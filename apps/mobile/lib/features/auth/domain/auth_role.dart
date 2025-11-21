@@ -1,0 +1,18 @@
+enum AuthRole { admin, personnel }
+
+extension AuthRoleX on AuthRole {
+  String get label => switch (this) {
+    AuthRole.admin => "Admin Girişi",
+    AuthRole.personnel => "Personel Girişi",
+  };
+
+  String get identifierLabel => switch (this) {
+    AuthRole.admin => "Admin ID",
+    AuthRole.personnel => "Personel ID",
+  };
+
+  String get passwordLabel => switch (this) {
+    AuthRole.admin => "Şifre",
+    AuthRole.personnel => "6 Haneli Kod",
+  };
+}

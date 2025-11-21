@@ -1,0 +1,816 @@
+import "package:flutter/material.dart";
+import "package:go_router/go_router.dart";
+import "package:hooks_riverpod/hooks_riverpod.dart";
+import "package:intl/intl.dart";
+import "package:mobile/widgets/admin_app_bar.dart";
+
+import "../../application/customer_list_notifier.dart";
+import "../../application/job_list_notifier.dart";
+import "../../data/admin_repository.dart";
+import "../../data/models/customer.dart";
+import "add_job_to_customer_sheet.dart";
+import "edit_customer_sheet.dart";
+
+final customerDetailProvider = FutureProvider.family<Customer, String>((
+  ref,
+  customerId,
+) {
+  final repository = ref.read(adminRepositoryProvider);
+  return repository.fetchCustomerDetail(customerId);
+});
+
+class CustomerDetailPage extends ConsumerStatefulWidget {
+  const CustomerDetailPage({
+    super.key,
+    required this.customerId,
+    this.initialCustomer,
+  });
+
+  final String customerId;
+  final Customer? initialCustomer;
+
+  @override
+  ConsumerState<CustomerDetailPage> createState() => _CustomerDetailPageState();
+}
+
+class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
+  @override
+  Widget build(BuildContext context) {
+    // Always watch the provider to get real-time updates
+    final customerFuture = ref.watch(customerDetailProvider(widget.customerId));
+    return customerFuture.when(
+      data: (customer) => _buildContent(customer),
+      loading: () {
+        // Show initial customer if available while loading
+        if (widget.initialCustomer != null) {
+          return _buildContent(widget.initialCustomer!);
+        }
+        return Scaffold(
+          appBar: const AdminAppBar(title: "Müşteri Detayı"),
+          body: const Center(child: CircularProgressIndicator()),
+        );
+      },
+      error: (error, _) {
+        // Show initial customer if available on error
+        if (widget.initialCustomer != null) {
+          return _buildContent(widget.initialCustomer!);
+        }
+        return Scaffold(
+          appBar: const AdminAppBar(title: "Müşteri Detayı"),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text("Hata: $error"),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () =>
+                      ref.invalidate(customerDetailProvider(widget.customerId)),
+                  child: const Text("Tekrar Dene"),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContent(Customer customer) {
+    return Scaffold(
+      appBar: AdminAppBar(
+        title: customer.name,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: "İş Ekle",
+            onPressed: () => _showAddJobSheet(customer),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: "Müşteriyi Sil",
+            onPressed: () => _deleteCustomer(customer),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showEditCustomerSheet(customer),
+        tooltip: "Düzenle",
+        child: const Icon(Icons.edit),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _Section(
+            title: "Müşteri Bilgileri",
+            children: [
+              _Row("İsim", customer.name),
+              _Row("Telefon", customer.phone),
+              if (customer.email != null) _Row("E-posta", customer.email!),
+              _Row("Adres", customer.address),
+            ],
+          ),
+          if (customer.nextMaintenanceDate != null) ...[
+            const SizedBox(height: 24),
+            _Section(
+              title: "Bakım Bilgileri",
+              children: [
+                _Row(
+                  "Sonraki Bakım Tarihi",
+                  DateFormat(
+                    "dd MMM yyyy",
+                  ).format(customer.nextMaintenanceDate!),
+                ),
+                if (customer.maintenanceTimeRemaining != null)
+                  _Row(
+                    "Kalan Süre",
+                    customer.maintenanceTimeRemaining!,
+                    valueColor:
+                        customer.nextMaintenanceDate!.isBefore(DateTime.now())
+                        ? Colors.red
+                        : customer.nextMaintenanceDate!
+                                  .difference(DateTime.now())
+                                  .inDays <=
+                              7
+                        ? Colors.orange
+                        : null,
+                  ),
+              ],
+            ),
+          ],
+          if (customer.hasDebt) ...[
+            const SizedBox(height: 24),
+            _Section(
+              title: "Borç Bilgileri",
+              children: [
+                if (customer.debtAmount != null)
+                  _Row(
+                    "Toplam Borç",
+                    "${customer.debtAmount!.toStringAsFixed(2)} TL",
+                  ),
+                if (customer.paidDebtAmount != null &&
+                    customer.paidDebtAmount! > 0)
+                  _Row(
+                    "Ödenen Borç",
+                    "${customer.paidDebtAmount!.toStringAsFixed(2)} TL",
+                  ),
+                if (customer.hasInstallment &&
+                    customer.installmentCount != null)
+                  _Row("Taksit Sayısı", "${customer.installmentCount} taksit"),
+                if (customer.remainingDebtAmount != null)
+                  _Row(
+                    "Kalan Borç",
+                    "${customer.remainingDebtAmount!.toStringAsFixed(2)} TL",
+                  ),
+                if (customer.nextDebtDate != null) ...[
+                  _Row(
+                    "Sonraki Borç Tarihi",
+                    DateFormat("dd MMM yyyy").format(customer.nextDebtDate!),
+                  ),
+                  if (customer.nextDebtDate!.isBefore(DateTime.now())) ...[
+                    _Row(
+                      "Geçen Süre",
+                      _getOverdueDays(customer.nextDebtDate!),
+                      valueColor: Colors.red,
+                    ),
+                  ],
+                ],
+                // Borç geçmişse (taksit olmasa bile) göster
+                if (customer.hasDebt &&
+                    customer.remainingDebtAmount != null &&
+                    customer.remainingDebtAmount! > 0 &&
+                    customer.hasOverduePayment) ...[
+                  _Row("Borç Durumu", "Ödeme gecikmiş", valueColor: Colors.red),
+                ],
+              ],
+            ),
+            const SizedBox(height: 24),
+            Card(
+              color: const Color(0xFF10B981).withValues(alpha: 0.05),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Borç Ödeme",
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _PayDebtForm(customerId: customer.id),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+          Card(
+            color: const Color(0xFF2563EB).withValues(alpha: 0.05),
+            child: InkWell(
+              onTap: () => _showAddJobSheet(customer),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.add_circle_outline,
+                        color: Color(0xFF2563EB),
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Yeni İş Ekle",
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF2563EB),
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Bu müşteriye yeni bir iş ekleyin",
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Color(0xFF2563EB),
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (customer.jobs != null && customer.jobs!.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            _Section(
+              title: "İşler (${customer.jobs!.length})",
+              children: customer.jobs!
+                  .map(
+                    (job) => _JobCard(
+                      job: job,
+                      onDelete: job.status == "IN_PROGRESS"
+                          ? () => _deleteJob(job, customer.id)
+                          : null,
+                      onTap: () => context.push("/admin/jobs/${job.id}"),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showAddJobSheet(Customer customer) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      isDismissible: true,
+      enableDrag: true,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.95,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => AddJobToCustomerSheet(
+          customerId: customer.id,
+          scrollController: scrollController,
+        ),
+      ),
+    );
+  }
+
+  void _showEditCustomerSheet(Customer customer) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: EditCustomerSheet(customer: customer),
+      ),
+    );
+  }
+
+  Future<void> _deleteCustomer(Customer customer) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Müşteriyi Sil"),
+        content: Text(
+          "${customer.name} müşterisini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text("İptal"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Sil"),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await ref.read(adminRepositoryProvider).deleteCustomer(customer.id);
+      ref.invalidate(customerListProvider);
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(content: Text("${customer.name} silindi")),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text("Silinemedi: $error")));
+    }
+  }
+
+  Future<void> _deleteJob(CustomerJob job, String customerId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("İşi Sil"),
+        content: Text(
+          "${job.title} işini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text("İptal"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Sil"),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await ref.read(adminRepositoryProvider).deleteJob(job.id);
+      ref.invalidate(customerDetailProvider(customerId));
+      ref.invalidate(customerListProvider);
+      ref.invalidate(jobListProvider);
+      if (context.mounted) {
+        messenger.showSnackBar(SnackBar(content: Text("${job.title} silindi")));
+      }
+    } catch (error) {
+      if (context.mounted) {
+        messenger.showSnackBar(SnackBar(content: Text("Silinemedi: $error")));
+      }
+    }
+  }
+}
+
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(children: children),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Row extends StatelessWidget {
+  const _Row(this.label, this.value, {this.valueColor});
+
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(fontWeight: FontWeight.w500, color: valueColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PayDebtForm extends ConsumerStatefulWidget {
+  const _PayDebtForm({required this.customerId});
+
+  final String customerId;
+
+  @override
+  ConsumerState<_PayDebtForm> createState() => _PayDebtFormState();
+}
+
+class _PayDebtFormState extends ConsumerState<_PayDebtForm> {
+  final _amountController = TextEditingController();
+  final _installmentCountController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _installmentCountController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitPayment(double amount) async {
+    setState(() {
+      _submitting = true;
+    });
+
+    try {
+      // Get current customer data
+      final customerAsync = ref.read(customerDetailProvider(widget.customerId));
+      final customer = customerAsync.value;
+      if (customer == null) {
+        throw Exception("Müşteri bilgisi alınamadı");
+      }
+
+      final installmentCount =
+          customer.hasInstallment && _installmentCountController.text.isNotEmpty
+          ? int.tryParse(_installmentCountController.text)
+          : null;
+
+      await ref
+          .read(adminRepositoryProvider)
+          .payCustomerDebt(
+            id: widget.customerId,
+            amount: amount,
+            installmentCount: installmentCount,
+          );
+
+      // Refresh customer detail and wait for it to complete
+      // Invalidate to trigger rebuild, then wait for data to load
+      ref.invalidate(customerDetailProvider(widget.customerId));
+      // Wait for the provider to reload so UI updates immediately
+      await ref.read(customerDetailProvider(widget.customerId).future);
+
+      // Also refresh customer list to update filters (invalidate yerine refresh kullan)
+      // Bu sayede loading state'ine düşmez, sadece liste güncellenir
+      // Eğer customer list sayfası açıksa, orada loading görünmez
+      ref.read(customerListProvider.notifier).refresh(showLoading: false);
+
+      if (!mounted) return;
+      _amountController.clear();
+      setState(() {
+        _submitting = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Borç ödemesi kaydedildi")));
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Hata: $error")));
+    }
+  }
+
+  Future<void> _payPartial() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final amount = double.tryParse(_amountController.text);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Geçerli bir miktar girin")));
+      return;
+    }
+
+    // Get current customer data
+    final customerAsync = ref.read(customerDetailProvider(widget.customerId));
+    final customer = customerAsync.value;
+    if (customer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Müşteri bilgisi alınamadı")),
+      );
+      return;
+    }
+    final remaining = customer.remainingDebtAmount ?? 0.0;
+
+    if (amount > remaining) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Ödeme miktarı kalan borçtan (${remaining.toStringAsFixed(2)} TL) fazla olamaz",
+          ),
+        ),
+      );
+      return;
+    }
+
+    await _submitPayment(amount);
+  }
+
+  Future<void> _payFull() async {
+    // Get current customer data
+    final customerAsync = ref.read(customerDetailProvider(widget.customerId));
+    final customer = customerAsync.value;
+    if (customer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Müşteri bilgisi alınamadı")),
+      );
+      return;
+    }
+    final remaining = customer.remainingDebtAmount ?? 0.0;
+
+    if (remaining <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Ödenecek borç bulunmuyor")));
+      return;
+    }
+
+    await _submitPayment(remaining);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final customerAsync = ref.watch(customerDetailProvider(widget.customerId));
+
+    return customerAsync.when(
+      data: (customer) {
+        // Update installment count when customer data changes
+        if (customer.hasInstallment && customer.installmentCount != null) {
+          final newCount = customer.installmentCount.toString();
+          if (_installmentCountController.text != newCount) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _installmentCountController.text = newCount;
+              }
+            });
+          }
+        }
+
+        final remaining = customer.remainingDebtAmount ?? 0.0;
+
+        return Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (remaining > 0)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 20,
+                        color: Colors.blue.shade700,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Kalan Borç: ${remaining.toStringAsFixed(2)} TL",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (remaining > 0) const SizedBox(height: 12),
+              TextFormField(
+                controller: _amountController,
+                decoration: InputDecoration(
+                  labelText: "Ödenen Borç Miktarı (TL)",
+                  prefixIcon: const Icon(Icons.attach_money),
+                  helperText: remaining > 0
+                      ? "Maksimum: ${remaining.toStringAsFixed(2)} TL"
+                      : "Ödeme yapıldıktan sonra borçtan düşülecek",
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "Miktar girin";
+                  }
+                  final amount = double.tryParse(value);
+                  if (amount == null || amount <= 0) {
+                    return "Geçerli bir miktar girin";
+                  }
+                  if (amount > remaining) {
+                    return "Ödeme miktarı kalan borçtan fazla olamaz";
+                  }
+                  return null;
+                },
+              ),
+              if (customer.hasInstallment) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _installmentCountController,
+                  decoration: const InputDecoration(
+                    labelText: "Yeni Taksit Sayısı (Manuel)",
+                    prefixIcon: Icon(Icons.numbers),
+                    helperText: "Kalan taksit sayısını manuel olarak girin",
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (customer.hasInstallment &&
+                        value != null &&
+                        value.trim().isNotEmpty) {
+                      final count = int.tryParse(value);
+                      if (count == null || count < 0) {
+                        return "Geçerli bir sayı girin";
+                      }
+                    }
+                    return null;
+                  },
+                ),
+              ],
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _submitting ? null : _payPartial,
+                  icon: _submitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.payment),
+                  label: Text(
+                    _submitting ? "Kaydediliyor..." : "Borç Ödemesi Yap",
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                  ),
+                ),
+              ),
+              if (remaining > 0) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _submitting ? null : _payFull,
+                    icon: const Icon(Icons.check_circle),
+                    label: const Text("Tüm Borcu Öde"),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF10B981),
+                      side: const BorderSide(color: Color(0xFF10B981)),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Center(child: Text("Hata: $error")),
+    );
+  }
+}
+
+class _JobCard extends StatelessWidget {
+  const _JobCard({required this.job, this.onDelete, this.onTap});
+
+  final CustomerJob job;
+  final VoidCallback? onDelete;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      job.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  if (onDelete != null)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      tooltip: "İşi Sil",
+                      onPressed: onDelete,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              _Row("Durum", job.status),
+              if (job.price != null)
+                _Row("Fiyat", "${job.price!.toStringAsFixed(2)} TL"),
+              if (job.collectedAmount != null)
+                _Row(
+                  "Tahsilat",
+                  "${job.collectedAmount!.toStringAsFixed(2)} TL",
+                ),
+              if (job.maintenanceDueAt != null)
+                _Row(
+                  "Bakım Tarihi",
+                  DateFormat("dd MMM yyyy").format(job.maintenanceDueAt!),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _getOverdueDays(DateTime dueDate) {
+  final now = DateTime.now();
+  final difference = now.difference(dueDate);
+  final days = difference.inDays;
+
+  if (days == 0) {
+    return "Bugün geçti";
+  } else if (days == 1) {
+    return "1 gün geçti";
+  } else {
+    return "$days gün geçti";
+  }
+}

@@ -1,0 +1,324 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AdminRole {
+  ANA
+  ALT
+}
+
+enum JobStatus {
+  PENDING
+  IN_PROGRESS
+  DELIVERED
+  ARCHIVED
+}
+
+enum PaymentStatus {
+  NOT_PAID
+  PARTIAL
+  PAID
+}
+
+enum PersonnelStatus {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum JobNoteAuthorType {
+  ALT_ADMIN
+  PERSONNEL
+  SYSTEM
+}
+
+enum MaintenanceStatus {
+  PENDING
+  SENT
+  COMPLETED
+}
+
+enum MaintenanceWindow {
+  SEVEN_DAYS
+  THREE_DAYS
+  ONE_DAY
+  OVERDUE
+}
+
+enum InventoryTransactionType {
+  INBOUND
+  OUTBOUND
+  ADJUSTMENT
+}
+
+model Admin {
+  id             String             @id @default(cuid())
+  name           String
+  phone          String
+  email          String
+  role           AdminRole
+  status         String             @default("active")
+  passwordHash   String?
+  personnel      Personnel[]
+  jobs           Job[]
+  customers      Customer[]
+  operations     Operation[]
+  inventoryItems InventoryItem[]
+  notifications  Notification[]
+  jobStatusLogs  JobStatusHistory[] @relation("JobStatusHistoryAdmin")
+  jobNotes       JobNote[]          @relation("JobNoteAdmin")
+  subscription   Subscription?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model Personnel {
+  id                 String             @id @default(cuid())
+  admin              Admin              @relation(fields: [adminId], references: [id])
+  adminId            String
+  name               String
+  phone              String
+  email              String?
+  loginCode          String
+  loginCodeUpdatedAt DateTime?
+  hireDate           DateTime
+  status             PersonnelStatus    @default(ACTIVE)
+  canShareLocation   Boolean            @default(true)
+  lastLoginAt        DateTime?
+  permissions        Json
+  locationLogs       LocationLog[]
+  jobs               JobPersonnel[]
+  jobStatusLogs      JobStatusHistory[] @relation("JobStatusHistoryPersonnel")
+  jobNotes           JobNote[]          @relation("JobNotePersonnel")
+  leaves             PersonnelLeave[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+model PersonnelLeave {
+  id          String    @id @default(cuid())
+  personnel   Personnel @relation(fields: [personnelId], references: [id], onDelete: Cascade)
+  personnelId String
+  startDate   DateTime
+  endDate     DateTime
+  reason      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([personnelId])
+  @@index([startDate, endDate])
+}
+
+model Customer {
+  id                  String    @id @default(cuid())
+  admin               Admin     @relation(fields: [adminId], references: [id])
+  adminId             String
+  name                String
+  phone               String
+  email               String?
+  address             String
+  location            Json?
+  hasDebt             Boolean   @default(false)
+  debtAmount          Decimal?
+  hasInstallment      Boolean   @default(false)
+  installmentCount    Int?
+  nextDebtDate        DateTime?
+  remainingDebtAmount Decimal?
+  paidDebtAmount      Decimal?  @default(0)
+  jobs                Job[]
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([adminId])
+}
+
+model Job {
+  id                            String                 @id @default(cuid())
+  title                         String
+  admin                         Admin                  @relation(fields: [adminId], references: [id])
+  adminId                       String
+  customer                      Customer               @relation(fields: [customerId], references: [id])
+  customerId                    String
+  operation                     Operation?             @relation(fields: [operationId], references: [id])
+  operationId                   String?
+  status                        JobStatus              @default(PENDING)
+  scheduledAt                   DateTime?
+  location                      Json
+  statusChangedAt               DateTime?
+  startedAt                     DateTime?
+  deliveredAt                   DateTime?
+  archivedAt                    DateTime?
+  price                         Decimal?               @db.Decimal(12, 2)
+  invoiceId                     String?
+  paymentStatus                 PaymentStatus          @default(NOT_PAID)
+  hasInstallment                Boolean                @default(false)
+  notes                         String?
+  maintenanceDueAt              DateTime?
+  priority                      Int?
+  collectedAmount               Decimal?               @db.Decimal(12, 2)
+  deliveryNote                  String?
+  deliveryMediaUrls             Json?
+  nextMaintenanceIntervalMonths Int?
+  materials                     JobMaterial[]
+  personnel                     JobPersonnel[]
+  locationLogs                  LocationLog[]
+  notifications                 Notification[]
+  statusHistory                 JobStatusHistory[]
+  jobNotes                      JobNote[]
+  maintenanceReminders          MaintenanceReminder[]
+  inventoryTransactions         InventoryTransaction[]
+  createdAt                     DateTime               @default(now())
+  updatedAt                     DateTime               @updatedAt
+}
+
+model JobPersonnel {
+  job         Job       @relation(fields: [jobId], references: [id])
+  jobId       String
+  personnel   Personnel @relation(fields: [personnelId], references: [id])
+  personnelId String
+  assignedAt  DateTime  @default(now())
+  startedAt   DateTime?
+  deliveredAt DateTime?
+
+  @@id([jobId, personnelId])
+}
+
+model InventoryItem {
+  id                String                 @id @default(cuid())
+  admin             Admin                  @relation(fields: [adminId], references: [id])
+  adminId           String
+  sku               String?
+  category          String
+  name              String
+  unit              String?
+  photoUrl          String?
+  unitPrice         Decimal                @db.Decimal(12, 2)
+  stockQty          Int
+  criticalThreshold Int
+  reorderPoint      Int?
+  reorderQuantity   Int?
+  lastRestockedAt   DateTime?
+  isActive          Boolean                @default(true)
+  jobMaterials      JobMaterial[]
+  transactions      InventoryTransaction[]
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+}
+
+model JobMaterial {
+  id              String        @id @default(cuid())
+  job             Job           @relation(fields: [jobId], references: [id])
+  jobId           String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  inventoryItemId String
+  quantity        Int
+  unitPrice       Decimal       @db.Decimal(12, 2)
+}
+
+model Notification {
+  id         String    @id @default(cuid())
+  admin      Admin     @relation(fields: [adminId], references: [id])
+  adminId    String
+  job        Job?      @relation(fields: [jobId], references: [id])
+  jobId      String?
+  targetRole String
+  type       String
+  payload    Json
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model LocationLog {
+  id          String    @id @default(cuid())
+  job         Job       @relation(fields: [jobId], references: [id])
+  jobId       String
+  personnel   Personnel @relation(fields: [personnelId], references: [id])
+  personnelId String
+  lat         Float
+  lng         Float
+  startedAt   DateTime
+  endedAt     DateTime?
+  consent     Boolean   @default(true)
+}
+
+model Subscription {
+  id        String    @id @default(cuid())
+  admin     Admin     @relation(fields: [adminId], references: [id])
+  adminId   String    @unique
+  planType  String
+  status    String
+  startDate DateTime
+  endDate   DateTime
+  trialEnds DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model JobStatusHistory {
+  id                   String     @id @default(cuid())
+  job                  Job        @relation(fields: [jobId], references: [id])
+  jobId                String
+  status               JobStatus
+  note                 String?
+  changedByAdmin       Admin?     @relation("JobStatusHistoryAdmin", fields: [changedByAdminId], references: [id])
+  changedByAdminId     String?
+  changedByPersonnel   Personnel? @relation("JobStatusHistoryPersonnel", fields: [changedByPersonnelId], references: [id])
+  changedByPersonnelId String?
+  createdAt            DateTime   @default(now())
+}
+
+model JobNote {
+  id                String            @id @default(cuid())
+  job               Job               @relation(fields: [jobId], references: [id])
+  jobId             String
+  authorType        JobNoteAuthorType
+  adminAuthor       Admin?            @relation("JobNoteAdmin", fields: [adminAuthorId], references: [id])
+  adminAuthorId     String?
+  personnelAuthor   Personnel?        @relation("JobNotePersonnel", fields: [personnelAuthorId], references: [id])
+  personnelAuthorId String?
+  content           String
+  createdAt         DateTime          @default(now())
+}
+
+model MaintenanceReminder {
+  id                 String             @id @default(cuid())
+  job                Job                @relation(fields: [jobId], references: [id])
+  jobId              String             @unique
+  dueAt              DateTime
+  status             MaintenanceStatus  @default(PENDING)
+  sentAt             DateTime?
+  lastWindowNotified MaintenanceWindow?
+  lastNotifiedAt     DateTime?
+  createdAt          DateTime           @default(now())
+}
+
+model InventoryTransaction {
+  id              String                   @id @default(cuid())
+  item            InventoryItem            @relation(fields: [inventoryItemId], references: [id])
+  inventoryItemId String
+  type            InventoryTransactionType
+  quantity        Int
+  job             Job?                     @relation(fields: [jobId], references: [id])
+  jobId           String?
+  note            String?
+  createdAt       DateTime                 @default(now())
+}
+
+model Operation {
+  id          String   @id @default(cuid())
+  admin       Admin    @relation(fields: [adminId], references: [id])
+  adminId     String
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  jobs        Job[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([adminId])
+}

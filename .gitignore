@@ -1,0 +1,35 @@
+# Genel
+.DS_Store
+*.log
+node_modules/
+dist/
+build/
+.env
+.env.*
+
+# Backend
+apps/backend/.turbo
+apps/backend/.parcel-cache
+
+# Flutter / Dart
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/App.framework
+**/ios/.symlinks
+**/ios/Pods
+**/ios/build
+**/android/.gradle
+**/android/app/build
+**/android/local.properties
+**/pubspec.lock
+**/.dart_tool
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/.terraform.lock.hcl
+infra/terraform/terraform.tfstate
+infra/terraform/terraform.tfstate.*
+

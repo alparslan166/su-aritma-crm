@@ -1,0 +1,208 @@
+projede flutter ve dart kullanılacak
+veritabanı olarak postgreSQL kullanılacak
+backend olarak typescript ile express.js kullanılacak
+genel temada renk olarak mavi-beyaz-siyah-yeşil tonları kullanılacak
+Destekleyici teknoloji ve servis gereksinimleri:
+    Mobil uygulama:
+        - Flutter 3.x + Dart 3.x, iOS/Android için tek kod tabanı.
+        - Durum yönetimi: Riverpod veya Bloc + Freezed tabanlı immutable modeller.
+        - Yerelleştirme (ARB) ve tema sistemi, karanlık mod.
+        - Harita/konum SDK’sı: Google Maps veya Mapbox + reverse geocoding servisleri.
+        - Arka plan konum paylaşımı ve izin yönetimi için platform kanalları.
+    Backend:
+        - Node.js 20 LTS, Express.js + TypeScript.
+        - ORM: Prisma veya TypeORM (PostgreSQL için).
+        - Redis: oturum, hız sınırlama, görev kuyrukları.
+        - Kuyruk/işleyici: BullMQ / RabbitMQ, bakım hatırlatma ve bildirim kuyruğu.
+        - Gerçek zamanlı iletişim: Socket.IO veya WebSocket/SSE katmanı (iş durumu, panel canlı güncellemeleri).
+        - Arka plan cron/worker süreçleri (Node cron, Temporal veya BullMQ repeatable jobs).
+    Bildirim ve kimlik doğrulama:
+        - Push servisleri: Firebase Cloud Messaging (FCM) + APNs ayarları.
+        - Web push (alt admin paneli) için VAPID altyapısı.
+        - Kimlik doğrulama: JWT tabanlı access/refresh token, OAuth 2.0 veya Magic link opsiyonu.
+        - Rol tabanlı yetkilendirme (RBAC) + policy enforcement (Casl, Oso, włas RBAC servisi).
+    Medya ve dosya erişimi:
+        - Fotoğraf/video depolama: AWS S3, GCP Cloud Storage veya MinIO + imzalı URL.
+        - CDN (CloudFront, Cloudflare) ile teslim.
+        - Görsel optimizasyon işlemleri için Lambda/tabanlı imaj işlem hattı.
+    Harita/konum servisleri:
+        - Geocoding, distance matrix, rota hesaplama (Google Maps Platform).
+        - Geo-fencing kuralları ve konum logları için PostGIS uzantısı.
+    Güvenlik ve gizlilik:
+        - Hash/şifreleme: Argon2/BCrypt, at-rest encryption (KMS yönetimli anahtarlar).
+        - Gizli yönetimi: HashiCorp Vault, AWS Secrets Manager veya Doppler.
+        - Denetim logları, veri maskeleme ve KVKK uyumu.
+    Gözlemlenebilirlik:
+        - Log yönetimi: Loki/ELK.
+        - İzleme: Prometheus + Grafana.
+        - Uygulama hata takibi: Sentry / Firebase Crashlytics.
+    DevOps ve teslimat:
+        - Docker tabanlı containerization, Compose ile lokal geliştirme.
+        - CI/CD: GitHub Actions veya GitLab CI (lint, test, build, deploy).
+        - Altyapı: Kubernetes (GKE/EKS) veya ECS + Terraform/IaC yönetimi.
+        - Feature flag yönetimi (LaunchDarkly, Flagsmith) kritik akışlar için.
+    Ödeme/faturalandırma (son faz):
+        - Ödeme sağlayıcı entegrasyonu: iyzico, Stripe.
+        - Fatura PDF üretimi (PDFKit) ve e-arşiv/e-fatura servisleri.
+        - Abonelik ve plan yönetimi için Metered billing veya Stripe Billing.
+
+
+
+ALT ADMİN UYGULAMA ŞEMASI
+--------------------------------
+
+Bu plan şu anda sadece Alt Admin ve Personel uygulama şemalarını kapsar; Ana Admin, giriş, ödeme ve fatura kısımları ayrı tutulacak.
+
+Temel veri modeli:
+    Personel (ad, iletişim, kayıt tarihi, izin parametreleri, konum paylaşım durumu)
+    İş (müşteri, konum, zaman çizelgesi, durum, atanan personeller, ücret/fatura/ödeme, notlar, bakım tarihi)
+    Müşteri (ad, iletişim, adres)
+    Stok Öğesi (kategori, ad, fotoğraf, fiyat, mevcut adet, kritik eşik)
+    Bildirim (tetikleyen olay, hedef rol, ilgili kayıt, okundu durumu)
+    Konum logları (personel, iş, başlama/bitiş saatleri, yayın izni)
+
+Rol ve yetki notları:
+    Alt admin tüm iş, personel ve stok kayıtlarını okur/yazar.
+    Personel yalnızca kendisine atanan işleri görür; teslim sonrası 2 gün boyunca ilgili kaydı yalnızca görüntüleyebilir.
+    Yetkilendirme servisleri bu roller üzerinden API seviyesinde yönetilecek, UI tarafında da görünürlük bu kurallara göre filtrelenecek.
+
+Admin tüm personelleri bir sayfada listeleyebilecek/görüntüleyebilecek
+Bu sayfada personel eklemek için butonu olacak(en üstte "Personel Ekle" başlığı olacak):
+    Personel bilgileri(isim - telefon - email - personel kayıt tarihi) olarak eklenecek
+    Personel şifresi otomatik olarak 6 haneli(kod/karakter/rakam olarak) bir şifre oluşturulacak ve personel bu şifre ile giriş yapabilecek
+    Personel şifresi personel detay sayfasında görüntülenecek
+    Personel şifresi personel detay sayfasında düzenlenebilecek
+    Yeni şifre oluşturmak için butonu olacak ve bu butona tıklandığında yeni şifre oluşturulacak
+    Yeni oluşturulan şifre personel detay sayfasında görüntülenecek
+    
+
+Personel detay sayfaları olacak:
+    Personel silmek için butonu olacak
+    Personel düzenlemek için butonu olacak
+    Personel izinleri olacak
+    Personel detayları olacak
+    Personel bilgileri(isim - telefon - email - personel kayıt tarihi) olacak
+    Personele iş atama butonu olacak(mevcut işlerdeki ilanların listesinden seçerek atayabilecek)
+
+
+Admin Mevcut İşleri bir sayfada listeleyebilecek/görüntüleyebilecek:
+Listelenen işlerin üzerinde ufak bir kutucuk olacak ve bu kutucukların rengi işin durumu ile ilgili olacak:
+    İşin durumu "Beklemede" ise kutucuğun rengi mavi olacak
+    İşin durumu "İşe Başladı" ise kutucuğun rengi turuncu olacak
+    İşin durumu "İş Teslim Edildi" ise kutucuğun rengi gri olacak ve geçmişte yapılan işler sayfasına gidecek
+Durum makinesi: Beklemede -> (personel işe başladı) -> İşe Başladı -> (personel teslim etti) -> İş Teslim Edildi -> (otomasyon) -> Geçmiş İş kaydı.
+   
+Buraya yeni iş ekleme butonu olacak ve bu butona tıklandığında yeni iş ekleme sayfası açılacak ve iş ekleyebilecek:
+    iş eklerken:
+        müşteri bilgileri(isim - telefon - email - adres) olarak eklenecek
+        konum bilgisi açık adres ile eklenecek ve konum bilgisi otomatik olarak haritada görüntülenecek
+        notlar bilgisi işi alan personeli bilgilendirmek için yazılacak(iş hakkında bilgi vermek için yazılacak ve kullanılacak malzemeleri bilgilendirmek için yazılacak)
+        iş eklerken en altta isteğe bağlı da personel atama butonu olacak ve bu butona tıklandığında personellerin içinden seçerek işe atayabilecek (birden fazla personel seçilebilecek)
+
+
+
+Listenenen işlerin üstünde "Personel Atama" butonu olacak ve bu butona tıklandığında personellerin içinden seçerek işe atayabilecek (birden fazla personel seçilebilecek)
+
+Listelenen işlerin üstünde "Detay" adında bir buton olacak ve bu butona tıklandığında işin detay sayfasına erişilebilecek ve bu şekilde görüntülenecek:
+    En üstte "Personel Ata" butonu olacak ve bu bölümde mevcut personellerin listesinden seçerek işe atayabilecek (birden fazla personel seçilebilecek)
+    İş detayları(müşteri - konum - tarih - Personel - Ücret - Fatura - Ödeme - Notlar) olacak
+    İş detaylarını görüntüleme butonu olacak
+    İş detaylarını düzenleme butonu olacak
+    İş detaylarını silme butonu olacak
+
+
+Geçmişte yapılan işler adında bir sayfa olacak ve bu sayfada tüm geçmişte yapılan işler listelenecek ve görüntülenecek
+Listelenen her iş işin üzerinde Müşteri adı - konumu - ve tarihi yazıcak
+
+Personel Tarafından tamamlanan işler, geçmişte yapılan işler sayfasına gidecek ve bu sayfada tüm geçmişte yapılan işler listelenecek ve görüntülenecek:
+    Bu listede her işin üzerinde varsa Bakım Tarihine kalan süre yazıcak ve bu süre bitince admine tekrar iş atama yapması için bildirim gönderilecek.
+    Bakım hatırlatma renkleri: 1 hafta kaldıysa turuncu, 3 gün kaldıysa sarı, 1 gün kaldıysa kırmızı; süre aşılırsa çerçeve kırmızı yanıp "Bakım kaçırıldı" bildirimi düşecek.
+    Bakım tarihleri personel "İş Teslim" ekranında seçildiği anda iş kaydına işlenir ve yeniden iş oluşturma akışı bu veriye göre tetiklenir.
+    Listelenen her işin üzerinde İş detaylarını görüntüleme butonu olacak tıklandığında bu şekilde görüntülenecek:
+        İş detayları(müşteri - konum - tarih - Yapan Personeller - Kullanılan Malzemeler(adetleri ve fiyatları ile listelenerek) - Bakım Tarihine kalan süre - Ücret - Fatura - Ödeme - Notlar) olacak
+        İş detaylarını düzenleme butonu olacak
+        İşi silme butonu olacak
+
+
+abonelik diye bir kısım olacak ve bu kısımda abonelik bilgileri(abonelik tipi - abonelik başlangıç tarihi - abonelik bitiş tarihi - abonelik durumu) görüntülenecek
+deneme süresi için deneme süresinde ise yeşil renk, son 3 gün kaldıysa kırmızı renk olacak
+abonelik güncelle, abone ol kısımları olacak ve bu kısımda ödeme paneli olacak abone olması için ödeme yapılacak ve abonelik başlangıç tarihi ve abonelik bitiş tarihi otomatik olarak güncellenecek
+
+
+
+--------------------------------
+
+
+
+
+
+PERSONEL UYGULAMA ŞEMASI
+--------------------------------
+
+Personele iş emri geldiği zaman telefonuna bildirim gönderilecek ve bildirime basıldığı zaman direk işin detay sayfasına gidecek ve işin detaylarına erişilebilecek
+Bildirim panelinde de görüntülenecek ve personel iş emri detaylarına erişilebilecek
+
+Mevcut iş diye bir sayfa olacak ve bu sayfada tüm mevcut işler listelenecek ve görüntülenecek
+Listelenen her işin üzerinde Müşteri adı - konumu - ve tarihi yazıcak
+Listelenen her işin üzerinde İş detaylarını görüntüleme butonu olacak tıklandığında bu şekilde görüntülenecek:
+    İş detayları(müşteri - konum - tarih - o işi alan Personeller) olacak
+    
+Personele iş emri geldiği zaman işe başladı diye bir buton olacak ve işin durumu admin panelinde değişecek
+
+
+İşi teslim et butonu olacak ve bu butona tıklandığında "İş Teslim" adında bir sayfası açılacak 
+buraya alınan fiyat ve gerekirse not kısmı olacak(admini bilgilendirmek için yazılacak), gelecek bakım tarihi diye bir buton olacak ve bu butona tıklandığında gelecek bakım tarihi seçilebilecek (1-12 arasında seçilebilecek) malzemelere göre personel bu bakım tarihini seçecek
+ve bu sayfada fotoğraf ekleme alanı olacak(yeni fotoğraf çekme veya galeriye giderek seçme) ve notlarının yazılması, alınan ücretin yazılması, kullanılan malzemelerin malzeme listesinden seçilmesi(kullanılan malzemeler diye bir buton olacak ve bu butona tıklandığında kullanılan malzemeler listesinden seçilebilecek (birden fazla malzeme seçilebilecek ve her malzemenin kullanım adetini seçebilecek)) sonrasında teslim et butonu olacak
+buradan malzeme seçildiği zaman malzemenin adeti ve fiyatı otomatik olarak stok listesinden alınacak ve stok listesinden kullanılan malzemenin adeti kadar silinecek
+
+
+
+İş teslim edildiğinde işin detay sayfasında "İş Teslim Edildi" olarak bir mesaj gelicek ve bildirim panelinde de görüntülenecek
+Personel işi teslim ettiğinde personel o işe 2 gün daha erişebilecek ve işin detay sayfası olucak bu sayfada sadece İş detaylarını görüntüleyebilecek:
+    İş detayları(müşteri - konum - tarih - o işi alan Personeller - Ücret - Fatura - Ödeme - Notlar) olacak
+    Personel hiçbir şekilde düzenleme yapamaz ve silme yapamaz
+    2 günlük erişim süresi dolduktan sonra ekran sadece uyarı mesajı gösterir ve API isteği yetkisiz döner; tekrar açılabilmesi için alt admin onayı gerekir.
+
+
+--------------------------------
+
+
+ANA ADMİN UYGULAMA ŞEMASI
+--------------------------------
+
+Yeni admin başvurusu olduğu zaman bildirim panelinde görüntülenecek ve admin onayı bekleniyor diye görüntülenecek
+Yeni admin kayıt olduğu zaman ana admin tarafından onaylanacak ve onaylandığı zaman sistemi kullanabilecek
+
+
+Tüm adminlere erişebileceği ana sayfa olacak
+Tüm adminler listelenecek, deneme süresi son 3 gün kaldıysa alt adminlere bildirim gidicek (Deneme sürenizin/aboneliğinizin son 3 günü kaldı/2 gün kaldı/1 gün kaldı)
+
+Listelenen adminlerin üstünde bir buton olacak ve bu butona tıklandığında adminin detay sayfasına erişilebilecek
+Listelenen adminlerin çerçeve rengi normalde siyah olacak, abone değil de deneme süresinde olanların çerçeveleri yeşil olacak
+Listelenen adminlerin en kenarında bir kutucuk olacak bu kutucuk 3 renkte olacak ve renkleri deneme süresi/abonelik süresi son 3 gün kaldıysa sarı renk, 1 gün kaldıysa kırmızı renk olacak
+
+
+Her adminin detay sayfası olacak ve detay sayfasında adminin bilgileri(isim - telefon - email - kayıt tarihi - kaç personele sahip olduğu) görüntülenecek - En altta admini silme butonu olacak
+Her adminin ödeme/abonelik bilgileri olacak ve abonelik bilgileri(deneme süresi günü - abonelik başlangıç tarihi - abonelik bitiş tarihi - abonelik tipi  - abonelik durumu) görüntülenecek - En altta aboneliği iptal etme butonu olacak --- detay sayfasında bu kısım en üstte olacak
+
+
+
+Bir alt admin silindiği zaman tüm personelleri otomatik olarak silinecek ve tüm ilanları otomatik olarak silinecek
+
+-------------------------------- BU KISIM EN SON YAPILACAK --------------------------------
+
+
+
+
+
+
+--------------------------------
+
+Giriş ekranları en son yapılacak(Uygulama ilk açıldığı zaman giriş ekranı görüntülenecek iki bölüm olacak birincisi admin girişi ikincisi personel girişi, personeller adminlerin veridği şifre ve adminin eklediği personel adı ile giriş yapabilecek ve hep kayıtlı olduğu cihazda otomatik olarak giriş yapabilecek, adminler de ana adminin verdiği şifre ile giriş yapabilecek ve hep kayıtlı olduğu cihazda otomatik olarak giriş yapabilecek)
+Ödeme sistemi en son yapılacak
+Fatura hazırlama sistemi en son yapılacak
+Gelir-gider hesaplayıcı sistemi en son yapılacak
+
+Çıkış yapma butonu olacak ve bu butona tıklandığı zaman hesabından çıkış yapılacak ve giriş ekranı görüntülenecek
+
+--------------------------------

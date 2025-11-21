@@ -1,0 +1,73 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "Alt admin & personel platformu için Express + Prisma API",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only --poll -r tsconfig-paths/register src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "lint": "eslint -c .eslintrc.cjs \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --runInBand",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prepare": "husky install",
+    "seed:test-admin": "ts-node scripts/seed-test-admin.ts",
+    "seed:full": "ts-node -r tsconfig-paths/register scripts/seed-full.ts",
+    "seed:update-customers": "ts-node -r tsconfig-paths/register scripts/update-customers-for-filters.ts",
+    "seed:add-operations": "ts-node -r tsconfig-paths/register scripts/add-operations.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.933.0",
+    "@aws-sdk/s3-request-presigner": "^3.933.0",
+    "@prisma/client": "^6.19.0",
+    "bcryptjs": "^3.0.3",
+    "bullmq": "^5.63.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "ioredis": "^5.8.2",
+    "morgan": "^1.10.1",
+    "socket.io": "^4.8.1",
+    "uuid": "^13.0.0",
+    "zod": "^4.1.12"
+  },
+  "lint-staged": {
+    "src/**/*.ts": [
+      "eslint --max-warnings=0"
+    ]
+  },
+  "devDependencies": {
+    "@tsconfig/node20": "^20.1.8",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/jest": "^30.0.0",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.10.1",
+    "@types/supertest": "^6.0.3",
+    "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.47.0",
+    "@typescript-eslint/parser": "^8.47.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
+    "husky": "^9.1.7",
+    "jest": "^30.2.0",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.6.2",
+    "prisma": "^6.19.0",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.9.3"
+  }
+}

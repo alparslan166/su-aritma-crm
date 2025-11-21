@@ -1,0 +1,54 @@
+import dotenv from "dotenv";
+import { z } from "zod";
+
+dotenv.config();
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  PORT: z.coerce.number().default(4000),
+  DATABASE_URL: z
+    .string()
+    .default("postgresql://postgres:postgres@localhost:5432/su_aritma?schema=public"),
+  AWS_REGION: z.string().default("eu-central-1"),
+  AWS_ACCESS_KEY_ID: z.string().default("local"),
+  AWS_SECRET_ACCESS_KEY: z.string().default("local"),
+  S3_MEDIA_BUCKET: z.string().default("local-bucket"),
+  FCM_SERVER_KEY: z.string().default("local"),
+  REDIS_URL: z.string().optional(),
+  MAINTENANCE_CRON: z.string().optional(),
+});
+
+const env = envSchema.parse({
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT,
+  DATABASE_URL: process.env.DATABASE_URL,
+  AWS_REGION: process.env.AWS_REGION,
+  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+  S3_MEDIA_BUCKET: process.env.S3_MEDIA_BUCKET,
+  FCM_SERVER_KEY: process.env.FCM_SERVER_KEY,
+  REDIS_URL: process.env.REDIS_URL,
+  MAINTENANCE_CRON: process.env.MAINTENANCE_CRON,
+});
+
+export const config = {
+  nodeEnv: env.NODE_ENV,
+  port: env.PORT,
+  databaseUrl: env.DATABASE_URL,
+  aws: {
+    region: env.AWS_REGION,
+    accessKeyId: env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+    mediaBucket: env.S3_MEDIA_BUCKET,
+  },
+  fcm: {
+    serverKey: env.FCM_SERVER_KEY,
+  },
+  redis: {
+    url: env.REDIS_URL,
+  },
+  maintenance: {
+    cron: env.MAINTENANCE_CRON ?? "0 * * * *",
+  },
+};
+

@@ -1,0 +1,89 @@
+import { MaintenanceStatus, MaintenanceWindow } from "@prisma/client";
+import { Job } from "bullmq";
+
+import { prisma } from "@/lib/prisma";
+import { notificationService } from "@/modules/notifications/notification.service";
+import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
+
+const MS_IN_DAY = 1000 * 60 * 60 * 24;
+
+const determineWindow = (diffInDays: number): MaintenanceWindow | null => {
+  if (diffInDays <= 0) {
+    return MaintenanceWindow.OVERDUE;
+  }
+  if (diffInDays <= 1) {
+    return MaintenanceWindow.ONE_DAY;
+  }
+  if (diffInDays <= 3) {
+    return MaintenanceWindow.THREE_DAYS;
+  }
+  if (diffInDays <= 7) {
+    return MaintenanceWindow.SEVEN_DAYS;
+  }
+  return null;
+};
+
+export const maintenanceReminderProcessor = async (_job: Job) => {
+  const now = new Date();
+  const reminders = await prisma.maintenanceReminder.findMany({
+    where: {
+      status: MaintenanceStatus.PENDING,
+    },
+    include: {
+      job: {
+        select: {
+          id: true,
+          title: true,
+          maintenanceDueAt: true,
+        },
+      },
+    },
+  });
+
+  for (const reminder of reminders) {
+    const diffDays = Math.ceil((reminder.dueAt.getTime() - now.getTime()) / MS_IN_DAY);
+    const window = determineWindow(diffDays);
+    if (!window) {
+      continue;
+    }
+    if (reminder.lastWindowNotified === window) {
+      continue;
+    }
+
+    const job = reminder.job;
+    const payload = {
+      id: reminder.id,
+      jobId: reminder.jobId,
+      jobTitle: job?.title ?? reminder.jobId,
+      dueAt: reminder.dueAt,
+      status: reminder.status,
+      daysUntilDue: diffDays,
+      lastWindowNotified: window,
+    };
+
+    await notificationService.notifyRole("admin", {
+      title: `Bakım hatırlatma - ${job?.title ?? reminder.jobId}`,
+      body: window === MaintenanceWindow.OVERDUE
+        ? "Bakım süresi aşıldı. Yeniden iş oluşturmayı unutmayın."
+        : `Bakım için ${Math.max(diffDays, 0)} gün kaldı.`,
+      data: {
+        type: "maintenance",
+        jobId: reminder.jobId,
+        window,
+      },
+    });
+
+    realtimeGateway.emitMaintenanceReminder(payload);
+
+    await prisma.maintenanceReminder.update({
+      where: { id: reminder.id },
+      data: {
+        lastWindowNotified: window,
+        lastNotifiedAt: now,
+        status: window === MaintenanceWindow.OVERDUE ? MaintenanceStatus.SENT : undefined,
+        sentAt: window === MaintenanceWindow.OVERDUE ? now : undefined,
+      },
+    });
+  }
+};
+
