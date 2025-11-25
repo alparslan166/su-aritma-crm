@@ -7,6 +7,9 @@ import { customerService } from "./customer.service";
 
 const listQuerySchema = z.object({
   search: z.string().optional(),
+  phoneSearch: z.string().optional(),
+  createdAtFrom: z.string().datetime().optional().transform((val) => val ? new Date(val) : undefined),
+  createdAtTo: z.string().datetime().optional().transform((val) => val ? new Date(val) : undefined),
   hasOverduePayment: z.string().transform((val) => val === "true").optional(),
   hasUpcomingMaintenance: z.string().transform((val) => val === "true").optional(),
   hasOverdueInstallment: z.string().transform((val) => val === "true").optional(),
@@ -18,10 +21,14 @@ const createSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   address: z.string().min(3),
   location: z.record(z.string(), z.any()).optional(),
+  createdAt: z.string().datetime().optional(),
   hasDebt: z.boolean().optional(),
   debtAmount: z.number().positive().optional(),
   hasInstallment: z.boolean().optional(),
   installmentCount: z.number().int().positive().optional(),
+  nextDebtDate: z.string().datetime().optional(),
+  installmentStartDate: z.string().datetime().optional(),
+  installmentIntervalDays: z.number().int().positive().optional(),
 }).refine((data) => {
   // If hasDebt is true, debtAmount must be provided
   if (data.hasDebt === true && !data.debtAmount) {
@@ -124,6 +131,21 @@ export const payDebtHandler = async (
       installmentCount: z.number().int().positive().optional(),
     }).parse(req.body);
     const data = await customerService.payDebt(adminId, id, amount, installmentCount);
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error as Error);
+  }
+};
+
+export const markInstallmentOverdueHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const adminId = getAdminId(req);
+    const { id } = req.params;
+    const data = await customerService.markInstallmentOverdue(adminId, id);
     res.json({ success: true, data });
   } catch (error) {
     next(error as Error);

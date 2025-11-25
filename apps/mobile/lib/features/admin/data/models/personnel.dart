@@ -1,6 +1,7 @@
 class Personnel {
   Personnel({
     required this.id,
+    this.personnelId,
     required this.name,
     required this.phone,
     required this.email,
@@ -8,11 +9,13 @@ class Personnel {
     required this.loginCode,
     required this.hireDate,
     required this.canShareLocation,
+    this.photoUrl,
     this.lastKnownLocation,
     this.leaves,
   });
 
   final String id;
+  final String? personnelId;
   final String name;
   final String phone;
   final String? email;
@@ -20,6 +23,7 @@ class Personnel {
   final String loginCode;
   final DateTime hireDate;
   final bool canShareLocation;
+  final String? photoUrl;
   final PersonnelLocation? lastKnownLocation;
   final List<PersonnelLeave>? leaves;
 
@@ -38,6 +42,7 @@ class Personnel {
     final leavesList = json["leaves"] as List<dynamic>?;
     return Personnel(
       id: json["id"] as String,
+      personnelId: json["personnelId"] as String?,
       name: json["name"] as String? ?? "-",
       phone: json["phone"] as String? ?? "",
       email: json["email"] as String?,
@@ -47,6 +52,7 @@ class Personnel {
           DateTime.tryParse(json["hireDate"] as String? ?? "") ??
           DateTime.now(),
       canShareLocation: json["canShareLocation"] as bool? ?? false,
+      photoUrl: json["photoUrl"] as String?,
       lastKnownLocation: PersonnelLocation.fromJson(
         json["lastKnownLocation"] as Map<String, dynamic>?,
       ),
@@ -57,6 +63,7 @@ class Personnel {
   /// Yeni bir Personnel instance'ı oluşturur, belirtilen alanları günceller
   Personnel copyWith({
     String? id,
+    String? personnelId,
     String? name,
     String? phone,
     String? email,
@@ -64,11 +71,13 @@ class Personnel {
     String? loginCode,
     DateTime? hireDate,
     bool? canShareLocation,
+    String? photoUrl,
     PersonnelLocation? lastKnownLocation,
     List<PersonnelLeave>? leaves,
   }) {
     return Personnel(
       id: id ?? this.id,
+      personnelId: personnelId ?? this.personnelId,
       name: name ?? this.name,
       phone: phone ?? this.phone,
       email: email ?? this.email,
@@ -76,6 +85,7 @@ class Personnel {
       loginCode: loginCode ?? this.loginCode,
       hireDate: hireDate ?? this.hireDate,
       canShareLocation: canShareLocation ?? this.canShareLocation,
+      photoUrl: photoUrl ?? this.photoUrl,
       lastKnownLocation: lastKnownLocation ?? this.lastKnownLocation,
       leaves: leaves ?? this.leaves,
     );

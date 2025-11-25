@@ -1,7 +1,6 @@
 import "package:flutter/material.dart";
-import "package:geocoding/geocoding.dart";
-import "package:geolocator/geolocator.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
+import "package:intl/intl.dart";
 
 import "../../application/customer_list_notifier.dart";
 import "../../data/admin_repository.dart";
@@ -25,10 +24,13 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
   late final TextEditingController _addressController;
   late final TextEditingController _debtAmountController;
   late final TextEditingController _installmentCountController;
+  late final TextEditingController _installmentIntervalDaysController;
 
   bool? _hasDebt;
   bool _debtHasInstallment = false;
-  Map<String, double>? _location;
+  DateTime? _createdAt;
+  DateTime? _nextDebtDate;
+  DateTime? _installmentStartDate;
   bool _submitting = false;
 
   @override
@@ -46,16 +48,15 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     _installmentCountController = TextEditingController(
       text: customer.installmentCount?.toString() ?? "",
     );
+    _installmentIntervalDaysController = TextEditingController(
+      text: customer.installmentIntervalDays?.toString() ?? "",
+    );
 
     _hasDebt = customer.hasDebt;
     _debtHasInstallment = customer.hasInstallment;
-
-    if (customer.location != null) {
-      _location = {
-        "latitude": customer.location!.latitude,
-        "longitude": customer.location!.longitude,
-      };
-    }
+    _createdAt = customer.createdAt;
+    _nextDebtDate = customer.nextDebtDate;
+    _installmentStartDate = customer.installmentStartDate;
   }
 
   @override
@@ -66,72 +67,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     _addressController.dispose();
     _debtAmountController.dispose();
     _installmentCountController.dispose();
+    _installmentIntervalDaysController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickLocation() async {
-    try {
-      // Request location permission
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Konum servisi kapalı")));
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Konum izni reddedildi")),
-          );
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Konum izni kalıcı olarak reddedildi")),
-        );
-        return;
-      }
-
-      // Get current location
-      Position position = await Geolocator.getCurrentPosition();
-      setState(() {
-        _location = {
-          "latitude": position.latitude,
-          "longitude": position.longitude,
-        };
-      });
-
-      // Get address from coordinates
-      try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-        if (placemarks.isNotEmpty) {
-          final place = placemarks[0];
-          final address =
-              "${place.street} ${place.subThoroughfare}, ${place.locality}";
-          _addressController.text = address;
-        }
-      } catch (e) {
-        // Address lookup failed, but location is set
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Konum alınamadı: $e")));
-    }
-  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -163,6 +102,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       final installmentCount =
           hasInstallment && _installmentCountController.text.isNotEmpty
           ? int.tryParse(_installmentCountController.text)
+          : null;
+      final installmentIntervalDays =
+          hasInstallment && _installmentIntervalDaysController.text.isNotEmpty
+          ? int.tryParse(_installmentIntervalDaysController.text)
           : null;
 
       // Show confirmation dialog for debt changes
@@ -210,12 +153,16 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
             email: _emailController.text.trim().isEmpty
                 ? null
                 : _emailController.text.trim(),
-            location: _location,
+            location: null,
+            createdAt: _createdAt,
             hasDebt: hasDebt,
             debtAmount: debtAmount,
             remainingDebtAmount: remainingDebtAmount,
             hasInstallment: hasInstallment,
             installmentCount: installmentCount,
+            nextDebtDate: _nextDebtDate,
+            installmentStartDate: _installmentStartDate,
+            installmentIntervalDays: installmentIntervalDays,
           );
 
       await ref.read(customerListProvider.notifier).refresh();
@@ -261,6 +208,34 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
+                // Kayıt Tarihi
+                if (_createdAt != null)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "Kayıt Tarihi: ${DateFormat("dd MMM yyyy").format(_createdAt!)}",
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _createdAt!,
+                            firstDate: DateTime.now().subtract(const Duration(days: 3650)),
+                            lastDate: DateTime.now(),
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              _createdAt = picked;
+                            });
+                          }
+                        },
+                        child: const Text("Tarih Seç"),
+                      ),
+                    ],
+                  ),
+                if (_createdAt != null) const SizedBox(height: 12),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(labelText: "İsim"),
@@ -288,21 +263,14 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _addressController,
-                  decoration: const InputDecoration(labelText: "Adres"),
+                  decoration: const InputDecoration(
+                    labelText: "Adres",
+                    hintText: "Şehir, ilçe, mahalle, sokak, bina no",
+                  ),
                   maxLines: 2,
                   validator: (value) => value == null || value.trim().length < 3
                       ? "Adres girin"
                       : null,
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _pickLocation,
-                  icon: Icon(
-                    _location != null ? Icons.check_circle : Icons.location_on,
-                  ),
-                  label: Text(
-                    _location != null ? "Konum seçildi" : "Konum Seç",
-                  ),
                 ),
                 const SizedBox(height: 24),
                 const Divider(),
@@ -344,6 +312,9 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                             _debtAmountController.clear();
                             _debtHasInstallment = false;
                             _installmentCountController.clear();
+                            _installmentIntervalDaysController.clear();
+                            _nextDebtDate = null;
+                            _installmentStartDate = null;
                           });
                         },
                         style: OutlinedButton.styleFrom(
@@ -386,6 +357,35 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                     },
                   ),
                   const SizedBox(height: 12),
+                  // Ödeme Tarihi
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "Ödeme Tarihi: ${_nextDebtDate != null ? DateFormat("dd MMM yyyy").format(_nextDebtDate!) : "Seçilmedi"}",
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _nextDebtDate ?? DateTime.now(),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(const Duration(days: 3650)),
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              _nextDebtDate = picked;
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.calendar_today, size: 18),
+                        label: const Text("Tarih Seç"),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -416,6 +416,8 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                             setState(() {
                               _debtHasInstallment = false;
                               _installmentCountController.clear();
+                              _installmentIntervalDaysController.clear();
+                              _installmentStartDate = null;
                             });
                           },
                           style: OutlinedButton.styleFrom(
@@ -441,8 +443,6 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       decoration: const InputDecoration(
                         labelText: "Taksit Sayısı",
                         prefixIcon: Icon(Icons.numbers),
-                        helperText:
-                            "Sonraki borç tarihi otomatik olarak 1 ay sonra olacak",
                       ),
                       keyboardType: TextInputType.number,
                       validator: (value) {
@@ -454,6 +454,59 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                           final count = int.tryParse(value);
                           if (count == null || count <= 0) {
                             return "Geçerli bir sayı girin";
+                          }
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    // Taksit Başlama Tarihi
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "Taksit Başlama Tarihi: ${_installmentStartDate != null ? DateFormat("dd MMM yyyy").format(_installmentStartDate!) : "Seçilmedi"}",
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _installmentStartDate ?? DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(const Duration(days: 3650)),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                _installmentStartDate = picked;
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.calendar_today, size: 18),
+                          label: const Text("Tarih Seç"),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Taksit Tekrar Günü
+                    TextFormField(
+                      controller: _installmentIntervalDaysController,
+                      decoration: const InputDecoration(
+                        labelText: "Taksit Tekrar Günü",
+                        prefixIcon: Icon(Icons.repeat),
+                        helperText: "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (_debtHasInstallment &&
+                            (value == null || value.trim().isEmpty)) {
+                          return "Taksit tekrar günü girin";
+                        }
+                        if (value != null && value.trim().isNotEmpty) {
+                          final days = int.tryParse(value);
+                          if (days == null || days <= 0) {
+                            return "Geçerli bir gün sayısı girin";
                           }
                         }
                         return null;

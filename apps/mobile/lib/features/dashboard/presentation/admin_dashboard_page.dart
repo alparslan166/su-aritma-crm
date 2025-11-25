@@ -4,11 +4,11 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 
 import "../../../core/session/session_provider.dart";
 import "../../../routing/app_router.dart";
+import "../../admin/presentation/views/assign_job_sheet.dart";
 import "../../admin/presentation/views/customers_view.dart";
 import "../../admin/presentation/views/inventory_view.dart";
 import "../../admin/presentation/views/job_map_view.dart";
 import "../../admin/presentation/views/notifications_view.dart";
-import "../../admin/presentation/views/operations_view.dart";
 import "../../admin/presentation/views/past_jobs_view.dart";
 import "../../admin/presentation/views/personnel_view.dart";
 
@@ -28,7 +28,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -39,6 +39,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Ekran genişliğine göre font boyutunu hesapla (5 tab için)
+    final tabWidth = screenWidth / 5;
+    // Minimum 8px padding, maksimum font boyutu 12
+    final fontSize = (tabWidth - 16) / 6;
+    final responsiveFontSize = fontSize.clamp(8.0, 12.0);
+
     return Scaffold(
       appBar: AppBar(
         leading: Builder(
@@ -74,30 +81,127 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
           unselectedLabelColor: Colors.grey.shade600,
           indicatorColor: const Color(0xFF2563EB),
           indicatorWeight: 3,
-          labelStyle: const TextStyle(
+          labelStyle: TextStyle(
             fontWeight: FontWeight.w600,
-            fontSize: 12,
+            fontSize: responsiveFontSize,
           ),
+          unselectedLabelStyle: TextStyle(fontSize: responsiveFontSize),
           isScrollable: false,
           tabAlignment: TabAlignment.fill,
           dividerColor: Colors.transparent,
-          tabs: const [
+          labelPadding: EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: responsiveFontSize < 10 ? 8 : 4,
+          ),
+          tabs: [
             Tab(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: [Text("Tüm"), Text("Müşteriler")],
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Tüm",
+                    style: TextStyle(fontSize: responsiveFontSize),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    "Müşteriler",
+                    style: TextStyle(fontSize: responsiveFontSize),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
             Tab(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: [Text("Ödemesi"), Text("Gelen")],
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Ödemesi",
+                    style: TextStyle(fontSize: responsiveFontSize),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    "Gelen",
+                    style: TextStyle(fontSize: responsiveFontSize),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
             Tab(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: [Text("Bakımı"), Text("Gelen")],
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Ana",
+                    style: TextStyle(fontSize: responsiveFontSize),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    "Sayfa",
+                    style: TextStyle(fontSize: responsiveFontSize),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Tab(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Bakımı",
+                    style: TextStyle(fontSize: responsiveFontSize),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    "Gelen",
+                    style: TextStyle(fontSize: responsiveFontSize),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Tab(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "İş",
+                    style: TextStyle(fontSize: responsiveFontSize),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    "Atama",
+                    style: TextStyle(fontSize: responsiveFontSize),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
           ],
@@ -106,10 +210,76 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       drawer: _AdminDrawer(),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          CustomersView(filterType: CustomerFilterType.all),
-          CustomersView(filterType: CustomerFilterType.overduePayment),
-          CustomersView(filterType: CustomerFilterType.upcomingMaintenance),
+        children: [
+          const CustomersView(filterType: CustomerFilterType.all),
+          const CustomersView(filterType: CustomerFilterType.overduePayment),
+          const _HomePageTab(),
+          const CustomersView(
+            filterType: CustomerFilterType.upcomingMaintenance,
+          ),
+          _AssignJobTab(),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomePageTab extends StatelessWidget {
+  const _HomePageTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text(
+        "Ana Sayfa",
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey,
+        ),
+      ),
+    );
+  }
+}
+
+class _AssignJobTab extends StatelessWidget {
+  const _AssignJobTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            iconSize: 64,
+            icon: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.add, color: Color(0xFF2563EB), size: 48),
+            ),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const AssignJobSheet(),
+                  fullscreenDialog: true,
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            "İş Ata",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Yeni iş atamak için tıklayın",
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+          ),
         ],
       ),
     );
@@ -117,6 +287,37 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 }
 
 class _AdminDrawer extends ConsumerWidget {
+  const _AdminDrawer();
+
+  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Çıkış Yap"),
+        content: const Text("Çıkış yapmak istediğinize emin misiniz?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text("İptal"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Çıkış Yap"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && context.mounted) {
+      // Oturumu sil
+      ref.read(authSessionProvider.notifier).state = null;
+
+      // Login'e git (redirect mekanizması otomatik çalışacak)
+      ref.read(appRouterProvider).go("/");
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Drawer(
@@ -192,59 +393,15 @@ class _AdminDrawer extends ConsumerWidget {
               );
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.build),
-            title: const Text("Operasyonlar"),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const OperationsView()));
-            },
-          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text("Çıkış Yap", style: TextStyle(color: Colors.red)),
-            onTap: () async {
+            onTap: () {
               // Drawer'ı kapat
               Navigator.pop(context);
-
-              // Drawer kapandıktan sonra dialog'u aç
-              await Future.microtask(() async {
-                if (!context.mounted) return;
-
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (dialogContext) => AlertDialog(
-                    title: const Text("Çıkış Yap"),
-                    content: const Text(
-                      "Çıkış yapmak istediğinize emin misiniz?",
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(false),
-                        child: const Text("İptal"),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(true),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.red,
-                        ),
-                        child: const Text("Çıkış Yap"),
-                      ),
-                    ],
-                  ),
-                );
-
-                if (confirm == true && context.mounted) {
-                  // Oturumu sil
-                  ref.read(authSessionProvider.notifier).state = null;
-
-                  // Login'e git (redirect mekanizması otomatik çalışacak)
-                  ref.read(appRouterProvider).go("/");
-                }
-              });
+              // Logout işlemini başlat
+              _handleLogout(context, ref);
             },
           ),
         ],

@@ -14,6 +14,13 @@ import { AppError } from "@/middleware/error-handler";
 import { notificationService } from "@/modules/notifications/notification.service";
 import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
 
+// Telefon numarasını normalize et (boşlukları ve özel karakterleri temizle)
+function normalizePhoneNumber(phone: string): string {
+  // Tüm boşlukları, tireleri, parantezleri ve diğer özel karakterleri temizle
+  // Sadece rakamları ve başta + işaretini tut
+  return phone.replace(/[\s\-\(\)]/g, "");
+}
+
 type CustomerInput = {
   id?: string;
   name: string;
@@ -28,7 +35,6 @@ type CreateJobPayload = {
   title: string;
   customer?: CustomerInput;
   customerId?: string;
-  operationId?: string;
   scheduledAt?: Date;
   location: LocationPayload;
   price?: Prisma.Decimal | number;
@@ -42,7 +48,6 @@ type CreateJobPayload = {
 
 type UpdateJobPayload = Partial<CreateJobPayload> & {
   status?: JobStatus;
-  operationId?: string | null;
 };
 
 type StatusUpdatePayload = {
@@ -68,6 +73,7 @@ type DeliveryPayload = {
 type JobListFilters = {
   status?: JobStatus;
   search?: string;
+  personnelId?: string;
 };
 
 const statusTimestampMap: Record<JobStatus, keyof Prisma.JobUpdateInput | null> = {
@@ -110,6 +116,13 @@ class JobService {
                 { customer: { name: { contains: filters.search, mode: Prisma.QueryMode.insensitive } } },
                 { notes: { contains: filters.search, mode: Prisma.QueryMode.insensitive } },
               ],
+            }
+          : {}),
+        ...(filters.personnelId
+          ? {
+              personnel: {
+                some: { personnelId: filters.personnelId },
+              },
             }
           : {}),
       },
@@ -156,7 +169,7 @@ class JobService {
         data: {
           adminId,
           name: input.name,
-          phone: input.phone,
+          phone: normalizePhoneNumber(input.phone),
           email: input.email,
           address: input.address,
         },
@@ -220,25 +233,10 @@ class JobService {
             throw new AppError("Customer or customerId is required", 400);
           }
 
-          // Validate operation if provided
-          if (payload.operationId) {
-            const operation = await tx.operation.findFirst({
-              where: { id: payload.operationId, adminId },
-            });
-            if (!operation) {
-              throw new AppError("Operation not found", 404);
-            }
-            if (!operation.isActive) {
-              throw new AppError("Operation is not active", 400);
-            }
-            logger.debug("✅ Operation validated:", operation.id);
-          }
-
           logger.debug("🔄 Creating job...");
           const jobData = {
             adminId,
             customerId: customer.id,
-            operationId: payload.operationId,
             title: payload.title,
             scheduledAt: payload.scheduledAt,
             location: payload.location as Prisma.InputJsonValue,
@@ -351,13 +349,6 @@ class JobService {
       maintenanceDueAt: payload.maintenanceDueAt,
       priority: payload.priority,
     };
-    if (payload.operationId !== undefined) {
-      if (payload.operationId === null) {
-        updateData.operation = { disconnect: true };
-      } else {
-        updateData.operation = { connect: { id: payload.operationId } };
-      }
-    }
     return prisma.job.update({
       where: { id: jobId },
       data: updateData,

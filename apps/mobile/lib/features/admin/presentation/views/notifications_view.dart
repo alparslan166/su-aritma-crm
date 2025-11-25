@@ -15,7 +15,7 @@ class NotificationsView extends ConsumerWidget {
     final notifier = ref.read(adminNotificationsProvider.notifier);
 
     return Scaffold(
-      appBar: const AdminAppBar(title: "Bildirimler"),
+      appBar: const AdminAppBar(title: Text("Bildirimler")),
       body: notifications.isEmpty
           ? Center(
               child: Padding(

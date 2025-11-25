@@ -5,7 +5,6 @@ import "package:intl/intl.dart";
 import "../../application/customer_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/inventory_item.dart";
-import "../../data/models/operation.dart";
 import "customer_detail_page.dart";
 
 class AddJobToCustomerSheet extends ConsumerStatefulWidget {
@@ -29,11 +28,13 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
   final _priceController = TextEditingController();
   final _debtAmountController = TextEditingController();
   final _installmentCountController = TextEditingController();
+  final _installmentIntervalDaysController = TextEditingController();
   DateTime? _scheduledAt;
-  Operation? _selectedOperation;
   bool _hasInstallment = false;
   bool? _hasDebt; // null = not selected, true = yes, false = no
   bool _debtHasInstallment = false;
+  DateTime? _nextDebtDate;
+  DateTime? _installmentStartDate;
   final Map<String, int> _selectedMaterials = {};
   bool _submitting = false;
 
@@ -43,6 +44,7 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
     _priceController.dispose();
     _debtAmountController.dispose();
     _installmentCountController.dispose();
+    _installmentIntervalDaysController.dispose();
     super.dispose();
   }
 
@@ -56,40 +58,6 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
     if (picked != null) {
       setState(() {
         _scheduledAt = picked;
-      });
-    }
-  }
-
-  Future<void> _selectOperation() async {
-    final operations = await ref
-        .read(adminRepositoryProvider)
-        .fetchOperations();
-    if (!mounted) return;
-
-    final selected = await showDialog<Operation>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Operasyon Seç"),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: operations.length,
-            itemBuilder: (context, index) {
-              final op = operations[index];
-              return ListTile(
-                title: Text(op.name),
-                subtitle: op.description != null ? Text(op.description!) : null,
-                onTap: () => Navigator.of(context).pop(op),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-    if (selected != null) {
-      setState(() {
-        _selectedOperation = selected;
       });
     }
   }
@@ -133,6 +101,10 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
           hasInstallmentForDebt && _installmentCountController.text.isNotEmpty
           ? int.tryParse(_installmentCountController.text)
           : null;
+      final installmentIntervalDays =
+          hasInstallmentForDebt && _installmentIntervalDaysController.text.isNotEmpty
+          ? int.tryParse(_installmentIntervalDaysController.text)
+          : null;
 
       // Create job
       await ref
@@ -140,7 +112,6 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
           .createJobForCustomer(
             customerId: widget.customerId,
             title: _titleController.text.trim(),
-            operationId: _selectedOperation?.id,
             scheduledAt: _scheduledAt,
             price: _priceController.text.isNotEmpty
                 ? double.tryParse(_priceController.text)
@@ -255,15 +226,6 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                           : null,
                     ),
                     const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _selectOperation,
-                      icon: const Icon(Icons.build),
-                      label: Text(_selectedOperation?.name ?? "Operasyon Seç"),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 48),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
                     TextFormField(
                       controller: _priceController,
                       decoration: const InputDecoration(
@@ -353,6 +315,9 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                                 _debtAmountController.clear();
                                 _debtHasInstallment = false;
                                 _installmentCountController.clear();
+                                _installmentIntervalDaysController.clear();
+                                _nextDebtDate = null;
+                                _installmentStartDate = null;
                               });
                             },
                             style: OutlinedButton.styleFrom(
@@ -398,6 +363,35 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                         },
                       ),
                       const SizedBox(height: 12),
+                      // Ödeme Tarihi
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              "Ödeme Tarihi: ${_nextDebtDate != null ? DateFormat("dd MMM yyyy").format(_nextDebtDate!) : "Seçilmedi"}",
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: _nextDebtDate ?? DateTime.now(),
+                                firstDate: DateTime.now(),
+                                lastDate: DateTime.now().add(const Duration(days: 3650)),
+                              );
+                              if (picked != null) {
+                                setState(() {
+                                  _nextDebtDate = picked;
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.calendar_today, size: 18),
+                            label: const Text("Tarih Seç"),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
@@ -430,6 +424,8 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                                 setState(() {
                                   _debtHasInstallment = false;
                                   _installmentCountController.clear();
+                                  _installmentIntervalDaysController.clear();
+                                  _installmentStartDate = null;
                                 });
                               },
                               style: OutlinedButton.styleFrom(
@@ -458,8 +454,6 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                             labelText: "Taksit Sayısı",
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.numbers),
-                            helperText:
-                                "Sonraki borç tarihi otomatik olarak 1 ay sonra olacak",
                           ),
                           keyboardType: TextInputType.number,
                           validator: (value) {
@@ -471,6 +465,60 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                               final count = int.tryParse(value);
                               if (count == null || count <= 0) {
                                 return "Geçerli bir sayı girin";
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        // Taksit Başlama Tarihi
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                "Taksit Başlama Tarihi: ${_installmentStartDate != null ? DateFormat("dd MMM yyyy").format(_installmentStartDate!) : "Seçilmedi"}",
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: _installmentStartDate ?? DateTime.now(),
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now().add(const Duration(days: 3650)),
+                                );
+                                if (picked != null) {
+                                  setState(() {
+                                    _installmentStartDate = picked;
+                                  });
+                                }
+                              },
+                              icon: const Icon(Icons.calendar_today, size: 18),
+                              label: const Text("Tarih Seç"),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Taksit Tekrar Günü
+                        TextFormField(
+                          controller: _installmentIntervalDaysController,
+                          decoration: const InputDecoration(
+                            labelText: "Taksit Tekrar Günü",
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.repeat),
+                            helperText: "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (_debtHasInstallment &&
+                                (value == null || value.trim().isEmpty)) {
+                              return "Taksit tekrar günü girin";
+                            }
+                            if (value != null && value.trim().isNotEmpty) {
+                              final days = int.tryParse(value);
+                              if (days == null || days <= 0) {
+                                return "Geçerli bir gün sayısı girin";
                               }
                             }
                             return null;

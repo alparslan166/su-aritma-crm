@@ -1,12 +1,11 @@
 import "package:flutter/material.dart";
 import "package:geocoding/geocoding.dart";
-import "package:geolocator/geolocator.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 
 import "../../application/customer_list_notifier.dart";
 import "../../data/admin_repository.dart";
-import "../../data/models/operation.dart";
+import "../../data/models/personnel.dart";
 
 class AddCustomerSheet extends ConsumerStatefulWidget {
   const AddCustomerSheet({super.key});
@@ -21,16 +20,23 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _addressController = TextEditingController();
-  final _priceController = TextEditingController();
+  final _jobTitleController = TextEditingController();
   final _debtAmountController = TextEditingController();
   final _installmentCountController = TextEditingController();
-  Operation? _selectedOperation;
-  DateTime? _scheduledAt;
-  bool _hasInstallment = false;
+  final _installmentIntervalDaysController = TextEditingController();
   bool? _hasDebt; // null = not selected, true = yes, false = no
   bool _debtHasInstallment = false;
-  Map<String, double>? _location;
+  late DateTime _createdAt;
+  DateTime? _nextDebtDate;
+  DateTime? _installmentStartDate;
   bool _submitting = false;
+  List<Personnel> _selectedPersonnelList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _createdAt = DateTime.now();
+  }
 
   @override
   void dispose() {
@@ -38,121 +44,46 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
     _phoneController.dispose();
     _emailController.dispose();
     _addressController.dispose();
-    _priceController.dispose();
+    _jobTitleController.dispose();
     _debtAmountController.dispose();
     _installmentCountController.dispose();
+    _installmentIntervalDaysController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickLocation() async {
+  Future<void> _selectPersonnel() async {
     try {
-      // Request location permission
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Konum servisi kapalı")));
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Konum izni reddedildi")),
-          );
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        if (!mounted) return;
+      // Fetch personnel directly from repository
+      final repository = ref.read(adminRepositoryProvider);
+      final personnelList = await repository.fetchPersonnel();
+      
+      if (!mounted) return;
+      
+      if (personnelList.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Konum izni kalıcı olarak reddedildi")),
+          const SnackBar(content: Text("Personel bulunamadı")),
         );
         return;
       }
-
-      // Get current location
-      Position position = await Geolocator.getCurrentPosition();
-      setState(() {
-        _location = {
-          "latitude": position.latitude,
-          "longitude": position.longitude,
-        };
-      });
-
-      // Get address from coordinates
-      try {
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-        if (placemarks.isNotEmpty) {
-          final place = placemarks[0];
-          final address =
-              "${place.street} ${place.subThoroughfare}, ${place.locality}";
-          _addressController.text = address;
-        }
-      } catch (e) {
-        // Address lookup failed, but location is set
+      
+      final selected = await showDialog<List<Personnel>>(
+        context: context,
+        builder: (context) => _PersonnelSelectionDialog(
+          personnelList: personnelList,
+          initialSelection: _selectedPersonnelList,
+        ),
+      );
+      if (selected != null) {
+        setState(() {
+          _selectedPersonnelList = selected;
+        });
       }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Konum alınamadı: $e")));
-    }
-  }
-
-  Future<void> _selectOperation() async {
-    final operations = await ref
-        .read(adminRepositoryProvider)
-        .fetchOperations();
-    if (!mounted) return;
-
-    final selected = await showDialog<Operation>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Operasyon Seç"),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: operations.length,
-            itemBuilder: (context, index) {
-              final op = operations[index];
-              return ListTile(
-                title: Text(op.name),
-                subtitle: op.description != null ? Text(op.description!) : null,
-                onTap: () => Navigator.of(context).pop(op),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-    if (selected != null) {
-      setState(() {
-        _selectedOperation = selected;
-      });
-    }
-  }
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _scheduledAt ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-    if (picked != null) {
-      setState(() {
-        _scheduledAt = picked;
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Personel listesi yüklenemedi: $e")),
+        );
+      }
     }
   }
 
@@ -199,6 +130,10 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
           hasInstallment && _installmentCountController.text.isNotEmpty
           ? int.tryParse(_installmentCountController.text)
           : null;
+      final installmentIntervalDays =
+          hasInstallment && _installmentIntervalDaysController.text.isNotEmpty
+          ? int.tryParse(_installmentIntervalDaysController.text)
+          : null;
 
       // Create customer
       final customer = await ref
@@ -210,27 +145,54 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
             email: _emailController.text.trim().isEmpty
                 ? null
                 : _emailController.text.trim(),
-            location: _location,
+            location: null,
+            createdAt: _createdAt,
             hasDebt: hasDebt,
             debtAmount: debtAmount,
             hasInstallment: hasInstallment,
             installmentCount: installmentCount,
+            nextDebtDate: _nextDebtDate,
+            installmentStartDate: _installmentStartDate,
+            installmentIntervalDays: installmentIntervalDays,
           );
 
-      // Create job if operation is selected
-      if (_selectedOperation != null) {
-        await ref
-            .read(adminRepositoryProvider)
-            .createJobForCustomer(
-              customerId: customer.id,
-              title: _selectedOperation!.name,
-              operationId: _selectedOperation!.id,
-              scheduledAt: _scheduledAt,
-              price: _priceController.text.isNotEmpty
-                  ? double.tryParse(_priceController.text)
-                  : null,
-              hasInstallment: _hasInstallment,
+      // If job title is provided, create a job for this customer
+      final jobTitle = _jobTitleController.text.trim();
+      if (jobTitle.isNotEmpty) {
+        try {
+          // Geocode address to get location
+          Location? location;
+          try {
+            final locations = await locationFromAddress(_addressController.text.trim());
+            if (locations.isNotEmpty) {
+              location = locations.first;
+            }
+          } catch (e) {
+            // Geocoding failed, continue without location
+          }
+
+          await ref.read(adminRepositoryProvider).createJobForCustomer(
+                customerId: customer.id,
+                title: jobTitle,
+                latitude: location?.latitude,
+                longitude: location?.longitude,
+                locationDescription: _addressController.text.trim(),
+                personnelIds: _selectedPersonnelList.isNotEmpty
+                    ? _selectedPersonnelList.map((p) => p.id).toList()
+                    : null,
+              );
+        } catch (e) {
+          // Job creation failed, but customer was created successfully
+          // Show warning but don't fail the whole operation
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Müşteri eklendi ancak iş oluşturulamadı: $e"),
+                backgroundColor: Colors.orange,
+              ),
             );
+          }
+        }
       }
 
       await ref.read(customerListProvider.notifier).refresh();
@@ -238,7 +200,11 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Müşteri eklendi")));
+      ).showSnackBar(SnackBar(
+        content: Text(jobTitle.isNotEmpty 
+            ? "Müşteri ve iş eklendi" 
+            : "Müşteri eklendi"),
+      ));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -255,9 +221,6 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final dateText = _scheduledAt != null
-        ? DateFormat("dd MMM yyyy").format(_scheduledAt!)
-        : "Tarih seç";
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -276,6 +239,33 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
+                // Kayıt Tarihi
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "Kayıt Tarihi: ${DateFormat("dd MMM yyyy").format(_createdAt)}",
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _createdAt,
+                          firstDate: DateTime.now().subtract(const Duration(days: 3650)),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _createdAt = picked;
+                          });
+                        }
+                      },
+                      child: const Text("Tarih Seç"),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(labelText: "İsim"),
@@ -303,22 +293,59 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _addressController,
-                  decoration: const InputDecoration(labelText: "Adres"),
+                  decoration: const InputDecoration(
+                    labelText: "Adres",
+                    hintText: "Şehir, ilçe, mahalle, sokak, bina no",
+                  ),
                   maxLines: 2,
                   validator: (value) => value == null || value.trim().length < 3
                       ? "Adres girin"
                       : null,
                 ),
                 const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _pickLocation,
-                  icon: Icon(
-                    _location != null ? Icons.check_circle : Icons.location_on,
+                TextFormField(
+                  controller: _jobTitleController,
+                  decoration: const InputDecoration(
+                    labelText: "Yapılacak İşlem",
+                    hintText: "Örn: Su arıtma cihazı bakımı",
                   ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 12),
+                // Personel Ata
+                OutlinedButton.icon(
+                  onPressed: _selectPersonnel,
+                  icon: const Icon(Icons.person),
                   label: Text(
-                    _location != null ? "Konum seçildi" : "Konum Seç",
+                    _selectedPersonnelList.isEmpty
+                        ? "Personel Seç"
+                        : "${_selectedPersonnelList.length} personel seçildi",
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.all(16),
+                    alignment: Alignment.centerLeft,
                   ),
                 ),
+                if (_selectedPersonnelList.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _selectedPersonnelList.map((personnel) {
+                        return Chip(
+                          label: Text(personnel.name),
+                          onDeleted: () {
+                            setState(() {
+                              _selectedPersonnelList.remove(personnel);
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),
@@ -359,6 +386,9 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                             _debtAmountController.clear();
                             _debtHasInstallment = false;
                             _installmentCountController.clear();
+                            _installmentIntervalDaysController.clear();
+                            _nextDebtDate = null;
+                            _installmentStartDate = null;
                           });
                         },
                         style: OutlinedButton.styleFrom(
@@ -401,6 +431,35 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                     },
                   ),
                   const SizedBox(height: 12),
+                  // Ödeme Tarihi
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "Ödeme Tarihi: ${_nextDebtDate != null ? DateFormat("dd MMM yyyy").format(_nextDebtDate!) : "Seçilmedi"}",
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _nextDebtDate ?? DateTime.now(),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(const Duration(days: 3650)),
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              _nextDebtDate = picked;
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.calendar_today, size: 18),
+                        label: const Text("Tarih Seç"),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -431,6 +490,8 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                             setState(() {
                               _debtHasInstallment = false;
                               _installmentCountController.clear();
+                              _installmentIntervalDaysController.clear();
+                              _installmentStartDate = null;
                             });
                           },
                           style: OutlinedButton.styleFrom(
@@ -456,8 +517,6 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                       decoration: const InputDecoration(
                         labelText: "Taksit Sayısı",
                         prefixIcon: Icon(Icons.numbers),
-                        helperText:
-                            "Sonraki borç tarihi otomatik olarak 1 ay sonra olacak",
                       ),
                       keyboardType: TextInputType.number,
                       validator: (value) {
@@ -474,48 +533,61 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                         return null;
                       },
                     ),
-                  ],
-                ],
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-                Text(
-                  "İş Bilgileri (Opsiyonel)",
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _selectOperation,
-                  icon: const Icon(Icons.build),
-                  label: Text(_selectedOperation?.name ?? "Operasyon Seç"),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _priceController,
-                  decoration: const InputDecoration(labelText: "Ücret (TL)"),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _hasInstallment,
-                  title: const Text("Taksit"),
-                  onChanged: (value) {
-                    setState(() {
-                      _hasInstallment = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(child: Text("Planlanan Tarih: $dateText")),
-                    TextButton(
-                      onPressed: _pickDate,
-                      child: const Text("Tarih seç"),
+                    const SizedBox(height: 12),
+                    // Taksit Başlama Tarihi
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "Taksit Başlama Tarihi: ${_installmentStartDate != null ? DateFormat("dd MMM yyyy").format(_installmentStartDate!) : "Seçilmedi"}",
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _installmentStartDate ?? DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(const Duration(days: 3650)),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                _installmentStartDate = picked;
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.calendar_today, size: 18),
+                          label: const Text("Tarih Seç"),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Taksit Tekrar Günü
+                    TextFormField(
+                      controller: _installmentIntervalDaysController,
+                      decoration: const InputDecoration(
+                        labelText: "Taksit Tekrar Günü",
+                        prefixIcon: Icon(Icons.repeat),
+                        helperText: "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (_debtHasInstallment &&
+                            (value == null || value.trim().isEmpty)) {
+                          return "Taksit tekrar günü girin";
+                        }
+                        if (value != null && value.trim().isNotEmpty) {
+                          final days = int.tryParse(value);
+                          if (days == null || days <= 0) {
+                            return "Geçerli bir gün sayısı girin";
+                          }
+                        }
+                        return null;
+                      },
                     ),
                   ],
-                ),
+                ],
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -535,6 +607,148 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PersonnelSelectionDialog extends StatefulWidget {
+  const _PersonnelSelectionDialog({
+    required this.personnelList,
+    required this.initialSelection,
+  });
+
+  final List<Personnel> personnelList;
+  final List<Personnel> initialSelection;
+
+  @override
+  State<_PersonnelSelectionDialog> createState() =>
+      _PersonnelSelectionDialogState();
+}
+
+class _PersonnelSelectionDialogState extends State<_PersonnelSelectionDialog> {
+  final _searchController = TextEditingController();
+  List<Personnel> _filteredList = [];
+  final Set<String> _selectedIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredList = widget.personnelList;
+    _selectedIds.addAll(widget.initialSelection.map((p) => p.id));
+    _searchController.addListener(_filterList);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterList() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredList = widget.personnelList.where((personnel) {
+        return personnel.name.toLowerCase().contains(query) ||
+            personnel.phone.contains(query) ||
+            (personnel.personnelId?.toLowerCase().contains(query) ?? false);
+      }).toList();
+    });
+  }
+
+  void _toggleSelection(Personnel personnel) {
+    setState(() {
+      if (_selectedIds.contains(personnel.id)) {
+        _selectedIds.remove(personnel.id);
+      } else {
+        _selectedIds.add(personnel.id);
+      }
+    });
+  }
+
+  void _confirmSelection() {
+    final selected = widget.personnelList
+        .where((p) => _selectedIds.contains(p.id))
+        .toList();
+    Navigator.of(context).pop(selected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      labelText: "Personel Ara",
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
+                    autofocus: true,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          ),
+          if (_filteredList.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text("Personel bulunamadı"),
+            )
+          else
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _filteredList.length,
+                itemBuilder: (context, index) {
+                  final personnel = _filteredList[index];
+                  final isSelected = _selectedIds.contains(personnel.id);
+                  return CheckboxListTile(
+                    value: isSelected,
+                    onChanged: (_) => _toggleSelection(personnel),
+                    title: Text(personnel.name),
+                    subtitle: Text(personnel.phone),
+                    secondary: personnel.personnelId != null
+                        ? Chip(
+                            label: Text(
+                              personnel.personnelId!,
+                              style: const TextStyle(fontSize: 10),
+                            ),
+                          )
+                        : const Icon(Icons.person),
+                  );
+                },
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "${_selectedIds.length} personel seçildi",
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                FilledButton(
+                  onPressed: _confirmSelection,
+                  child: const Text("Seç"),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,9 +1,15 @@
 class JobCustomer {
-  JobCustomer({required this.name, required this.phone, required this.address});
+  JobCustomer({
+    required this.name,
+    required this.phone,
+    required this.address,
+    this.email,
+  });
 
   final String name;
   final String phone;
   final String address;
+  final String? email;
 
   factory JobCustomer.fromJson(Map<String, dynamic>? json) {
     if (json == null) {
@@ -13,6 +19,7 @@ class JobCustomer {
       name: json["name"] as String? ?? "-",
       phone: json["phone"] as String? ?? "-",
       address: json["address"] as String? ?? "-",
+      email: json["email"] as String?,
     );
   }
 
@@ -21,11 +28,13 @@ class JobCustomer {
     String? name,
     String? phone,
     String? address,
+    String? email,
   }) {
     return JobCustomer(
       name: name ?? this.name,
       phone: phone ?? this.phone,
       address: address ?? this.address,
+      email: email ?? this.email,
     );
   }
 }
@@ -113,6 +122,8 @@ class Job {
     this.materials,
     this.deliveryNote,
     this.deliveryMediaUrls,
+    this.deliveredAt,
+    this.createdAt,
   });
 
   final String id;
@@ -131,6 +142,8 @@ class Job {
   final List<JobMaterial>? materials;
   final String? deliveryNote;
   final List<String>? deliveryMediaUrls;
+  final DateTime? deliveredAt;
+  final DateTime? createdAt;
 
   factory Job.fromJson(Map<String, dynamic> json) {
     final personnelList = (json["personnel"] as List<dynamic>? ?? [])
@@ -150,7 +163,7 @@ class Job {
       status: json["status"] as String? ?? "PENDING",
       customer: JobCustomer.fromJson(json["customer"] as Map<String, dynamic>?),
       scheduledAt: DateTime.tryParse(json["scheduledAt"] as String? ?? ""),
-          priority: _parseInt(json["priority"]),
+      priority: _parseInt(json["priority"]),
       assignments: personnelList,
       location: JobLocation.maybeFromJson(
         json["location"] as Map<String, dynamic>?,
@@ -165,6 +178,12 @@ class Job {
       materials: materialsList.isNotEmpty ? materialsList : null,
       deliveryNote: json["deliveryNote"] as String?,
       deliveryMediaUrls: mediaUrls,
+      deliveredAt: json["deliveredAt"] != null
+          ? DateTime.tryParse(json["deliveredAt"] as String)
+          : null,
+      createdAt: json["createdAt"] != null
+          ? DateTime.tryParse(json["createdAt"] as String)
+          : null,
     );
   }
 
@@ -186,6 +205,8 @@ class Job {
     List<JobMaterial>? materials,
     String? deliveryNote,
     List<String>? deliveryMediaUrls,
+    DateTime? deliveredAt,
+    DateTime? createdAt,
   }) {
     return Job(
       id: id ?? this.id,
@@ -204,6 +225,8 @@ class Job {
       materials: materials ?? this.materials,
       deliveryNote: deliveryNote ?? this.deliveryNote,
       deliveryMediaUrls: deliveryMediaUrls ?? this.deliveryMediaUrls,
+      deliveredAt: deliveredAt ?? this.deliveredAt,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

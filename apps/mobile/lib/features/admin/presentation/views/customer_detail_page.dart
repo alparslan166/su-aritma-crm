@@ -1,14 +1,18 @@
 import "package:flutter/material.dart";
+import "package:flutter_map/flutter_map.dart";
+import "package:geocoding/geocoding.dart";
 import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
+import "package:latlong2/latlong.dart";
+import "package:open_file/open_file.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
+import "full_screen_map_page.dart";
 
 import "../../application/customer_list_notifier.dart";
 import "../../application/job_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
-import "add_job_to_customer_sheet.dart";
 import "edit_customer_sheet.dart";
 
 final customerDetailProvider = FutureProvider.family<Customer, String>((
@@ -46,7 +50,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           return _buildContent(widget.initialCustomer!);
         }
         return Scaffold(
-          appBar: const AdminAppBar(title: "Müşteri Detayı"),
+          appBar: const AdminAppBar(title: Text("Müşteri Detayı")),
           body: const Center(child: CircularProgressIndicator()),
         );
       },
@@ -56,7 +60,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           return _buildContent(widget.initialCustomer!);
         }
         return Scaffold(
-          appBar: const AdminAppBar(title: "Müşteri Detayı"),
+          appBar: const AdminAppBar(title: Text("Müşteri Detayı")),
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -79,13 +83,8 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
   Widget _buildContent(Customer customer) {
     return Scaffold(
       appBar: AdminAppBar(
-        title: customer.name,
+        title: Text(customer.name),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: "İş Ekle",
-            onPressed: () => _showAddJobSheet(customer),
-          ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
             tooltip: "Müşteriyi Sil",
@@ -101,9 +100,17 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Harita bölümü - en üstte
+          _CustomerMapSection(customer: customer),
+          const SizedBox(height: 24),
           _Section(
             title: "Müşteri Bilgileri",
             children: [
+              if (customer.createdAt != null)
+                _Row(
+                  "Kayıt Tarihi",
+                  DateFormat("dd MMM yyyy").format(customer.createdAt!),
+                ),
               _Row("İsim", customer.name),
               _Row("Telefon", customer.phone),
               if (customer.email != null) _Row("E-posta", customer.email!),
@@ -205,60 +212,6 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
               ),
             ),
           ],
-          const SizedBox(height: 24),
-          Card(
-            color: const Color(0xFF2563EB).withValues(alpha: 0.05),
-            child: InkWell(
-              onTap: () => _showAddJobSheet(customer),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.add_circle_outline,
-                        color: Color(0xFF2563EB),
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Yeni İş Ekle",
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF2563EB),
-                                ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Bu müşteriye yeni bir iş ekleyin",
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      Icons.arrow_forward_ios,
-                      color: Color(0xFF2563EB),
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
           if (customer.jobs != null && customer.jobs!.isNotEmpty) ...[
             const SizedBox(height: 24),
             _Section(
@@ -267,6 +220,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                   .map(
                     (job) => _JobCard(
                       job: job,
+                      customerId: customer.id,
                       onDelete: job.status == "IN_PROGRESS"
                           ? () => _deleteJob(job, customer.id)
                           : null,
@@ -277,26 +231,6 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
             ),
           ],
         ],
-      ),
-    );
-  }
-
-  void _showAddJobSheet(Customer customer) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      isDismissible: true,
-      enableDrag: true,
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.95,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (context, scrollController) => AddJobToCustomerSheet(
-          customerId: customer.id,
-          scrollController: scrollController,
-        ),
       ),
     );
   }
@@ -741,15 +675,22 @@ class _PayDebtFormState extends ConsumerState<_PayDebtForm> {
   }
 }
 
-class _JobCard extends StatelessWidget {
-  const _JobCard({required this.job, this.onDelete, this.onTap});
+class _JobCard extends ConsumerWidget {
+  const _JobCard({
+    required this.job,
+    required this.customerId,
+    this.onDelete,
+    this.onTap,
+  });
 
   final CustomerJob job;
+  final String customerId;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDelivered = job.status == "DELIVERED";
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -780,7 +721,7 @@ class _JobCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              _Row("Durum", job.status),
+              _Row("Durum", _getJobStatusText(job.status)),
               if (job.price != null)
                 _Row("Fiyat", "${job.price!.toStringAsFixed(2)} TL"),
               if (job.collectedAmount != null)
@@ -793,11 +734,87 @@ class _JobCard extends StatelessWidget {
                   "Bakım Tarihi",
                   DateFormat("dd MMM yyyy").format(job.maintenanceDueAt!),
                 ),
+              // Fatura Oluştur butonu - sadece DELIVERED işler için
+              if (isDelivered) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => _createInvoice(context, ref, job.id),
+                    icon: const Icon(Icons.receipt, size: 18),
+                    label: const Text("Fatura Oluştur"),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _createInvoice(
+    BuildContext context,
+    WidgetRef ref,
+    String jobId,
+  ) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // Generate PDF
+      final repository = ref.read(adminRepositoryProvider);
+      final pdfPath = await repository.generateInvoicePdf(jobId);
+
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Open PDF
+      await OpenFile.open(pdfPath);
+
+      // Refresh customer detail and job list
+      ref.invalidate(customerDetailProvider(customerId));
+      ref.invalidate(jobListProvider);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Fatura oluşturuldu ve açıldı")),
+        );
+      }
+    } catch (error) {
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Fatura oluşturulamadı: $error")),
+        );
+      }
+    }
+  }
+}
+
+String _getJobStatusText(String status) {
+  switch (status) {
+    case "PENDING":
+      return "Beklemede";
+    case "IN_PROGRESS":
+      return "Devam Ediyor";
+    case "DELIVERED":
+      return "Teslim Edildi";
+    case "ARCHIVED":
+      return "Arşivlendi";
+    default:
+      return status;
   }
 }
 
@@ -812,5 +829,218 @@ String _getOverdueDays(DateTime dueDate) {
     return "1 gün geçti";
   } else {
     return "$days gün geçti";
+  }
+}
+
+class _CustomerMapSection extends StatefulWidget {
+  const _CustomerMapSection({required this.customer});
+
+  final Customer customer;
+
+  @override
+  State<_CustomerMapSection> createState() => _CustomerMapSectionState();
+}
+
+class _CustomerMapSectionState extends State<_CustomerMapSection> {
+  LatLng? _customerLocation;
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocation();
+  }
+
+  Future<void> _loadLocation() async {
+    // Önce müşterinin location bilgisini kontrol et
+    if (widget.customer.location != null) {
+      setState(() {
+        _customerLocation = LatLng(
+          widget.customer.location!.latitude,
+          widget.customer.location!.longitude,
+        );
+      });
+      return;
+    }
+
+    // Location yoksa adresten geocoding yap
+    if (widget.customer.address.isEmpty) {
+      setState(() {
+        _error = "Adres bilgisi bulunamadı";
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final locations = await locationFromAddress(widget.customer.address);
+      if (locations.isNotEmpty) {
+        final location = locations.first;
+        setState(() {
+          _customerLocation = LatLng(location.latitude, location.longitude);
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _error = "Adres için konum bulunamadı";
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = "Konum yüklenemedi: $e";
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.map, color: Color(0xFF2563EB)),
+                const SizedBox(width: 8),
+                Text(
+                  "Konum",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                if (_error != null || _isLoading)
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _isLoading ? null : _loadLocation,
+                    tooltip: "Yeniden Yükle",
+                  ),
+              ],
+            ),
+          ),
+          InkWell(
+            onTap: _customerLocation != null
+                ? () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => FullScreenMapPage(
+                          location: _customerLocation!,
+                          title: widget.customer.name,
+                          address: widget.customer.address,
+                        ),
+                      ),
+                    );
+                  }
+                : null,
+            child: SizedBox(
+              height: 250,
+              child: _isLoading
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  : _error != null
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _error!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton.icon(
+                              onPressed: _loadLocation,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text("Tekrar Dene"),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : _customerLocation != null
+                  ? ClipRect(
+                      child: FlutterMap(
+                        key: ValueKey(
+                          "${_customerLocation!.latitude}_${_customerLocation!.longitude}",
+                        ),
+                        options: MapOptions(
+                          initialCenter: _customerLocation!,
+                          initialZoom: 15.0,
+                          interactionOptions: const InteractionOptions(
+                            flags: InteractiveFlag.none,
+                          ),
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate:
+                                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                            userAgentPackageName: "com.suaritma.app",
+                            maxZoom: 19,
+                            minZoom: 3,
+                          ),
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: _customerLocation!,
+                                width: 40,
+                                height: 40,
+                                child: const Icon(
+                                  Icons.location_on,
+                                  color: Color(0xFF2563EB),
+                                  size: 40,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    )
+                  : const Center(child: Text("Konum bilgisi bulunamadı")),
+            ),
+          ),
+          if (_customerLocation != null)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.place, size: 16, color: Colors.grey.shade600),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      widget.customer.address,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

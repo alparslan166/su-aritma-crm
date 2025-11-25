@@ -2,18 +2,21 @@ import "package:dio/dio.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
 import "../../../core/network/api_client.dart";
+import "../../../core/session/session_provider.dart";
 import "../application/delivery_payload.dart";
 import "models/personnel_job.dart";
 
 final personnelRepositoryProvider = Provider<PersonnelRepository>((ref) {
   final client = ref.watch(apiClientProvider);
-  return PersonnelRepository(client);
+  final session = ref.watch(authSessionProvider);
+  return PersonnelRepository(client, session?.identifier);
 });
 
 class PersonnelRepository {
-  PersonnelRepository(this._client);
+  PersonnelRepository(this._client, this._personnelId);
 
   final Dio _client;
+  final String? _personnelId;
 
   Future<List<PersonnelJob>> fetchAssignedJobs({
     String? status,
@@ -45,5 +48,18 @@ class PersonnelRepository {
 
   Future<void> deliverJob(String id, DeliveryPayload payload) async {
     await _client.post("/personnel/jobs/$id/deliver", data: payload.toJson());
+  }
+
+  Future<Map<String, dynamic>> fetchMyProfile() async {
+    if (_personnelId == null) {
+      throw Exception("Personnel ID not available. Please login first.");
+    }
+    final response = await _client.get("/personnel/$_personnelId");
+    return response.data["data"] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> fetchProfileById(String personnelId) async {
+    final response = await _client.get("/personnel/$personnelId");
+    return response.data["data"] as Map<String, dynamic>;
   }
 }

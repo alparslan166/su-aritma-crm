@@ -37,14 +37,14 @@ class _AdminInventoryDetailPageState
     final item = _currentItem ?? widget.initialItem;
     if (item == null) {
       return Scaffold(
-        appBar: const AdminAppBar(title: "Ürün Detayı"),
+        appBar: const AdminAppBar(title: Text("Ürün Detayı")),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
       appBar: AdminAppBar(
-        title: item.name,
+        title: Text(item.name),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),

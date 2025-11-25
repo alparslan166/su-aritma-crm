@@ -1,12 +1,16 @@
+import "dart:io";
+
 import "package:flutter/material.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
+import "package:open_file/open_file.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 
 import "../../application/job_list_notifier.dart";
 import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/job.dart";
+import "invoice_create_page.dart";
 
 final _jobDetailProvider = FutureProvider.family<Job, String>((ref, jobId) {
   final repository = ref.read(adminRepositoryProvider);
@@ -42,11 +46,11 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
     return jobFuture.when(
       data: (job) => _buildContent(job),
       loading: () => Scaffold(
-        appBar: const AdminAppBar(title: "İş Detayı"),
+        appBar: const AdminAppBar(title: Text("İş Detayı")),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => Scaffold(
-        appBar: const AdminAppBar(title: "İş Detayı"),
+        appBar: const AdminAppBar(title: Text("İş Detayı")),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -68,7 +72,7 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
 
     return Scaffold(
       appBar: AdminAppBar(
-        title: job.title,
+        title: Text(job.title),
         actions: [
           IconButton(
             icon: const Icon(Icons.person_add),
@@ -93,7 +97,7 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
           _Section(
             title: "Genel Bilgi",
             children: [
-              _Row("Durum", job.status),
+              _Row("Durum", _getStatusText(job.status)),
               _Row(
                 "Planlanan Tarih",
                 job.scheduledAt != null
@@ -102,6 +106,7 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
               ),
               _Row("Öncelik", job.priority?.toString() ?? "-"),
               _Row("Adres", job.location?.address ?? job.customer.address),
+              _Row("Yapılan İşlem", job.title),
             ],
           ),
           const SizedBox(height: 16),
@@ -128,7 +133,7 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                 if (job.price != null)
                   _Row("Ücret", "${job.price!.toStringAsFixed(2)} ₺"),
                 if (job.paymentStatus != null)
-                  _Row("Ödeme Durumu", job.paymentStatus!),
+                  _Row("Ödeme Durumu", _getPaymentStatusText(job.paymentStatus!)),
                 if (job.collectedAmount != null)
                   _Row("Tahsil Edilen", "${job.collectedAmount!.toStringAsFixed(2)} ₺"),
               ],
@@ -192,9 +197,113 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                 ),
               ],
             ),
+          // Fatura Oluştur butonu - sadece DELIVERED işler için
+          if (job.status == "DELIVERED") ...[
+            const SizedBox(height: 16),
+            Card(
+              color: const Color(0xFF10B981).withValues(alpha: 0.05),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Fatura",
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    Center(
+                      child: FilledButton.icon(
+                        onPressed: () => _createInvoice(context, job),
+                        icon: const Icon(Icons.receipt),
+                        label: const Text("Fatura Oluştur"),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  Future<void> _createInvoice(BuildContext context, Job job) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      // Generate PDF
+      final repository = ref.read(adminRepositoryProvider);
+      final pdfPath = await repository.generateInvoicePdf(job.id);
+
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Open PDF
+      await OpenFile.open(pdfPath);
+
+      // Refresh job detail
+      ref.invalidate(_jobDetailProvider(widget.jobId));
+      ref.invalidate(jobListProvider);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Fatura oluşturuldu ve açıldı")),
+        );
+      }
+    } catch (error) {
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Fatura oluşturulamadı: $error")),
+        );
+      }
+    }
+  }
+
+  String _getStatusText(String status) {
+    switch (status) {
+      case "PENDING":
+        return "Beklemede";
+      case "IN_PROGRESS":
+        return "Devam Ediyor";
+      case "DELIVERED":
+        return "Teslim Edildi";
+      case "ARCHIVED":
+        return "Arşivlendi";
+      default:
+        return status;
+    }
+  }
+
+  String _getPaymentStatusText(String status) {
+    switch (status.toUpperCase()) {
+      case "PAID":
+        return "Ödendi";
+      case "PARTIAL":
+        return "Kısmi Ödeme";
+      case "NOT_PAID":
+        return "Ödenmedi";
+      default:
+        return status;
+    }
   }
 
   String _getMaintenanceDaysRemaining(DateTime dueDate) {
@@ -216,83 +325,11 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
   }
 
   Future<void> _showAssignPersonnelSheet(Job job) async {
-    final personnelState = ref.read(personnelListProvider);
-    final personnelList = personnelState.value ?? [];
-    if (personnelList.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Personel bulunamadı")),
-      );
-      return;
-    }
-    final selectedIds = <String>{
-      ...job.assignments.map((a) => a.personnelId).whereType<String>()
-    };
     await showModalBottomSheet(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "Personel Seç",
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: personnelList.length,
-                    itemBuilder: (context, index) {
-                      final personnel = personnelList[index];
-                      final isSelected = selectedIds.contains(personnel.id);
-                      return CheckboxListTile(
-                        title: Text(personnel.name),
-                        subtitle: Text(personnel.phone),
-                        value: isSelected,
-                        onChanged: (value) {
-                          setModalState(() {
-                            if (value == true) {
-                              selectedIds.add(personnel.id);
-                            } else {
-                              selectedIds.remove(personnel.id);
-                            }
-                          });
-                        },
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () async {
-                    try {
-                      await ref.read(adminRepositoryProvider).assignPersonnelToJob(
-                            jobId: job.id,
-                            personnelIds: selectedIds.toList(),
-                          );
-                      await ref.read(jobListProvider.notifier).refresh();
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Personel atandı")),
-                        );
-                      }
-                    } catch (error) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Atama başarısız: $error")),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text("Ata"),
-                ),
-              ],
-            ),
-          );
-        },
+      isScrollControlled: true,
+      builder: (context) => _PersonnelAssignmentSheet(
+        job: job,
       ),
     );
   }
@@ -562,6 +599,173 @@ class _Row extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _PersonnelAssignmentSheet extends ConsumerWidget {
+  const _PersonnelAssignmentSheet({
+    required this.job,
+  });
+
+  final Job job;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final personnelState = ref.watch(personnelListProvider);
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag handle
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Text(
+            "Personel Seç",
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: personnelState.when(
+              data: (personnelList) {
+                if (personnelList.isEmpty) {
+                  return const Center(
+                    child: Text("Personel bulunamadı"),
+                  );
+                }
+                final assignedPersonnelIds = job.assignments
+                    .map((a) => a.personnelId)
+                    .whereType<String>()
+                    .toSet();
+                return ListView.builder(
+                  itemCount: personnelList.length,
+                  itemBuilder: (context, index) {
+                    final personnel = personnelList[index];
+                    final isAssigned = assignedPersonnelIds.contains(personnel.id);
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          child: Text(
+                            personnel.name.isNotEmpty
+                                ? personnel.name[0].toUpperCase()
+                                : "P",
+                          ),
+                        ),
+                        title: Text(personnel.name),
+                        subtitle: Text(personnel.phone),
+                        trailing: isAssigned
+                            ? const Chip(
+                                label: Text("Atandı"),
+                                backgroundColor: Color(0xFF10B981),
+                              )
+                            : FilledButton(
+                                onPressed: () => _assignPersonnel(
+                                  context,
+                                  ref,
+                                  personnel.id,
+                                ),
+                                child: const Text("İş Ata"),
+                              ),
+                      ),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (error, _) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text("Hata: $error"),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => ref.refresh(personnelListProvider),
+                      child: const Text("Tekrar Dene"),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _assignPersonnel(
+    BuildContext context,
+    WidgetRef ref,
+    String personnelId,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Personel Ata"),
+        content: const Text("Bu personele iş atamak istediğinize emin misiniz?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text("İptal"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text("Onayla"),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    try {
+      // Mevcut atanan personelleri al
+      final currentPersonnelIds = job.assignments
+          .map((a) => a.personnelId)
+          .whereType<String>()
+          .toList();
+      
+      // Yeni personeli ekle (zaten varsa ekleme)
+      if (!currentPersonnelIds.contains(personnelId)) {
+        currentPersonnelIds.add(personnelId);
+      }
+
+      await ref.read(adminRepositoryProvider).assignPersonnelToJob(
+            jobId: job.id,
+            personnelIds: currentPersonnelIds,
+          );
+      await ref.read(jobListProvider.notifier).refresh();
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Personel atandı")),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Atama başarısız: $error")),
+        );
+      }
+    }
   }
 }
 

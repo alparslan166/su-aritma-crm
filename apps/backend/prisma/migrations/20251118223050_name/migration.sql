@@ -1,5 +1,5 @@
 -- CreateEnum
- TYPE "AdminRole" AS ENUM ('ANA', 'ALT');
+CREATE TYPE "AdminRole" AS ENUM ('ANA', 'ALT');
 
 -- CreateEnum
 CREATE TYPE "JobStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'DELIVERED', 'ARCHIVED');

@@ -1,9 +1,12 @@
 import "package:flutter/material.dart";
+import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
+import "package:open_file/open_file.dart";
 
+import "../../data/admin_repository.dart";
 import "../../data/models/job.dart";
 
-class JobCard extends StatelessWidget {
+class JobCard extends ConsumerWidget {
   const JobCard({super.key, required this.job, this.onTap});
 
   final Job job;
@@ -12,24 +15,25 @@ class JobCard extends StatelessWidget {
   Color _statusColor(BuildContext context) {
     switch (job.status) {
       case "PENDING":
-        return Colors.blue.shade100;
+        return const Color(0xFF2563EB).withValues(alpha: 0.1);
       case "IN_PROGRESS":
-        return Colors.orange.shade100;
+        return const Color(0xFFF59E0B).withValues(alpha: 0.1);
       case "DELIVERED":
         return Colors.grey.shade300;
       case "ARCHIVED":
-        return Colors.teal.shade100;
+        return Colors.grey.shade200;
       default:
         return Theme.of(context).colorScheme.surfaceContainerHighest;
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheduled = job.scheduledAt != null
         ? "${job.scheduledAt!.day.toString().padLeft(2, "0")}.${job.scheduledAt!.month.toString().padLeft(2, "0")}"
         : "Planlı değil";
     final address = job.location?.address;
+    final isDelivered = job.status == "DELIVERED" || job.status == "ARCHIVED";
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: InkWell(
@@ -163,23 +167,23 @@ class JobCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue.shade200),
+                    border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.inventory_2, size: 16, color: Colors.blue.shade700),
+                          const Icon(Icons.inventory_2, size: 16, color: Color(0xFF2563EB)),
                           const SizedBox(width: 8),
                           Text(
                             "Kullanılan Malzemeler",
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Colors.blue.shade700,
+                              color: Color(0xFF2563EB),
                             ),
                           ),
                         ],
@@ -195,18 +199,18 @@ class JobCard extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   "${material.inventoryItemName} (${material.quantity} adet)",
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 11,
-                                    color: Colors.blue.shade800,
+                                    color: Color(0xFF2563EB),
                                   ),
                                 ),
                               ),
                               Text(
                                 "${total.toStringAsFixed(2)} ₺",
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.blue.shade800,
+                                  color: Color(0xFF2563EB),
                                 ),
                               ),
                             ],
@@ -222,23 +226,23 @@ class JobCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
+                    color: const Color(0xFF10B981).withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green.shade200),
+                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.payments, size: 16, color: Colors.green.shade700),
+                          const Icon(Icons.payments, size: 16, color: Color(0xFF10B981)),
                           const SizedBox(width: 8),
                           Text(
                             "Ödeme Bilgileri",
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Colors.green.shade700,
+                              color: Color(0xFF10B981),
                             ),
                           ),
                         ],
@@ -250,19 +254,19 @@ class JobCard extends StatelessWidget {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
+                              const Text(
                                 "Ücret:",
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: Colors.green.shade800,
+                                  color: Color(0xFF10B981),
                                 ),
                               ),
                               Text(
                                 "${job.price!.toStringAsFixed(2)} ₺",
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.green.shade800,
+                                  color: Color(0xFF10B981),
                                 ),
                               ),
                             ],
@@ -274,19 +278,19 @@ class JobCard extends StatelessWidget {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
+                              const Text(
                                 "Tahsil Edilen:",
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: Colors.green.shade800,
+                                  color: Color(0xFF10B981),
                                 ),
                               ),
                               Text(
                                 "${job.collectedAmount!.toStringAsFixed(2)} ₺",
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.green.shade800,
+                                  color: Color(0xFF10B981),
                                 ),
                               ),
                             ],
@@ -298,11 +302,11 @@ class JobCard extends StatelessWidget {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
+                              const Text(
                                 "Ödeme Durumu:",
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: Colors.green.shade800,
+                                  color: Color(0xFF10B981),
                                 ),
                               ),
                               Container(
@@ -373,30 +377,84 @@ class JobCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.shade200),
+                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
+                      const Icon(Icons.info_outline, size: 16, color: Color(0xFFF59E0B)),
                       const SizedBox(width: 8),
                       Text(
                         "Henüz personel atanmamış",
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.orange.shade700,
+                          color: Color(0xFFF59E0B),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
                 ),
+              // Fatura Oluştur butonu - sadece DELIVERED veya ARCHIVED işler için
+              if (isDelivered) ...[
+                const SizedBox(height: 16),
+                Center(
+                  child: FilledButton.icon(
+                    onPressed: () => _createInvoice(context, ref, job.id),
+                    icon: const Icon(Icons.receipt, size: 18),
+                    label: const Text("Fatura Oluştur"),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _createInvoice(BuildContext context, WidgetRef ref, String jobId) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      // Generate PDF
+      final repository = ref.read(adminRepositoryProvider);
+      final pdfPath = await repository.generateInvoicePdf(jobId);
+
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Open PDF
+      await OpenFile.open(pdfPath);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Fatura oluşturuldu ve açıldı")),
+        );
+      }
+    } catch (error) {
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Fatura oluşturulamadı: $error")),
+        );
+      }
+    }
   }
 
   String _getStatusText(String status) {
@@ -417,11 +475,11 @@ class JobCard extends StatelessWidget {
   Color _getPaymentStatusColor(String status) {
     switch (status.toUpperCase()) {
       case "PAID":
-        return Colors.green;
+        return const Color(0xFF10B981);
       case "PARTIAL":
-        return Colors.orange;
+        return const Color(0xFFF59E0B);
       case "NOT_PAID":
-        return Colors.red;
+        return const Color(0xFFEF4444);
       default:
         return Colors.grey;
     }

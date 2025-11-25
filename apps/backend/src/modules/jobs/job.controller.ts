@@ -10,6 +10,7 @@ import { jobService } from "./job.service";
 const listQuerySchema = z.object({
   status: z.nativeEnum(JobStatus).optional(),
   search: z.string().optional(),
+  personnelId: z.string().optional(),
 });
 
 const customerSchema = z.object({
@@ -27,7 +28,6 @@ const jobBaseSchema = z.object({
   title: z.string().min(2),
   customer: customerSchema,
   customerId: z.string().optional(),
-  operationId: z.string().optional(),
   scheduledAt: z.string().datetime().optional(),
   location: z.record(z.string(), z.any()).refine((val) => Object.keys(val).length > 0, {
     message: "Location must have at least one field",
@@ -68,7 +68,11 @@ export const listJobsHandler = async (req: Request, res: Response, next: NextFun
   try {
     const adminId = getAdminId(req);
     const filters = listQuerySchema.parse(req.query);
-    const data = await jobService.list(adminId, filters);
+    const data = await jobService.list(adminId, {
+      status: filters.status,
+      search: filters.search,
+      personnelId: filters.personnelId,
+    });
     res.json({ success: true, data });
   } catch (error) {
     next(error as Error);

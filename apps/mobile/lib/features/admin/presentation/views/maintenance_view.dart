@@ -65,15 +65,15 @@ class _ReminderCard extends StatelessWidget {
 
   Color _statusColor(BuildContext context) {
     if (reminder.daysUntilDue <= 0) {
-      return Colors.red.shade100;
+      return const Color(0xFFEF4444).withValues(alpha: 0.1);
     }
     if (reminder.daysUntilDue <= 1) {
-      return Colors.orange.shade100;
+      return const Color(0xFFF59E0B).withValues(alpha: 0.1);
     }
     if (reminder.daysUntilDue <= 3) {
-      return Colors.yellow.shade100;
+      return const Color(0xFFF59E0B).withValues(alpha: 0.05);
     }
-    return Colors.blue.shade100;
+    return const Color(0xFF2563EB).withValues(alpha: 0.1);
   }
 
   @override

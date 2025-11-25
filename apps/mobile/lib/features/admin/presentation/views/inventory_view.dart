@@ -66,7 +66,7 @@ class InventoryView extends ConsumerWidget {
     );
     final padding = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
-      appBar: const AdminAppBar(title: "Stok Durumu"),
+      appBar: const AdminAppBar(title: Text("Stok Durumu")),
       body: Stack(
         children: [
           Positioned.fill(child: content),

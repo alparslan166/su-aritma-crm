@@ -17,7 +17,7 @@ class PastJobsView extends ConsumerWidget {
     final notifier = ref.read(jobListProvider.notifier);
 
     return Scaffold(
-      appBar: const AdminAppBar(title: "Geçmiş"),
+      appBar: const AdminAppBar(title: Text("Geçmiş")),
       body: state.when(
       data: (items) {
         final completedJobs = _pastOnly(items);

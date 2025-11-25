@@ -3,8 +3,10 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 
 import "../../../core/session/session_provider.dart";
 import "../../../routing/app_router.dart";
+import "../../admin/presentation/views/add_customer_sheet.dart";
 import "../../personnel/presentation/views/notifications_view.dart";
 import "../../personnel/presentation/views/personnel_jobs_page.dart";
+import "../../personnel/presentation/views/personnel_profile_page.dart";
 
 class PersonnelDashboardPage extends ConsumerWidget {
   const PersonnelDashboardPage({super.key});
@@ -17,6 +19,12 @@ class PersonnelDashboardPage extends ConsumerWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
+          leading: Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => _showMenu(context, ref),
+            ),
+          ),
           title: Row(
             children: [
               Container(
@@ -35,13 +43,6 @@ class PersonnelDashboardPage extends ConsumerWidget {
               const Text("Personel Paneli"),
             ],
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.logout, color: Colors.red),
-              tooltip: "Çıkış Yap",
-              onPressed: () => _handleLogout(context, ref),
-            ),
-          ],
           bottom: TabBar(
             labelColor: const Color(0xFF10B981),
             unselectedLabelColor: Colors.grey.shade600,
@@ -62,6 +63,56 @@ class PersonnelDashboardPage extends ConsumerWidget {
         ),
         body: const TabBarView(
           children: [PersonnelJobsPage(), PersonnelNotificationsView()],
+        ),
+      ),
+    );
+  }
+
+  void _showMenu(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.person, color: Color(0xFF10B981)),
+              title: const Text("Profil"),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const PersonnelProfilePage(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_add, color: Color(0xFF2563EB)),
+              title: const Text("Müşteri Ekle"),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const AddCustomerSheet(),
+                  ),
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text("Çıkış Yap"),
+              onTap: () {
+                Navigator.of(context).pop();
+                _handleLogout(context, ref);
+              },
+            ),
+            SizedBox(height: MediaQuery.of(context).padding.bottom),
+          ],
         ),
       ),
     );

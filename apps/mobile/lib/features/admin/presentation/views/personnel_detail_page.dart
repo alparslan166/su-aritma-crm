@@ -1,17 +1,26 @@
+import "dart:typed_data";
+
+import "package:dio/dio.dart";
 import "package:flutter/material.dart";
 import "package:flutter_map/flutter_map.dart";
+import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
+import "package:image_picker/image_picker.dart";
 import "package:intl/intl.dart";
 import "package:latlong2/latlong.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
+import "package:mobile/widgets/empty_state.dart";
+import "full_screen_map_page.dart";
 
+import "../../../../core/constants/app_config.dart";
+import "../../../../core/network/api_client.dart" show apiClientProvider;
 import "../../application/job_list_notifier.dart";
 import "../../application/personnel_detail_provider.dart";
 import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/job.dart";
 import "../../data/models/personnel.dart";
-import "job_map_view.dart";
+import "../widgets/job_card.dart";
 
 class AdminPersonnelDetailPage extends ConsumerStatefulWidget {
   const AdminPersonnelDetailPage({
@@ -43,11 +52,13 @@ class _AdminPersonnelDetailPageState
         onManageLeaves: () => _showLeavesSheet(personnel),
       ),
       loading: () => Scaffold(
-        appBar: AdminAppBar(title: widget.initialPersonnel?.name ?? "Personel"),
+        appBar: AdminAppBar(
+          title: Text(widget.initialPersonnel?.name ?? "Personel"),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => Scaffold(
-        appBar: const AdminAppBar(title: "Personel Detayı"),
+        appBar: const AdminAppBar(title: Text("Personel Detayı")),
         body: Center(child: Text(error.toString())),
       ),
     );
@@ -178,7 +189,7 @@ class _AdminPersonnelDetailPageState
               .map(
                 (job) => ListTile(
                   title: Text("${job.customer.name} - ${job.title}"),
-                  subtitle: Text("Durum: ${job.status}"),
+                  subtitle: Text("Durum: ${_getJobStatusText(job.status)}"),
                   onTap: () async {
                     Navigator.of(context).pop();
                     await _assignPersonnelToJob(job, personnelId);
@@ -231,6 +242,34 @@ class _AdminPersonnelDetailPageState
   }
 }
 
+String _getJobStatusText(String status) {
+  switch (status) {
+    case "PENDING":
+      return "Beklemede";
+    case "IN_PROGRESS":
+      return "Devam Ediyor";
+    case "DELIVERED":
+      return "Teslim Edildi";
+    case "ARCHIVED":
+      return "Arşivlendi";
+    default:
+      return status;
+  }
+}
+
+String _getPersonnelStatusText(String status) {
+  switch (status) {
+    case "ACTIVE":
+      return "Aktif";
+    case "SUSPENDED":
+      return "Askıda";
+    case "INACTIVE":
+      return "Pasif";
+    default:
+      return status;
+  }
+}
+
 class _DetailContent extends StatelessWidget {
   const _DetailContent({
     required this.personnel,
@@ -248,170 +287,30 @@ class _DetailContent extends StatelessWidget {
   final VoidCallback onAssignJob;
   final VoidCallback onManageLeaves;
 
-  void _openMapView(BuildContext context) {
-    if (personnel.lastKnownLocation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Personelin konum bilgisi bulunmuyor")),
-      );
-      return;
-    }
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => JobMapView(
-          initialPersonnelLocation: LatLng(
-            personnel.lastKnownLocation!.lat,
-            personnel.lastKnownLocation!.lng,
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final hasLocation = personnel.lastKnownLocation != null;
     return Scaffold(
-      appBar: AdminAppBar(title: personnel.name),
+      appBar: AdminAppBar(
+        title: Row(
+          children: [
+            _PersonnelAvatar(
+              photoUrl: personnel.photoUrl,
+              name: personnel.name,
+              size: 32,
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text(personnel.name)),
+          ],
+        ),
+      ),
       body: Stack(
         children: [
           ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
             children: [
-              // Harita bölümü
-              if (hasLocation)
-                Card(
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: () => _openMapView(context),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          height: 200,
-                          child: Stack(
-                            children: [
-                              FlutterMap(
-                                options: MapOptions(
-                                  initialCenter: LatLng(
-                                    personnel.lastKnownLocation!.lat,
-                                    personnel.lastKnownLocation!.lng,
-                                  ),
-                                  initialZoom: 15.0,
-                                  interactionOptions: const InteractionOptions(
-                                    flags: InteractiveFlag.none,
-                                  ),
-                                ),
-                                children: [
-                                  TileLayer(
-                                    urlTemplate:
-                                        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                                    userAgentPackageName: "com.suaritma.app",
-                                    maxZoom: 19,
-                                    minZoom: 3,
-                                  ),
-                                  MarkerLayer(
-                                    markers: [
-                                      Marker(
-                                        point: LatLng(
-                                          personnel.lastKnownLocation!.lat,
-                                          personnel.lastKnownLocation!.lng,
-                                        ),
-                                        width: 40,
-                                        height: 40,
-                                        child: const Icon(
-                                          Icons.person_pin_circle,
-                                          color: Color(0xFF2563EB),
-                                          size: 40,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    Icons.open_in_full,
-                                    size: 20,
-                                    color: Color(0xFF2563EB),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.location_on, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      "Son Bilinen Konum",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "${personnel.lastKnownLocation!.lat.toStringAsFixed(6)}, "
-                                      "${personnel.lastKnownLocation!.lng.toStringAsFixed(6)}",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                    if (personnel
-                                            .lastKnownLocation!
-                                            .timestamp !=
-                                        null)
-                                      Text(
-                                        "Son güncelleme: ${DateFormat("dd MMM yyyy HH:mm").format(personnel.lastKnownLocation!.timestamp!.toLocal())}",
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey.shade500,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Icon(Icons.location_off, color: Colors.grey.shade400),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            "Konum bilgisi bulunmuyor",
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 16),
+              // Harita bölümü - en üstte
+              _PersonnelMapSection(personnel: personnel),
+              const SizedBox(height: 24),
               // Bilgiler kartı
               Card(
                 child: Padding(
@@ -421,17 +320,21 @@ class _DetailContent extends StatelessWidget {
                     children: [
                       _Row(label: "Telefon", value: personnel.phone),
                       _Row(label: "E-posta", value: personnel.email ?? "-"),
-                      _Row(label: "Durum", value: personnel.status),
+                      _Row(
+                        label: "Durum",
+                        value: _getPersonnelStatusText(personnel.status),
+                      ),
                       _Row(
                         label: "İşe giriş",
                         value: DateFormat(
                           "dd MMM yyyy",
                         ).format(personnel.hireDate.toLocal()),
                       ),
-                      _Row(
-                        label: "Konum paylaşımı",
-                        value: personnel.canShareLocation ? "Açık" : "Kapalı",
-                      ),
+                      if (personnel.personnelId != null)
+                        _Row(
+                          label: "Personel ID",
+                          value: personnel.personnelId!,
+                        ),
                       _Row(label: "Giriş kodu", value: personnel.loginCode),
                       if (personnel.isOnLeave) ...[
                         const SizedBox(height: 8),
@@ -471,6 +374,9 @@ class _DetailContent extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
+              // Geçmiş İşler bölümü
+              _PastJobsSection(personnelId: personnel.id),
             ],
           ),
           // Sağ alt köşede sabit butonlar
@@ -575,13 +481,16 @@ class _EditPersonnelSheet extends ConsumerStatefulWidget {
 
 class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _imagePicker = ImagePicker();
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
   late DateTime _hireDate;
   late String _status;
-  late bool _canShareLocation;
   bool _submitting = false;
+  XFile? _selectedImage;
+  Uint8List? _selectedImageBytes;
+  bool _photoRemoved = false;
 
   @override
   void initState() {
@@ -593,7 +502,6 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
     );
     _hireDate = widget.personnel.hireDate;
     _status = widget.personnel.status;
-    _canShareLocation = widget.personnel.canShareLocation;
   }
 
   @override
@@ -618,12 +526,122 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
     }
   }
 
+  Future<void> _pickImage() async {
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Fotoğraf Kaynağı"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text("Kamera"),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text("Galeri"),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source != null) {
+      final image = await _imagePicker.pickImage(source: source);
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        setState(() {
+          _selectedImage = image;
+          _selectedImageBytes = bytes;
+        });
+      }
+    }
+  }
+
+  Future<String?> _uploadImage(XFile image) async {
+    try {
+      final bytes = await image.readAsBytes();
+      final contentType =
+          image.path.endsWith(".jpg") || image.path.endsWith(".jpeg")
+          ? "image/jpeg"
+          : "image/png";
+
+      // Get presigned URL from backend
+      final client = ref.read(apiClientProvider);
+      final presignedResponse = await client.post(
+        "/media/sign",
+        data: {"contentType": contentType, "prefix": "personnel-photos"},
+      );
+      final uploadUrl = presignedResponse.data["data"]["uploadUrl"] as String;
+      final photoKey = presignedResponse.data["data"]["key"] as String;
+
+      // Upload to S3 using presigned URL
+      // Create a new Dio instance without interceptors to avoid conflicts
+      final uploadClient = Dio();
+      try {
+        await uploadClient.put(
+          uploadUrl,
+          data: bytes,
+          options: Options(
+            headers: {"Content-Type": contentType},
+            contentType: contentType,
+            validateStatus: (status) => status != null && status < 600,
+          ),
+        );
+      } catch (uploadError) {
+        // Close the upload client to free resources
+        uploadClient.close();
+        rethrow;
+      }
+      uploadClient.close();
+
+      // Return the photo key
+      return photoKey;
+    } catch (e) {
+      if (mounted) {
+        final errorMessage =
+            e.toString().contains("connection error") ||
+                e.toString().contains("XMLHttpRequest")
+            ? "Fotoğraf yüklenemedi: Ağ bağlantı hatası. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin."
+            : "Fotoğraf yüklenemedi: ${e.toString()}";
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+      return null;
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _submitting = true;
     });
     try {
+      String? photoUrl;
+      bool shouldUpdatePhoto = false;
+
+      // Upload image if selected
+      if (_selectedImage != null) {
+        photoUrl = await _uploadImage(_selectedImage!);
+        if (photoUrl == null) {
+          // Upload failed, don't update photo
+          shouldUpdatePhoto = false;
+        } else {
+          shouldUpdatePhoto = true;
+        }
+      } else if (_photoRemoved) {
+        // Photo was explicitly removed - send empty string to backend
+        photoUrl = "";
+        shouldUpdatePhoto = true;
+      }
+      // If neither condition is met, don't update photo (keep existing)
+
       await ref
           .read(adminRepositoryProvider)
           .updatePersonnel(
@@ -635,7 +653,7 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
                 : _emailController.text.trim(),
             hireDate: _hireDate,
             status: _status,
-            canShareLocation: _canShareLocation,
+            photoUrl: shouldUpdatePhoto ? photoUrl : null,
           );
       ref.invalidate(personnelDetailProvider(widget.personnelId));
       ref.invalidate(personnelListProvider);
@@ -673,6 +691,87 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
               Text(
                 "Personel Düzenle",
                 style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              // Fotoğraf seçimi
+              Center(
+                child: Column(
+                  children: [
+                    Stack(
+                      children: [
+                        if (_selectedImageBytes != null)
+                          ClipOval(
+                            child: Image.memory(
+                              _selectedImageBytes!,
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        else if (widget.personnel.photoUrl != null &&
+                            widget.personnel.photoUrl!.isNotEmpty)
+                          _PersonnelAvatar(
+                            photoUrl: widget.personnel.photoUrl,
+                            name: widget.personnel.name,
+                            size: 100,
+                          )
+                        else
+                          _PersonnelAvatar(
+                            photoUrl: null,
+                            name: widget.personnel.name,
+                            size: 100,
+                          ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: const Color(0xFF2563EB),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.camera_alt,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                              onPressed: _pickImage,
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (_selectedImageBytes != null)
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _selectedImage = null;
+                            _selectedImageBytes = null;
+                          });
+                        },
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text("Kaldır"),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                      ),
+                    if (widget.personnel.photoUrl != null &&
+                        widget.personnel.photoUrl!.isNotEmpty &&
+                        _selectedImageBytes == null)
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _photoRemoved = true;
+                          });
+                        },
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text("Fotoğrafı Kaldır"),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.red.shade300),
+                        ),
+                      ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -725,16 +824,6 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
                   DropdownMenuEntry(value: "SUSPENDED", label: "Askıda"),
                   DropdownMenuEntry(value: "INACTIVE", label: "Pasif"),
                 ],
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text("Konum paylaşımı"),
-                value: _canShareLocation,
-                onChanged: (value) {
-                  setState(() {
-                    _canShareLocation = value;
-                  });
-                },
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -1096,6 +1185,370 @@ class _LeavesManagementSheetState
           ),
           SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
         ],
+      ),
+    );
+  }
+}
+
+class _PastJobsSection extends ConsumerWidget {
+  const _PastJobsSection({required this.personnelId});
+
+  final String personnelId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<List<Job>>(
+      future: ref
+          .read(adminRepositoryProvider)
+          .fetchJobs(personnelId: personnelId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red, size: 48),
+                  const SizedBox(height: 8),
+                  Text(
+                    "İşler yüklenemedi",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    snapshot.error.toString(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final allJobs = snapshot.data ?? [];
+        final pastJobs = allJobs
+            .where(
+              (job) => job.status == "DELIVERED" || job.status == "ARCHIVED",
+            )
+            .toList();
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.history, color: Color(0xFF2563EB)),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Geçmiş İşler",
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (pastJobs.isEmpty)
+                  const EmptyState(
+                    icon: Icons.history,
+                    title: "Geçmiş iş bulunamadı",
+                    subtitle:
+                        "Bu personelin teslim ettiği işler burada listelenecek.",
+                  )
+                else
+                  ...pastJobs.map((job) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: RepaintBoundary(
+                        child: JobCard(
+                          job: job,
+                          onTap: () =>
+                              context.push("/admin/jobs/${job.id}", extra: job),
+                        ),
+                      ),
+                    );
+                  }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PersonnelMapSection extends StatefulWidget {
+  const _PersonnelMapSection({required this.personnel});
+
+  final Personnel personnel;
+
+  @override
+  State<_PersonnelMapSection> createState() => _PersonnelMapSectionState();
+}
+
+class _PersonnelMapSectionState extends State<_PersonnelMapSection> {
+  LatLng? _personnelLocation;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocation();
+  }
+
+  void _loadLocation() {
+    // Personelin lastKnownLocation bilgisini kontrol et
+    if (widget.personnel.lastKnownLocation != null) {
+      setState(() {
+        _personnelLocation = LatLng(
+          widget.personnel.lastKnownLocation!.lat,
+          widget.personnel.lastKnownLocation!.lng,
+        );
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.map, color: Color(0xFF2563EB)),
+                const SizedBox(width: 8),
+                Text(
+                  "Son Bilinen Konum",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          InkWell(
+            onTap: _personnelLocation != null
+                ? () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => FullScreenMapPage(
+                          location: _personnelLocation!,
+                          title: widget.personnel.name,
+                        ),
+                      ),
+                    );
+                  }
+                : null,
+            child: SizedBox(
+              height: 250,
+              child: _personnelLocation != null
+                  ? ClipRect(
+                      child: FlutterMap(
+                        key: ValueKey(
+                          "${_personnelLocation!.latitude}_${_personnelLocation!.longitude}",
+                        ),
+                        options: MapOptions(
+                          initialCenter: _personnelLocation!,
+                          initialZoom: 15.0,
+                          interactionOptions: const InteractionOptions(
+                            flags: InteractiveFlag.none,
+                          ),
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate:
+                                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                            userAgentPackageName: "com.suaritma.app",
+                            maxZoom: 19,
+                            minZoom: 3,
+                          ),
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: _personnelLocation!,
+                                width: 40,
+                                height: 40,
+                                child: const Icon(
+                                  Icons.person_pin_circle,
+                                  color: Color(0xFF2563EB),
+                                  size: 40,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    )
+                  : Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.location_off,
+                              color: Colors.grey.shade400,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Konum bilgisi bulunmuyor",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+          if (_personnelLocation != null &&
+              widget.personnel.lastKnownLocation != null)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.place, size: 16, color: Colors.grey.shade600),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "${widget.personnel.lastKnownLocation!.lat.toStringAsFixed(6)}, "
+                          "${widget.personnel.lastKnownLocation!.lng.toStringAsFixed(6)}",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (widget.personnel.lastKnownLocation!.timestamp !=
+                      null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          "Son güncelleme: ${DateFormat("dd MMM yyyy HH:mm").format(widget.personnel.lastKnownLocation!.timestamp!.toLocal())}",
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PersonnelAvatar extends StatelessWidget {
+  const _PersonnelAvatar({
+    required this.photoUrl,
+    required this.name,
+    this.size = 48,
+  });
+
+  final String? photoUrl;
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    // Eğer photoUrl varsa ve boş değilse, fotoğrafı göster
+    if (photoUrl != null && photoUrl!.isNotEmpty) {
+      // Default fotoğraflar için asset kullan
+      if (photoUrl!.startsWith("default/")) {
+        final gender = photoUrl!
+            .replaceAll("default/", "")
+            .replaceAll(".jpg", "");
+        return ClipOval(
+          child: Image.asset(
+            "assets/images/$gender.jpg",
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildInitialsAvatar();
+            },
+          ),
+        );
+      }
+      // S3 URL için network image kullan
+      final imageUrl = AppConfig.getMediaUrl(photoUrl!);
+      return ClipOval(
+        child: Image.network(
+          imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            // Hata durumunda baş harf göster
+            return _buildInitialsAvatar();
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return _buildInitialsAvatar();
+          },
+        ),
+      );
+    }
+    // Fotoğraf yoksa baş harf göster
+    return _buildInitialsAvatar();
+  }
+
+  Widget _buildInitialsAvatar() {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF2563EB).withValues(alpha: 0.1),
+            const Color(0xFF10B981).withValues(alpha: 0.1),
+          ],
+        ),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : "P",
+          style: TextStyle(
+            fontSize: size * 0.4,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF2563EB),
+          ),
+        ),
       ),
     );
   }

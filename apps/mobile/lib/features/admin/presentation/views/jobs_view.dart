@@ -1,5 +1,4 @@
 import "package:flutter/material.dart";
-import "package:geocoding/geocoding.dart";
 import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
@@ -319,57 +318,6 @@ class _JobFormSheetState extends ConsumerState<_JobFormSheet> {
     return double.tryParse(value.trim());
   }
 
-  Future<void> _geocodeAddress() async {
-    final address = _customerAddressController.text.trim();
-    if (address.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Lütfen önce adres girin")),
-      );
-      return;
-    }
-
-    try {
-      setState(() {
-        _submitting = true;
-      });
-
-      final locations = await locationFromAddress(address);
-      if (!mounted) return;
-      if (locations.isNotEmpty) {
-        final location = locations.first;
-        setState(() {
-          _latitudeController.text = location.latitude.toStringAsFixed(6);
-          _longitudeController.text = location.longitude.toStringAsFixed(6);
-        });
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Konum bulundu: ${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}",
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Adres için konum bulunamadı")),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Konum bulunamadı: $e")),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _submitting = false;
-        });
-      }
-    }
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -469,32 +417,18 @@ class _JobFormSheetState extends ConsumerState<_JobFormSheet> {
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          key: const Key("customer-address-field"),
-                          controller: _customerAddressController,
-                          decoration: const InputDecoration(
-                            labelText: "Adres",
-                            hintText: "örn: İstanbul, Kadıköy, Bağdat Caddesi",
-                          ),
-                          validator: (value) => value == null || value.trim().length < 5
-                              ? "Adres girin"
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.map),
-                        tooltip: "Adresten konum bul",
-                        onPressed: _submitting ? null : _geocodeAddress,
-                        style: IconButton.styleFrom(
-                          backgroundColor: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                        ),
-                      ),
-                    ],
-                  ),
+              TextFormField(
+                key: const Key("customer-address-field"),
+                controller: _customerAddressController,
+                decoration: const InputDecoration(
+                  labelText: "Adres",
+                  hintText: "Şehir, ilçe, mahalle, sokak, bina no",
+                ),
+                maxLines: 2,
+                validator: (value) => value == null || value.trim().length < 5
+                    ? "Adres girin"
+                    : null,
+              ),
                   if (_latitudeController.text.isNotEmpty ||
                       _longitudeController.text.isNotEmpty) ...[
                     const SizedBox(height: 8),

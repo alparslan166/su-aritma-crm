@@ -2,9 +2,12 @@ import "dart:io";
 
 import "package:dio/dio.dart";
 import "package:flutter/material.dart";
+import "package:flutter_map/flutter_map.dart";
 import "package:flutter_hooks/flutter_hooks.dart";
+import "package:geocoding/geocoding.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:image_picker/image_picker.dart";
+import "package:latlong2/latlong.dart";
 
 import "../../../admin/application/inventory_list_notifier.dart";
 import "../../../admin/data/models/inventory_item.dart";
@@ -13,6 +16,7 @@ import "../../application/delivery_payload.dart";
 import "../../application/job_detail_notifier.dart";
 import "../../application/personnel_jobs_notifier.dart";
 import "../../data/personnel_repository.dart";
+import "../../data/models/personnel_job.dart";
 import "../widgets/job_status_chip.dart";
 
 class PersonnelJobDetailPage extends HookConsumerWidget {
@@ -32,6 +36,9 @@ class PersonnelJobDetailPage extends HookConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // Harita bölümü - en üstte
+              _JobMapSection(customer: detail.job.customer),
+              const SizedBox(height: 24),
               Row(
                 children: [
                   Expanded(
@@ -58,6 +65,11 @@ class PersonnelJobDetailPage extends HookConsumerWidget {
                 title: "Öncelik",
                 value: detail.job.priority?.toString() ?? "-",
               ),
+              // Malzemeler bölümü
+              if (detail.job.materials != null && detail.job.materials!.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                _MaterialsSection(materials: detail.job.materials!),
+              ],
               const SizedBox(height: 24),
               _ActionButtons(
                 jobId: jobId,
@@ -586,6 +598,261 @@ class _DeliverySheet extends HookConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _JobMapSection extends StatefulWidget {
+  const _JobMapSection({required this.customer});
+
+  final PersonnelJobCustomer customer;
+
+  @override
+  State<_JobMapSection> createState() => _JobMapSectionState();
+}
+
+class _JobMapSectionState extends State<_JobMapSection> {
+  LatLng? _customerLocation;
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocation();
+  }
+
+  Future<void> _loadLocation() async {
+    // Önce müşterinin location bilgisini kontrol et
+    if (widget.customer.location != null) {
+      final location = widget.customer.location!;
+      final lat = location["latitude"] as num?;
+      final lng = location["longitude"] as num?;
+      if (lat != null && lng != null) {
+        setState(() {
+          _customerLocation = LatLng(lat.toDouble(), lng.toDouble());
+        });
+        return;
+      }
+    }
+
+    // Location yoksa adresten geocoding yap
+    if (widget.customer.address.isEmpty) {
+      setState(() {
+        _error = "Adres bilgisi bulunamadı";
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final locations = await locationFromAddress(widget.customer.address);
+      if (locations.isNotEmpty) {
+        final location = locations.first;
+        setState(() {
+          _customerLocation = LatLng(location.latitude, location.longitude);
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _error = "Adres için konum bulunamadı";
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = "Konum yüklenemedi: $e";
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.map, color: Color(0xFF2563EB)),
+                const SizedBox(width: 8),
+                Text(
+                  "Müşteri Konumu",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const Spacer(),
+                if (_error != null || _isLoading)
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _isLoading ? null : _loadLocation,
+                    tooltip: "Yeniden Yükle",
+                  ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 250,
+            child: _isLoading
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                : _error != null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                              const SizedBox(height: 8),
+                              Text(
+                                _error!,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.grey.shade600),
+                              ),
+                              const SizedBox(height: 8),
+                              TextButton.icon(
+                                onPressed: _loadLocation,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text("Tekrar Dene"),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : _customerLocation != null
+                        ? FlutterMap(
+                            options: MapOptions(
+                              initialCenter: _customerLocation!,
+                              initialZoom: 15.0,
+                              interactionOptions: const InteractionOptions(
+                                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                              ),
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate:
+                                    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                                userAgentPackageName: "com.suaritma.app",
+                                maxZoom: 19,
+                                minZoom: 3,
+                              ),
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    point: _customerLocation!,
+                                    width: 40,
+                                    height: 40,
+                                    child: const Icon(
+                                      Icons.location_on,
+                                      color: Color(0xFF2563EB),
+                                      size: 40,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          )
+                        : const Center(
+                            child: Text("Konum bilgisi bulunamadı"),
+                          ),
+          ),
+          if (_customerLocation != null)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.place, size: 16, color: Colors.grey.shade600),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      widget.customer.address,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MaterialsSection extends StatelessWidget {
+  const _MaterialsSection({required this.materials});
+
+  final List<PersonnelJobMaterial> materials;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.inventory_2, color: Color(0xFF2563EB)),
+                const SizedBox(width: 8),
+                Text(
+                  "Kullanılacak Malzemeler",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...materials.map((material) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.inventory, size: 20, color: Color(0xFF10B981)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          material.inventoryItem.name,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          "Adet: ${material.quantity}",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF10B981),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+          ],
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 module.exports = {
   root: true,
+  ignorePatterns: [".eslintrc.cjs"],
   env: {
     node: true,
     es2021: true,
@@ -7,7 +8,8 @@ module.exports = {
   },
   parser: "@typescript-eslint/parser",
   parserOptions: {
-    project: "./tsconfig.json",
+    project: ["./tsconfig.json"],
+    tsconfigRootDir: __dirname,
   },
   plugins: ["@typescript-eslint", "import"],
   extends: [

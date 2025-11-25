@@ -1,39 +1,67 @@
 # Backend servislerini başlat
-cd "/Users/alparslan166/Library/Mobile Documents/com~apple~CloudDocs/Desktop/su-aritma/apps/mobile"
+cd ~/development/su-aritma/apps/mobile
 flutter pub get
 
 # İlk kurulum (sadece bir kez)
-cd "/Users/alparslan166/Library/Mobile Documents/com~apple~CloudDocs/Desktop/su-aritma/apps/backend"
+cd ~/development/su-aritma/apps/backend
 cp env.example .env           
 npm install
 npx prisma migrate dev
-de
+
 # Backend API'yi çalıştır (default port: 4000, .env dosyasından değiştirilebilir)
-cd "/Users/alparslan166/Library/Mobile Documents/com~apple~CloudDocs/Desktop/su-aritma/apps/backend"
+cd ~/development/su-aritma/apps/backend
 npm run dev
 
 # Alternatif: Port 8080'de çalıştırmak için:
 # PORT=8080 npm run dev
 
 # Flutter uygulamasını çalıştır (ayrı terminalde)
-cd "/Users/alparslan166/Library/Mobile Documents/com~apple~CloudDocs/Desktop/su-aritma/apps/mobile"
+cd ~/development/su-aritma/apps/mobile
 flutter pub get
 
 # Android Emülatör için:
-cd "/Users/alparslan166/Library/Mobile Documents/com~apple~CloudDocs/Desktop/su-aritma/apps/mobile"
+cd ~/development/su-aritma/apps/mobile
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:4000/api \
-           --dart-define=ADMIN_ID=ALT-ADMIN-QA
+           --dart-define=ADMIN_ID=ALT-ADMIN-QA;
+
 
 # Chrome/Web için:
-cd "/Users/alparslan166/Library/Mobile Documents/com~apple~CloudDocs/Desktop/su-aritma/apps/mobile"
-flutter run --dart-define=API_BASE_URL=http://localhost:4000/api \
+cd ~/development/su-aritma/apps/mobile
+flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:4000/api \
            --dart-define=ADMIN_ID=ALT-ADMIN-QA
 
 # iOS Simülatör için:
-cd "/Users/alparslan166/Library/Mobile Documents/com~apple~CloudDocs/Desktop/su-aritma/apps/mobile"
-flutter run -d ios --dart-define=API_BASE_URL=http://localhost:4000/api \
+cd ~/development/su-aritma/apps/mobile
+# Önce bağımlılıkları yükle:
+flutter pub get
+# CocoaPods bağımlılıklarını yükle (flutter pub get sonrası):
+cd ios && pod install && cd ..
+# Simülatörü aç (isteğe bağlı):
+# open -a Simulator
+# Mevcut cihazları kontrol et:
+# flutter devices
+# Device name ile çalıştır:
+flutter run -d "iPhone 16e" --dart-define=API_BASE_URL=http://localhost:4000/api \  
            --dart-define=ADMIN_ID=ALT-ADMIN-QA
+# Veya device ID ile:
+# flutter run -d 9042F717-4746-4763-A15C-49A59588AF59 --dart-define=API_BASE_URL=http://localhost:4000/api --dart-define=ADMIN_ID=ALT-ADMIN-QA
+# NOT: "flutter run -d ios" çalışmaz, mutlaka device name veya ID kullanın!
 
 # Giriş bilgileri
 # Admin ID: ALT-ADMIN-QA
 # Şifre  : 1234
+
+
+DURDURMAK
+
+# Port 4000'de çalışan process'leri bul
+lsof -ti :4000
+
+# Process'leri durdur   
+kill $(lsof -ti :4000)
+
+# Veya zorla durdur
+kill -9 $(lsof -ti :4000)
+
+Personel ID: AHIZ9Q
+Şifre: 7WV3CJ (Giriş Kodu)

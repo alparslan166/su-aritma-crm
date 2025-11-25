@@ -8,11 +8,14 @@ class Customer {
     this.email,
     this.location,
     this.jobs,
+    this.createdAt,
     this.hasDebt = false,
     this.debtAmount,
     this.hasInstallment = false,
     this.installmentCount,
     this.nextDebtDate,
+    this.installmentStartDate,
+    this.installmentIntervalDays,
     this.remainingDebtAmount,
     this.paidDebtAmount,
   });
@@ -24,11 +27,14 @@ class Customer {
   final String address;
   final CustomerLocation? location;
   final List<CustomerJob>? jobs;
+  final DateTime? createdAt;
   final bool hasDebt;
   final double? debtAmount;
   final bool hasInstallment;
   final int? installmentCount;
   final DateTime? nextDebtDate;
+  final DateTime? installmentStartDate;
+  final int? installmentIntervalDays;
   final double? remainingDebtAmount;
   final double? paidDebtAmount;
 
@@ -42,6 +48,9 @@ class Customer {
       address: json["address"] as String? ?? "",
       location: CustomerLocation.maybeFromJson(json["location"] as Map<String, dynamic>?),
       jobs: jobsList?.map((e) => CustomerJob.fromJson(e as Map<String, dynamic>)).toList(),
+      createdAt: json["createdAt"] != null
+          ? DateTime.tryParse(json["createdAt"] as String)
+          : null,
       hasDebt: json["hasDebt"] as bool? ?? false,
       debtAmount: _parseDouble(json["debtAmount"]),
       hasInstallment: json["hasInstallment"] as bool? ?? false,
@@ -49,6 +58,10 @@ class Customer {
       nextDebtDate: json["nextDebtDate"] != null
           ? DateTime.tryParse(json["nextDebtDate"] as String)
           : null,
+      installmentStartDate: json["installmentStartDate"] != null
+          ? DateTime.tryParse(json["installmentStartDate"] as String)
+          : null,
+      installmentIntervalDays: json["installmentIntervalDays"] as int?,
       remainingDebtAmount: _parseDouble(json["remainingDebtAmount"]),
       paidDebtAmount: _parseDouble(json["paidDebtAmount"]),
     );
@@ -62,11 +75,14 @@ class Customer {
     String? address,
     CustomerLocation? location,
     List<CustomerJob>? jobs,
+    DateTime? createdAt,
     bool? hasDebt,
     double? debtAmount,
     bool? hasInstallment,
     int? installmentCount,
     DateTime? nextDebtDate,
+    DateTime? installmentStartDate,
+    int? installmentIntervalDays,
     double? remainingDebtAmount,
     double? paidDebtAmount,
   }) {
@@ -78,11 +94,14 @@ class Customer {
       address: address ?? this.address,
       location: location ?? this.location,
       jobs: jobs ?? this.jobs,
+      createdAt: createdAt ?? this.createdAt,
       hasDebt: hasDebt ?? this.hasDebt,
       debtAmount: debtAmount ?? this.debtAmount,
       hasInstallment: hasInstallment ?? this.hasInstallment,
       installmentCount: installmentCount ?? this.installmentCount,
       nextDebtDate: nextDebtDate ?? this.nextDebtDate,
+      installmentStartDate: installmentStartDate ?? this.installmentStartDate,
+      installmentIntervalDays: installmentIntervalDays ?? this.installmentIntervalDays,
       remainingDebtAmount: remainingDebtAmount ?? this.remainingDebtAmount,
       paidDebtAmount: paidDebtAmount ?? this.paidDebtAmount,
     );
@@ -156,7 +175,8 @@ class Customer {
   }
 
   bool get hasOverdueInstallment {
-    if (!hasDebt || !hasInstallment || nextDebtDate == null) return false;
+    // Borcu olan ve ödeme tarihi geçmiş müşteriler (taksit olsun veya olmasın)
+    if (!hasDebt || nextDebtDate == null) return false;
     return nextDebtDate!.isBefore(DateTime.now());
   }
 }

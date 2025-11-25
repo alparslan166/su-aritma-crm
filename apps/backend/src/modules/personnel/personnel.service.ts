@@ -1,8 +1,15 @@
 import { PersonnelStatus, Prisma } from "@prisma/client";
 
-import { generateLoginCode } from "@/lib/generators";
+import { generateLoginCode, generatePersonnelId } from "@/lib/generators";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/middleware/error-handler";
+
+// Telefon numarasını normalize et (boşlukları ve özel karakterleri temizle)
+function normalizePhoneNumber(phone: string): string {
+  // Tüm boşlukları, tireleri, parantezleri ve diğer özel karakterleri temizle
+  // Sadece rakamları ve başta + işaretini tut
+  return phone.replace(/[\s\-\(\)]/g, "");
+}
 
 type ListFilters = {
   search?: string;
@@ -13,6 +20,7 @@ type CreatePayload = {
   name: string;
   phone: string;
   email?: string;
+  photoUrl?: string;
   hireDate: Date;
   permissions: Record<string, unknown>;
   canShareLocation?: boolean;
@@ -39,9 +47,10 @@ class PersonnelService {
       where.status = filters.status;
     }
     if (filters.search) {
+      const normalizedSearch = normalizePhoneNumber(filters.search);
       where.OR = [
         { name: { contains: filters.search, mode: Prisma.QueryMode.insensitive } },
-        { phone: { contains: filters.search } },
+        { phone: { contains: normalizedSearch, mode: Prisma.QueryMode.insensitive } },
         { email: { contains: filters.search, mode: Prisma.QueryMode.insensitive } },
       ];
     }
@@ -89,12 +98,15 @@ class PersonnelService {
 
   async create(adminId: string, payload: CreatePayload) {
     const loginCode = generateLoginCode();
+    const personnelId = await generatePersonnelId();
     return prisma.personnel.create({
       data: {
         adminId,
+        personnelId,
         name: payload.name,
-        phone: payload.phone,
+        phone: normalizePhoneNumber(payload.phone),
         email: payload.email,
+        photoUrl: payload.photoUrl,
         hireDate: payload.hireDate,
         permissions: payload.permissions as Prisma.InputJsonValue,
         loginCode,
@@ -106,17 +118,37 @@ class PersonnelService {
 
   async update(adminId: string, id: string, payload: UpdatePayload) {
     await this.ensureOwnership(adminId, id);
+    const data: Prisma.PersonnelUpdateInput = {};
+    
+    if (payload.name !== undefined) {
+      data.name = payload.name;
+    }
+    if (payload.phone !== undefined) {
+      data.phone = normalizePhoneNumber(payload.phone);
+    }
+    if (payload.email !== undefined) {
+      data.email = payload.email;
+    }
+    // photoUrl can be null (to remove), undefined (to keep existing), or a string (to update)
+    if (payload.photoUrl !== undefined) {
+      data.photoUrl = payload.photoUrl;
+    }
+    if (payload.hireDate !== undefined) {
+      data.hireDate = payload.hireDate;
+    }
+    if (payload.permissions !== undefined) {
+      data.permissions = payload.permissions as Prisma.InputJsonValue;
+    }
+    if (payload.status !== undefined) {
+      data.status = payload.status;
+    }
+    if (payload.canShareLocation !== undefined) {
+      data.canShareLocation = payload.canShareLocation;
+    }
+    
     return prisma.personnel.update({
       where: { id },
-      data: {
-        name: payload.name,
-        phone: payload.phone,
-        email: payload.email,
-        hireDate: payload.hireDate,
-        permissions: payload.permissions as Prisma.InputJsonValue | undefined,
-        status: payload.status,
-        canShareLocation: payload.canShareLocation,
-      },
+      data,
     });
   }
 

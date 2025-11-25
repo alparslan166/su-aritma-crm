@@ -15,6 +15,7 @@ const upsertSchema = z.object({
   name: z.string().min(2),
   phone: z.string().min(6),
   email: z.string().email().optional(),
+  photoUrl: z.string().optional().or(z.literal("")),
   hireDate: z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
     message: "hireDate must be ISO date string",
   }),
@@ -53,6 +54,7 @@ export const createPersonnelHandler = async (req: Request, res: Response, next: 
     const payload = upsertSchema.parse(req.body);
     const created = await personnelService.create(adminId, {
       ...payload,
+      photoUrl: payload.photoUrl === "" ? undefined : payload.photoUrl,
       hireDate: new Date(payload.hireDate),
     });
     res.status(201).json({ success: true, data: created });
@@ -65,10 +67,15 @@ export const updatePersonnelHandler = async (req: Request, res: Response, next: 
   try {
     const adminId = getAdminId(req);
     const payload = upsertSchema.partial({ name: true, phone: true, hireDate: true }).parse(req.body);
-    const updated = await personnelService.update(adminId, req.params.id, {
+    const updatePayload: any = {
       ...payload,
       hireDate: payload.hireDate ? new Date(payload.hireDate) : undefined,
-    });
+    };
+    // Handle photoUrl: empty string means remove photo (set to null), undefined means keep existing
+    if (payload.photoUrl !== undefined) {
+      updatePayload.photoUrl = payload.photoUrl === "" ? null : payload.photoUrl;
+    }
+    const updated = await personnelService.update(adminId, req.params.id, updatePayload);
     res.json({ success: true, data: updated });
   } catch (error) {
     next(error as Error);

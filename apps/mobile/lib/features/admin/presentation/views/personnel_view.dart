@@ -1,10 +1,16 @@
+import "dart:typed_data";
+
+import "package:dio/dio.dart";
 import "package:flutter/material.dart";
 import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
+import "package:image_picker/image_picker.dart";
 import "package:intl/intl.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 import "package:mobile/widgets/empty_state.dart";
 
+import "../../../../core/constants/app_config.dart";
+import "../../../../core/network/api_client.dart" show apiClientProvider;
 import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/personnel.dart";
@@ -69,7 +75,7 @@ class PersonnelView extends ConsumerWidget {
     );
     final padding = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
-      appBar: const AdminAppBar(title: "Personeller"),
+      appBar: const AdminAppBar(title: Text("Personeller")),
       body: Stack(
         children: [
           Positioned.fill(child: content),
@@ -106,6 +112,19 @@ class _PersonnelTile extends StatelessWidget {
 
   final Personnel item;
 
+  String _getPersonnelStatusText(String status) {
+    switch (status) {
+      case "ACTIVE":
+        return "Aktif";
+      case "SUSPENDED":
+        return "Askıda";
+      case "INACTIVE":
+        return "Pasif";
+      default:
+        return status;
+    }
+  }
+
   Color _statusColor() {
     // İzinli personeller mavi renkte
     if (item.isOnLeave) {
@@ -136,28 +155,10 @@ class _PersonnelTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF2563EB).withValues(alpha: 0.1),
-                        const Color(0xFF10B981).withValues(alpha: 0.1),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      item.name.isNotEmpty ? item.name[0].toUpperCase() : "P",
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2563EB),
-                      ),
-                    ),
-                  ),
+                _PersonnelAvatar(
+                  photoUrl: item.photoUrl,
+                  name: item.name,
+                  size: 48,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -242,7 +243,7 @@ class _PersonnelTile extends StatelessWidget {
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
-                            item.isOnLeave ? "İZİNLİ" : item.status,
+                            item.isOnLeave ? "İZİNLİ" : _getPersonnelStatusText(item.status),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -358,9 +359,12 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
+  final _imagePicker = ImagePicker();
   DateTime _hireDate = DateTime.now();
   bool _canShareLocation = true;
   bool _submitting = false;
+  XFile? _selectedImage;
+  Uint8List? _selectedImageBytes;
 
   @override
   void dispose() {
@@ -384,12 +388,111 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
     }
   }
 
+  Future<void> _pickImage() async {
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Fotoğraf Kaynağı"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text("Kamera"),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text("Galeri"),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source != null) {
+      final image = await _imagePicker.pickImage(source: source);
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        setState(() {
+          _selectedImage = image;
+          _selectedImageBytes = bytes;
+        });
+      }
+    }
+  }
+
+
+  Future<String?> _uploadImage(XFile image) async {
+    try {
+      final bytes = await image.readAsBytes();
+      final contentType = image.path.endsWith(".jpg") || image.path.endsWith(".jpeg")
+          ? "image/jpeg"
+          : "image/png";
+
+      // Get presigned URL from backend
+      final client = ref.read(apiClientProvider);
+      final presignedResponse = await client.post("/media/sign", data: {
+        "contentType": contentType,
+        "prefix": "personnel-photos",
+      });
+      final uploadUrl = presignedResponse.data["data"]["uploadUrl"] as String;
+      final photoKey = presignedResponse.data["data"]["key"] as String;
+
+      // Upload to S3 using presigned URL
+      // Create a new Dio instance without interceptors to avoid conflicts
+      final uploadClient = Dio();
+      try {
+        await uploadClient.put(
+          uploadUrl,
+          data: bytes,
+          options: Options(
+            headers: {
+              "Content-Type": contentType,
+            },
+            contentType: contentType,
+            validateStatus: (status) => status != null && status < 600,
+          ),
+        );
+      } catch (uploadError) {
+        // Close the upload client to free resources
+        uploadClient.close();
+        rethrow;
+      }
+      uploadClient.close();
+
+      // Return the photo key
+      return photoKey;
+    } catch (e) {
+      if (mounted) {
+        final errorMessage = e.toString().contains("connection error") ||
+                e.toString().contains("XMLHttpRequest")
+            ? "Fotoğraf yüklenemedi: Ağ bağlantı hatası. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin."
+            : "Fotoğraf yüklenemedi: ${e.toString()}";
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+      return null;
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _submitting = true;
     });
     try {
+      String? photoUrl;
+      
+      // Upload image if selected
+      if (_selectedImage != null) {
+        photoUrl = await _uploadImage(_selectedImage!);
+      }
+
       await ref
           .read(adminRepositoryProvider)
           .createPersonnel(
@@ -400,6 +503,7 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
                 : _emailController.text.trim(),
             hireDate: _hireDate,
             canShareLocation: _canShareLocation,
+            photoUrl: photoUrl,
           );
       await ref.read(personnelListProvider.notifier).refresh();
       if (!mounted) return;
@@ -435,6 +539,70 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
               Text(
                 "Personel Ekle",
                 style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              // Fotoğraf seçimi
+              Center(
+                child: Column(
+                  children: [
+                    Stack(
+                      children: [
+                        if (_selectedImageBytes != null)
+                          ClipOval(
+                            child: Image.memory(
+                              _selectedImageBytes!,
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        else
+                          Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFF2563EB).withValues(alpha: 0.1),
+                                  const Color(0xFF10B981).withValues(alpha: 0.1),
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.person, size: 50),
+                          ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: const Color(0xFF2563EB),
+                            child: IconButton(
+                              icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                              onPressed: _pickImage,
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (_selectedImageBytes != null)
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _selectedImage = null;
+                            _selectedImageBytes = null;
+                          });
+                        },
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text("Kaldır"),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                      ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -500,6 +668,86 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
               ),
               SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PersonnelAvatar extends StatelessWidget {
+  const _PersonnelAvatar({
+    required this.photoUrl,
+    required this.name,
+    this.size = 48,
+  });
+
+  final String? photoUrl;
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    // Eğer photoUrl varsa ve boş değilse, fotoğrafı göster
+    if (photoUrl != null && photoUrl!.isNotEmpty) {
+      // Default fotoğraflar için asset kullan
+      if (photoUrl!.startsWith("default/")) {
+        final gender = photoUrl!.replaceAll("default/", "").replaceAll(".jpg", "");
+        return ClipOval(
+          child: Image.asset(
+            "assets/images/$gender.jpg",
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildInitialsAvatar();
+            },
+          ),
+        );
+      }
+      // S3 URL için network image kullan
+      final imageUrl = AppConfig.getMediaUrl(photoUrl!);
+      return ClipOval(
+        child: Image.network(
+          imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            // Hata durumunda baş harf göster
+            return _buildInitialsAvatar();
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return _buildInitialsAvatar();
+          },
+        ),
+      );
+    }
+    // Fotoğraf yoksa baş harf göster
+    return _buildInitialsAvatar();
+  }
+
+  Widget _buildInitialsAvatar() {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF2563EB).withValues(alpha: 0.1),
+            const Color(0xFF10B981).withValues(alpha: 0.1),
+          ],
+        ),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : "P",
+          style: TextStyle(
+            fontSize: size * 0.4,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF2563EB),
           ),
         ),
       ),

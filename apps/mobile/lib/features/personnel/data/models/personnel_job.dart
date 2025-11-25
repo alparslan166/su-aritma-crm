@@ -3,11 +3,13 @@ class PersonnelJobCustomer {
     required this.name,
     required this.phone,
     required this.address,
+    this.location,
   });
 
   final String name;
   final String phone;
   final String address;
+  final Map<String, dynamic>? location;
 
   factory PersonnelJobCustomer.fromJson(Map<String, dynamic>? json) {
     if (json == null) {
@@ -17,6 +19,7 @@ class PersonnelJobCustomer {
       name: json["name"] as String? ?? "-",
       phone: json["phone"] as String? ?? "-",
       address: json["address"] as String? ?? "-",
+      location: json["location"] as Map<String, dynamic>?,
     );
   }
 }
@@ -38,6 +41,42 @@ class PersonnelJobAssignment {
   }
 }
 
+class PersonnelJobMaterial {
+  PersonnelJobMaterial({
+    required this.quantity,
+    required this.inventoryItem,
+  });
+
+  final int quantity;
+  final PersonnelJobMaterialItem inventoryItem;
+
+  factory PersonnelJobMaterial.fromJson(Map<String, dynamic> json) {
+    return PersonnelJobMaterial(
+      quantity: (json["quantity"] as num?)?.toInt() ?? 0,
+      inventoryItem: PersonnelJobMaterialItem.fromJson(
+        json["inventoryItem"] as Map<String, dynamic>? ?? {},
+      ),
+    );
+  }
+}
+
+class PersonnelJobMaterialItem {
+  PersonnelJobMaterialItem({
+    required this.id,
+    required this.name,
+  });
+
+  final String id;
+  final String name;
+
+  factory PersonnelJobMaterialItem.fromJson(Map<String, dynamic> json) {
+    return PersonnelJobMaterialItem(
+      id: json["id"] as String? ?? "",
+      name: json["name"] as String? ?? "-",
+    );
+  }
+}
+
 class PersonnelJob {
   PersonnelJob({
     required this.id,
@@ -47,6 +86,7 @@ class PersonnelJob {
     required this.customer,
     required this.scheduledAt,
     required this.priority,
+    this.materials,
   });
 
   final String id;
@@ -56,6 +96,7 @@ class PersonnelJob {
   final PersonnelJobCustomer customer;
   final DateTime? scheduledAt;
   final int? priority;
+  final List<PersonnelJobMaterial>? materials;
 
   factory PersonnelJob.fromJson(Map<String, dynamic> json) {
     return PersonnelJob(
@@ -68,6 +109,9 @@ class PersonnelJob {
       ),
       scheduledAt: DateTime.tryParse(json["scheduledAt"] as String? ?? ""),
       priority: json["priority"] as int?,
+      materials: (json["materials"] as List<dynamic>?)
+          ?.map((e) => PersonnelJobMaterial.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

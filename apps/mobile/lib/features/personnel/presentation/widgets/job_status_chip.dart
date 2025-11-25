@@ -20,6 +20,21 @@ class JobStatusChip extends StatelessWidget {
     }
   }
 
+  String _getStatusText(String status) {
+    switch (status) {
+      case "PENDING":
+        return "Beklemede";
+      case "IN_PROGRESS":
+        return "Devam Ediyor";
+      case "DELIVERED":
+        return "Teslim Edildi";
+      case "ARCHIVED":
+        return "Arşivlendi";
+      default:
+        return status;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -28,7 +43,7 @@ class JobStatusChip extends StatelessWidget {
         color: _backgroundColor(context),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(status, style: Theme.of(context).textTheme.labelSmall),
+      child: Text(_getStatusText(status), style: Theme.of(context).textTheme.labelSmall),
     );
   }
 }

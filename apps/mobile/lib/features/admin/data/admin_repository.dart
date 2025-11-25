@@ -1,12 +1,16 @@
+import "dart:io";
+
 import "package:dio/dio.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
+import "package:path_provider/path_provider.dart";
+import "package:url_launcher/url_launcher.dart";
 
 import "../../../core/network/api_client.dart";
 import "models/customer.dart";
 import "models/inventory_item.dart";
+import "models/invoice.dart";
 import "models/job.dart";
 import "models/maintenance_reminder.dart";
-import "models/operation.dart";
 import "models/personnel.dart";
 
 // Re-export PersonnelLeave for convenience
@@ -42,19 +46,22 @@ class AdminRepository {
     String? email,
     required DateTime hireDate,
     required String status,
-    required bool canShareLocation,
+    bool? canShareLocation,
+    String? photoUrl,
   }) async {
-    final response = await _client.put(
-      "/personnel/$id",
-      data: {
-        "name": name,
-        "phone": phone,
-        "email": email,
-        "hireDate": hireDate.toIso8601String(),
-        "status": status,
-        "canShareLocation": canShareLocation,
-      },
-    );
+    final data = <String, dynamic>{
+      "name": name,
+      "phone": phone,
+      "hireDate": hireDate.toIso8601String(),
+      "status": status,
+    };
+    if (email != null) data["email"] = email;
+    if (canShareLocation != null) data["canShareLocation"] = canShareLocation;
+    // Always send photoUrl if provided (including empty string to remove photo)
+    if (photoUrl != null) {
+      data["photoUrl"] = photoUrl;
+    }
+    final response = await _client.put("/personnel/$id", data: data);
     return Personnel.fromJson(response.data["data"] as Map<String, dynamic>);
   }
 
@@ -101,8 +108,12 @@ class AdminRepository {
     await _client.delete("/personnel/$personnelId/leaves/$leaveId");
   }
 
-  Future<List<Job>> fetchJobs() async {
-    final response = await _client.get("/jobs");
+  Future<List<Job>> fetchJobs({String? personnelId}) async {
+    final queryParams = <String, dynamic>{};
+    if (personnelId != null && personnelId.isNotEmpty) {
+      queryParams["personnelId"] = personnelId;
+    }
+    final response = await _client.get("/jobs", queryParameters: queryParams);
     final items = response.data["data"] as List<dynamic>? ?? [];
     return items.map((e) => Job.fromJson(e as Map<String, dynamic>)).toList();
   }
@@ -218,18 +229,18 @@ class AdminRepository {
     String? email,
     required DateTime hireDate,
     bool canShareLocation = true,
+    String? photoUrl,
   }) async {
-    await _client.post(
-      "/personnel",
-      data: {
-        "name": name,
-        "phone": phone,
-        "email": email,
-        "hireDate": hireDate.toIso8601String(),
-        "permissions": const <String, dynamic>{},
-        "canShareLocation": canShareLocation,
-      },
-    );
+    final data = <String, dynamic>{
+      "name": name,
+      "phone": phone,
+      "hireDate": hireDate.toIso8601String(),
+      "permissions": const <String, dynamic>{},
+      "canShareLocation": canShareLocation,
+    };
+    if (email != null) data["email"] = email;
+    if (photoUrl != null) data["photoUrl"] = photoUrl;
+    await _client.post("/personnel", data: data);
   }
 
   Future<void> createJob({
@@ -330,6 +341,9 @@ class AdminRepository {
   // Customer methods
   Future<List<Customer>> fetchCustomers({
     String? search,
+    String? phoneSearch,
+    DateTime? createdAtFrom,
+    DateTime? createdAtTo,
     bool? hasOverduePayment,
     bool? hasUpcomingMaintenance,
     bool? hasOverdueInstallment,
@@ -337,6 +351,15 @@ class AdminRepository {
     final queryParams = <String, dynamic>{};
     if (search != null && search.isNotEmpty) {
       queryParams["search"] = search;
+    }
+    if (phoneSearch != null && phoneSearch.isNotEmpty) {
+      queryParams["phoneSearch"] = phoneSearch;
+    }
+    if (createdAtFrom != null) {
+      queryParams["createdAtFrom"] = createdAtFrom.toIso8601String();
+    }
+    if (createdAtTo != null) {
+      queryParams["createdAtTo"] = createdAtTo.toIso8601String();
     }
     if (hasOverduePayment == true) {
       queryParams["hasOverduePayment"] = "true";
@@ -368,10 +391,14 @@ class AdminRepository {
     required String address,
     String? email,
     Map<String, dynamic>? location,
+    DateTime? createdAt,
     bool? hasDebt,
     double? debtAmount,
     bool? hasInstallment,
     int? installmentCount,
+    DateTime? nextDebtDate,
+    DateTime? installmentStartDate,
+    int? installmentIntervalDays,
   }) async {
     final data = <String, dynamic>{
       "name": name,
@@ -379,10 +406,16 @@ class AdminRepository {
       "address": address,
       if (email != null && email.isNotEmpty) "email": email,
       if (location != null) "location": location,
+      if (createdAt != null) "createdAt": createdAt.toIso8601String(),
       if (hasDebt != null) "hasDebt": hasDebt,
       if (debtAmount != null) "debtAmount": debtAmount,
       if (hasInstallment != null) "hasInstallment": hasInstallment,
       if (installmentCount != null) "installmentCount": installmentCount,
+      if (nextDebtDate != null) "nextDebtDate": nextDebtDate.toIso8601String(),
+      if (installmentStartDate != null)
+        "installmentStartDate": installmentStartDate.toIso8601String(),
+      if (installmentIntervalDays != null)
+        "installmentIntervalDays": installmentIntervalDays,
     };
     final response = await _client.post("/customers", data: data);
     return Customer.fromJson(response.data["data"] as Map<String, dynamic>);
@@ -395,10 +428,14 @@ class AdminRepository {
     String? address,
     String? email,
     Map<String, dynamic>? location,
+    DateTime? createdAt,
     bool? hasDebt,
     double? debtAmount,
     bool? hasInstallment,
     int? installmentCount,
+    DateTime? nextDebtDate,
+    DateTime? installmentStartDate,
+    int? installmentIntervalDays,
     double? remainingDebtAmount,
   }) async {
     final data = <String, dynamic>{};
@@ -407,10 +444,17 @@ class AdminRepository {
     if (address != null) data["address"] = address;
     if (email != null) data["email"] = email;
     if (location != null) data["location"] = location;
+    if (createdAt != null) data["createdAt"] = createdAt.toIso8601String();
     if (hasDebt != null) data["hasDebt"] = hasDebt;
     if (debtAmount != null) data["debtAmount"] = debtAmount;
     if (hasInstallment != null) data["hasInstallment"] = hasInstallment;
     if (installmentCount != null) data["installmentCount"] = installmentCount;
+    if (nextDebtDate != null)
+      data["nextDebtDate"] = nextDebtDate.toIso8601String();
+    if (installmentStartDate != null)
+      data["installmentStartDate"] = installmentStartDate.toIso8601String();
+    if (installmentIntervalDays != null)
+      data["installmentIntervalDays"] = installmentIntervalDays;
     if (remainingDebtAmount != null)
       data["remainingDebtAmount"] = remainingDebtAmount;
     final response = await _client.put("/customers/$id", data: data);
@@ -428,67 +472,21 @@ class AdminRepository {
     return Customer.fromJson(response.data["data"] as Map<String, dynamic>);
   }
 
+  Future<Customer> markInstallmentOverdue(String id) async {
+    final response = await _client.post(
+      "/customers/$id/mark-installment-overdue",
+    );
+    return Customer.fromJson(response.data["data"] as Map<String, dynamic>);
+  }
+
   Future<void> deleteCustomer(String id) async {
     await _client.delete("/customers/$id");
-  }
-
-  // Operation methods
-  Future<List<Operation>> fetchOperations({bool activeOnly = false}) async {
-    final response = await _client.get(
-      "/operations",
-      queryParameters: activeOnly ? {"activeOnly": "true"} : null,
-    );
-    final items = response.data["data"] as List<dynamic>? ?? [];
-    return items
-        .map((e) => Operation.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
-  Future<Operation> fetchOperationDetail(String id) async {
-    final response = await _client.get("/operations/$id");
-    return Operation.fromJson(response.data["data"] as Map<String, dynamic>);
-  }
-
-  Future<Operation> createOperation({
-    required String name,
-    String? description,
-    bool isActive = true,
-  }) async {
-    final response = await _client.post(
-      "/operations",
-      data: {
-        "name": name,
-        if (description != null && description.isNotEmpty)
-          "description": description,
-        "isActive": isActive,
-      },
-    );
-    return Operation.fromJson(response.data["data"] as Map<String, dynamic>);
-  }
-
-  Future<Operation> updateOperation({
-    required String id,
-    String? name,
-    String? description,
-    bool? isActive,
-  }) async {
-    final data = <String, dynamic>{};
-    if (name != null) data["name"] = name;
-    if (description != null) data["description"] = description;
-    if (isActive != null) data["isActive"] = isActive;
-    final response = await _client.put("/operations/$id", data: data);
-    return Operation.fromJson(response.data["data"] as Map<String, dynamic>);
-  }
-
-  Future<void> deleteOperation(String id) async {
-    await _client.delete("/operations/$id");
   }
 
   // Updated job creation with new fields
   Future<void> createJobForCustomer({
     required String customerId,
     required String title,
-    String? operationId,
     DateTime? scheduledAt,
     String? notes,
     double? latitude,
@@ -514,7 +512,6 @@ class AdminRepository {
       "location": location,
     };
 
-    if (operationId != null) requestData["operationId"] = operationId;
     if (scheduledAt != null) {
       requestData["scheduledAt"] = scheduledAt.toIso8601String();
     }
@@ -531,5 +528,121 @@ class AdminRepository {
     }
 
     await _client.post("/jobs", data: requestData);
+  }
+
+  // Invoice methods
+  Future<Invoice> createInvoiceDraft({
+    required String jobId,
+    double? subtotal,
+    double? tax,
+    double? total,
+    String? notes,
+  }) async {
+    final response = await _client.post(
+      "/invoices",
+      data: {
+        "jobId": jobId,
+        if (subtotal != null) "subtotal": subtotal,
+        if (tax != null) "tax": tax,
+        if (total != null) "total": total,
+        if (notes != null && notes.isNotEmpty) "notes": notes,
+      },
+    );
+    return Invoice.fromJson(response.data["data"] as Map<String, dynamic>);
+  }
+
+  Future<Invoice> updateInvoice({
+    required String invoiceId,
+    String? customerName,
+    String? customerPhone,
+    String? customerAddress,
+    String? customerEmail,
+    String? jobTitle,
+    DateTime? jobDate,
+    double? subtotal,
+    double? tax,
+    double? total,
+    String? notes,
+    bool? isDraft,
+  }) async {
+    final response = await _client.put(
+      "/invoices/$invoiceId",
+      data: {
+        if (customerName != null) "customerName": customerName,
+        if (customerPhone != null) "customerPhone": customerPhone,
+        if (customerAddress != null) "customerAddress": customerAddress,
+        if (customerEmail != null) "customerEmail": customerEmail,
+        if (jobTitle != null) "jobTitle": jobTitle,
+        if (jobDate != null) "jobDate": jobDate.toIso8601String(),
+        if (subtotal != null) "subtotal": subtotal,
+        if (tax != null) "tax": tax,
+        if (total != null) "total": total,
+        if (notes != null) "notes": notes,
+        if (isDraft != null) "isDraft": isDraft,
+      },
+    );
+    return Invoice.fromJson(response.data["data"] as Map<String, dynamic>);
+  }
+
+  Future<Invoice> fetchInvoice(String invoiceId) async {
+    final response = await _client.get("/invoices/$invoiceId");
+    return Invoice.fromJson(response.data["data"] as Map<String, dynamic>);
+  }
+
+  Future<List<Invoice>> fetchInvoices() async {
+    final response = await _client.get("/invoices");
+    final items = response.data["data"] as List<dynamic>? ?? [];
+    return items
+        .map((e) => Invoice.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> deleteInvoice(String invoiceId) async {
+    await _client.delete("/invoices/$invoiceId");
+  }
+
+  Future<String> generateInvoicePdf(String jobId) async {
+    // First, try to get directory (this will fail if path_provider is not properly initialized)
+    Directory? directory;
+    try {
+      directory = await getTemporaryDirectory();
+    } catch (e) {
+      // If temporary directory fails, try application documents directory
+      try {
+        directory = await getApplicationDocumentsDirectory();
+      } catch (e2) {
+        // If both fail, path_provider is not working - open PDF directly from URL
+        final baseUrl = _client.options.baseUrl;
+        final pdfUrl = "$baseUrl/invoices/job/$jobId/pdf";
+        final uri = Uri.parse(pdfUrl);
+
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          throw Exception(
+            "PDF tarayıcıda açıldı. Dosya sistemi erişimi için lütfen uygulamayı tamamen kapatıp yeniden başlatın (hot reload yeterli değil).",
+          );
+        }
+
+        throw Exception(
+          "Dosya sistemi erişimi sağlanamadı. Lütfen uygulamayı tamamen kapatıp yeniden başlatın (hot reload yeterli değil).",
+        );
+      }
+    }
+
+    // Get PDF from backend
+    final response = await _client.get(
+      "/invoices/job/$jobId/pdf",
+      options: Options(
+        responseType: ResponseType.bytes,
+        headers: {"Accept": "application/pdf"},
+      ),
+    );
+
+    // Write PDF to file
+    final filePath = "${directory.path}/fatura_$jobId.pdf";
+    final file = File(filePath);
+    await file.writeAsBytes(response.data as List<int>);
+
+    return filePath;
   }
 }

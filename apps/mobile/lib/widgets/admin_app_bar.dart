@@ -11,7 +11,7 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
   });
 
-  final String? title;
+  final Widget? title;
   final bool showBackButton;
   final List<Widget>? actions;
 
@@ -52,9 +52,7 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           if (title != null) ...[
             const SizedBox(width: 12),
-            Expanded(
-              child: Text(title!, overflow: TextOverflow.ellipsis, maxLines: 1),
-            ),
+            Expanded(child: title!),
           ] else ...[
             const SizedBox(width: 12),
             const Expanded(
