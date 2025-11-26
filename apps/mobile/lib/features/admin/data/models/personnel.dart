@@ -31,10 +31,23 @@ class Personnel {
   bool get isOnLeave {
     if (leaves == null || leaves!.isEmpty) return false;
     final now = DateTime.now();
+    // Sadece bugünün tarihini kullan (saat bilgisini sıfırla)
+    final today = DateTime(now.year, now.month, now.day);
     return leaves!.any((leave) {
-      final start = leave.startDate;
-      final end = leave.endDate.add(const Duration(days: 1)); // End date dahil
-      return now.isAfter(start) && now.isBefore(end);
+      // İzin başlangıç ve bitiş tarihlerini sadece tarih olarak al (saat bilgisini sıfırla)
+      final start = DateTime(
+        leave.startDate.year,
+        leave.startDate.month,
+        leave.startDate.day,
+      );
+      final end = DateTime(
+        leave.endDate.year,
+        leave.endDate.month,
+        leave.endDate.day,
+      );
+      // Bugün izin aralığında mı kontrol et (başlangıç dahil, bitiş dahil)
+      // today >= start && today <= end
+      return today.compareTo(start) >= 0 && today.compareTo(end) <= 0;
     });
   }
 

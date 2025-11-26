@@ -66,7 +66,8 @@ class PersonnelJobDetailPage extends HookConsumerWidget {
                 value: detail.job.priority?.toString() ?? "-",
               ),
               // Malzemeler bölümü
-              if (detail.job.materials != null && detail.job.materials!.isNotEmpty) ...[
+              if (detail.job.materials != null &&
+                  detail.job.materials!.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 _MaterialsSection(materials: detail.job.materials!),
               ],
@@ -274,12 +275,15 @@ class _DeliverySheet extends HookConsumerWidget {
                             ListTile(
                               leading: const Icon(Icons.camera_alt),
                               title: const Text("Kamera"),
-                              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+                              onTap: () =>
+                                  Navigator.of(context).pop(ImageSource.camera),
                             ),
                             ListTile(
                               leading: const Icon(Icons.photo_library),
                               title: const Text("Galeri"),
-                              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+                              onTap: () => Navigator.of(
+                                context,
+                              ).pop(ImageSource.gallery),
                             ),
                           ],
                         ),
@@ -349,11 +353,8 @@ class _DeliverySheet extends HookConsumerWidget {
           ],
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () => _showMaterialSelectionSheet(
-              context,
-              ref,
-              selectedMaterials,
-            ),
+            onPressed: () =>
+                _showMaterialSelectionSheet(context, ref, selectedMaterials),
             icon: const Icon(Icons.inventory_2),
             label: Text(
               selectedMaterials.value.isEmpty
@@ -393,7 +394,9 @@ class _DeliverySheet extends HookConsumerWidget {
                             entry.key: current - 1,
                           };
                         } else {
-                          final newMap = Map<String, int>.from(selectedMaterials.value);
+                          final newMap = Map<String, int>.from(
+                            selectedMaterials.value,
+                          );
                           newMap.remove(entry.key);
                           selectedMaterials.value = newMap;
                         }
@@ -430,18 +433,24 @@ class _DeliverySheet extends HookConsumerWidget {
                         for (final photo in selectedPhotos.value) {
                           final file = File(photo.path);
                           final bytes = await file.readAsBytes();
-                          final contentType = photo.path.endsWith(".jpg") ||
+                          final contentType =
+                              photo.path.endsWith(".jpg") ||
                                   photo.path.endsWith(".jpeg")
                               ? "image/jpeg"
                               : "image/png";
 
                           // Get presigned URL from backend
                           final client = ref.read(apiClientProvider);
-                          final presignedResponse = await client.post("/media/sign", data: {
-                            "contentType": contentType,
-                            "prefix": "job-deliveries",
-                          });
-                          final uploadUrl = presignedResponse.data["data"]["uploadUrl"] as String;
+                          final presignedResponse = await client.post(
+                            "/media/sign",
+                            data: {
+                              "contentType": contentType,
+                              "prefix": "job-deliveries",
+                            },
+                          );
+                          final uploadUrl =
+                              presignedResponse.data["data"]["uploadUrl"]
+                                  as String;
 
                           // Upload to S3 using presigned URL
                           final uploadClient = Dio();
@@ -479,10 +488,12 @@ class _DeliverySheet extends HookConsumerWidget {
                       maintenanceIntervalMonths: interval.value,
                       photoUrls: photoUrls,
                       usedMaterials: selectedMaterials.value.entries
-                          .map((e) => DeliveryMaterial(
-                                inventoryItemId: e.key,
-                                quantity: e.value,
-                              ))
+                          .map(
+                            (e) => DeliveryMaterial(
+                              inventoryItemId: e.key,
+                              quantity: e.value,
+                            ),
+                          )
                           .toList(),
                     );
                     if (!context.mounted) return;
@@ -506,9 +517,9 @@ class _DeliverySheet extends HookConsumerWidget {
     final inventoryState = ref.watch(inventoryListProvider);
     final inventory = inventoryState.value ?? [];
     if (inventory.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Malzeme bulunamadı")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Malzeme bulunamadı")));
       return;
     }
     await showModalBottomSheet(
@@ -517,84 +528,102 @@ class _DeliverySheet extends HookConsumerWidget {
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "Malzeme Seç",
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: inventory.length,
-                    itemBuilder: (context, index) {
-                      final item = inventory[index];
-                      final isSelected = selectedMaterials.value.containsKey(item.id);
-                      final quantity = selectedMaterials.value[item.id] ?? 0;
-                      return ListTile(
-                        title: Text(item.name),
-                        subtitle: Text("Stok: ${item.stockQty} ${item.unit ?? "adet"}"),
-                        trailing: isSelected
-                            ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.remove),
-                                    onPressed: () {
-                                      setModalState(() {
-                                        if (quantity > 1) {
-                                          selectedMaterials.value = {
-                                            ...selectedMaterials.value,
-                                            item.id: quantity - 1,
-                                          };
-                                        } else {
-                                          final newMap =
-                                              Map<String, int>.from(selectedMaterials.value);
-                                          newMap.remove(item.id);
-                                          selectedMaterials.value = newMap;
-                                        }
-                                      });
-                                    },
-                                  ),
-                                  Text("$quantity"),
-                                  IconButton(
-                                    icon: const Icon(Icons.add),
-                                    onPressed: () {
-                                      setModalState(() {
-                                        if (quantity < item.stockQty) {
-                                          selectedMaterials.value = {
-                                            ...selectedMaterials.value,
-                                            item.id: quantity + 1,
-                                          };
-                                        }
-                                      });
-                                    },
-                                  ),
-                                ],
-                              )
-                            : IconButton(
-                                icon: const Icon(Icons.add),
-                                onPressed: () {
-                                  setModalState(() {
-                                    selectedMaterials.value = {
-                                      ...selectedMaterials.value,
-                                      item.id: 1,
-                                    };
-                                  });
-                                },
-                              ),
-                      );
-                    },
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      "Malzeme Seç",
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text("Tamam"),
-                ),
-              ],
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: inventory.length,
+                      itemBuilder: (context, index) {
+                        final item = inventory[index];
+                        final isSelected = selectedMaterials.value.containsKey(
+                          item.id,
+                        );
+                        final quantity = selectedMaterials.value[item.id] ?? 0;
+                        return ListTile(
+                          title: Text(item.name),
+                          subtitle: Text(
+                            "Stok: ${item.stockQty} ${item.unit ?? "adet"}",
+                          ),
+                          trailing: isSelected
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.remove),
+                                      onPressed: () {
+                                        setModalState(() {
+                                          if (quantity > 1) {
+                                            selectedMaterials.value = {
+                                              ...selectedMaterials.value,
+                                              item.id: quantity - 1,
+                                            };
+                                          } else {
+                                            final newMap =
+                                                Map<String, int>.from(
+                                                  selectedMaterials.value,
+                                                );
+                                            newMap.remove(item.id);
+                                            selectedMaterials.value = newMap;
+                                          }
+                                        });
+                                      },
+                                    ),
+                                    Text("$quantity"),
+                                    IconButton(
+                                      icon: const Icon(Icons.add),
+                                      onPressed: () {
+                                        setModalState(() {
+                                          if (quantity < item.stockQty) {
+                                            selectedMaterials.value = {
+                                              ...selectedMaterials.value,
+                                              item.id: quantity + 1,
+                                            };
+                                          }
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                )
+                              : IconButton(
+                                  icon: const Icon(Icons.add),
+                                  onPressed: () {
+                                    setModalState(() {
+                                      selectedMaterials.value = {
+                                        ...selectedMaterials.value,
+                                        item.id: 1,
+                                      };
+                                    });
+                                  },
+                                ),
+                        );
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text("Tamam"),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -688,8 +717,8 @@ class _JobMapSectionState extends State<_JobMapSection> {
                 Text(
                   "Müşteri Konumu",
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const Spacer(),
                 if (_error != null || _isLoading)
@@ -711,65 +740,67 @@ class _JobMapSectionState extends State<_JobMapSection> {
                     ),
                   )
                 : _error != null
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                              const SizedBox(height: 8),
-                              Text(
-                                _error!,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.grey.shade600),
-                              ),
-                              const SizedBox(height: 8),
-                              TextButton.icon(
-                                onPressed: _loadLocation,
-                                icon: const Icon(Icons.refresh),
-                                label: const Text("Tekrar Dene"),
-                              ),
-                            ],
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: 48,
                           ),
-                        ),
-                      )
-                    : _customerLocation != null
-                        ? FlutterMap(
-                            options: MapOptions(
-                              initialCenter: _customerLocation!,
-                              initialZoom: 15.0,
-                              interactionOptions: const InteractionOptions(
-                                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                              ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton.icon(
+                            onPressed: _loadLocation,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text("Tekrar Dene"),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : _customerLocation != null
+                ? FlutterMap(
+                    options: MapOptions(
+                      initialCenter: _customerLocation!,
+                      initialZoom: 15.0,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                      ),
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        userAgentPackageName: "com.suaritma.app",
+                        maxZoom: 19,
+                        minZoom: 3,
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: _customerLocation!,
+                            width: 40,
+                            height: 40,
+                            child: const Icon(
+                              Icons.location_on,
+                              color: Color(0xFF2563EB),
+                              size: 40,
                             ),
-                            children: [
-                              TileLayer(
-                                urlTemplate:
-                                    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                                userAgentPackageName: "com.suaritma.app",
-                                maxZoom: 19,
-                                minZoom: 3,
-                              ),
-                              MarkerLayer(
-                                markers: [
-                                  Marker(
-                                    point: _customerLocation!,
-                                    width: 40,
-                                    height: 40,
-                                    child: const Icon(
-                                      Icons.location_on,
-                                      color: Color(0xFF2563EB),
-                                      size: 40,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          )
-                        : const Center(
-                            child: Text("Konum bilgisi bulunamadı"),
                           ),
+                        ],
+                      ),
+                    ],
+                  )
+                : const Center(child: Text("Konum bilgisi bulunamadı")),
           ),
           if (_customerLocation != null)
             Padding(
@@ -816,41 +847,50 @@ class _MaterialsSection extends StatelessWidget {
                 Text(
                   "Kullanılacak Malzemeler",
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            ...materials.map((material) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.inventory, size: 20, color: Color(0xFF10B981)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          material.inventoryItem.name,
-                          style: Theme.of(context).textTheme.bodyLarge,
+            ...materials.map(
+              (material) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.inventory,
+                      size: 20,
+                      color: Color(0xFF10B981),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        material.inventoryItem.name,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        "Adet: ${material.quantity}",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF10B981),
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          "Adet: ${material.quantity}",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF10B981),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

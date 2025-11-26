@@ -2,7 +2,8 @@ import { PersonnelStatus } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-import { getAdminId } from "@/lib/tenant";
+import { getAdminId, getPersonnelId } from "@/lib/tenant";
+import { prisma } from "@/lib/prisma";
 
 import { personnelService } from "./personnel.service";
 
@@ -37,12 +38,41 @@ export const listPersonnelHandler = async (req: Request, res: Response, next: Ne
 
 export const getPersonnelHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const adminId = getAdminId(req);
-    const record = await personnelService.getById(adminId, req.params.id);
-    if (!record) {
-      return res.status(404).json({ success: false, message: "Personnel not found" });
+    // Check if request is from personnel (has x-personnel-id header)
+    const personnelIdHeader = req.header("x-personnel-id");
+    const adminIdHeader = req.header("x-admin-id");
+    
+    if (personnelIdHeader && !adminIdHeader) {
+      // Request from personnel - they can only view their own profile
+      const personnelId = getPersonnelId(req);
+      if (personnelId !== req.params.id) {
+        return res.status(403).json({ 
+          success: false, 
+          message: "You can only view your own profile" 
+        });
+      }
+      // Get personnel's adminId from database
+      const personnel = await prisma.personnel.findUnique({
+        where: { id: personnelId },
+        select: { adminId: true },
+      });
+      if (!personnel) {
+        return res.status(404).json({ success: false, message: "Personnel not found" });
+      }
+      const record = await personnelService.getById(personnel.adminId, req.params.id);
+      if (!record) {
+        return res.status(404).json({ success: false, message: "Personnel not found" });
+      }
+      res.json({ success: true, data: record });
+    } else {
+      // Request from admin
+      const adminId = getAdminId(req);
+      const record = await personnelService.getById(adminId, req.params.id);
+      if (!record) {
+        return res.status(404).json({ success: false, message: "Personnel not found" });
+      }
+      res.json({ success: true, data: record });
     }
-    res.json({ success: true, data: record });
   } catch (error) {
     next(error as Error);
   }

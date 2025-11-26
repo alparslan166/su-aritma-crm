@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
+import "package:intl/date_symbol_data_local.dart";
 
 import "../../data/personnel_repository.dart";
 
@@ -20,25 +21,48 @@ class _PersonnelProfilePageState extends ConsumerState<PersonnelProfilePage> {
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    _initializeAndLoad();
+  }
+
+  Future<void> _initializeAndLoad() async {
+    try {
+      // Initialize Turkish locale data
+      await initializeDateFormatting("tr_TR", null);
+      await _loadProfile();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadProfile() async {
     try {
-      setState(() {
-        _loading = true;
-        _error = null;
-      });
-      final profile = await ref.read(personnelRepositoryProvider).fetchMyProfile();
-      setState(() {
-        _profile = profile;
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _loading = true;
+          _error = null;
+        });
+      }
+      final profile = await ref
+          .read(personnelRepositoryProvider)
+          .fetchMyProfile();
+      if (mounted) {
+        setState(() {
+          _profile = profile;
+          _loading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -55,92 +79,93 @@ class _PersonnelProfilePageState extends ConsumerState<PersonnelProfilePage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text("Hata: $_error"),
-                      const SizedBox(height: 16),
-                      FilledButton(
-                        onPressed: _loadProfile,
-                        child: const Text("Yeniden Dene"),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text("Hata: $_error"),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: _loadProfile,
+                    child: const Text("Yeniden Dene"),
                   ),
-                )
-              : _profile == null
-                  ? const Center(child: Text("Profil bulunamadı"))
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Profile Header
-                          Center(
-                            child: Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.person,
-                                size: 50,
-                                color: Color(0xFF10B981),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Center(
-                            child: Text(
-                              _profile!["name"] as String? ?? "-",
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          // Profile Information
-                          _InfoCard(
-                            title: "İsim",
-                            value: _profile!["name"] as String? ?? "-",
-                            icon: Icons.person,
-                          ),
-                          const SizedBox(height: 16),
-                          _InfoCard(
-                            title: "Telefon",
-                            value: _profile!["phone"] as String? ?? "-",
-                            icon: Icons.phone,
-                          ),
-                          const SizedBox(height: 16),
-                          _InfoCard(
-                            title: "Eklenme Tarihi",
-                            value: _profile!["hireDate"] != null
-                                ? DateFormat("dd MMM yyyy", "tr_TR").format(
-                                    DateTime.parse(_profile!["hireDate"] as String).toLocal(),
-                                  )
-                                : "-",
-                            icon: Icons.calendar_today,
-                          ),
-                          const SizedBox(height: 16),
-                          _InfoCard(
-                            title: "Personel ID",
-                            value: _profile!["personnelId"] as String? ?? "-",
-                            icon: Icons.badge,
-                          ),
-                          const SizedBox(height: 16),
-                          _InfoCard(
-                            title: "Şifre",
-                            value: _profile!["loginCode"] as String? ?? "-",
-                            icon: Icons.lock,
-                            isPassword: true,
-                          ),
-                        ],
+                ],
+              ),
+            )
+          : _profile == null
+          ? const Center(child: Text("Profil bulunamadı"))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Profile Header
+                  Center(
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.person,
+                        size: 50,
+                        color: Color(0xFF10B981),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: Text(
+                      _profile!["name"] as String? ?? "-",
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  // Profile Information
+                  _InfoCard(
+                    title: "İsim",
+                    value: _profile!["name"] as String? ?? "-",
+                    icon: Icons.person,
+                  ),
+                  const SizedBox(height: 16),
+                  _InfoCard(
+                    title: "Telefon",
+                    value: _profile!["phone"] as String? ?? "-",
+                    icon: Icons.phone,
+                  ),
+                  const SizedBox(height: 16),
+                  _InfoCard(
+                    title: "Eklenme Tarihi",
+                    value: _profile!["hireDate"] != null
+                        ? DateFormat("dd MMM yyyy", "tr_TR").format(
+                            DateTime.parse(
+                              _profile!["hireDate"] as String,
+                            ).toLocal(),
+                          )
+                        : "-",
+                    icon: Icons.calendar_today,
+                  ),
+                  const SizedBox(height: 16),
+                  _InfoCard(
+                    title: "Personel ID",
+                    value: _profile!["personnelId"] as String? ?? "-",
+                    icon: Icons.badge,
+                  ),
+                  const SizedBox(height: 16),
+                  _InfoCard(
+                    title: "Şifre",
+                    value: _profile!["loginCode"] as String? ?? "-",
+                    icon: Icons.lock,
+                    isPassword: true,
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }
@@ -203,15 +228,10 @@ class _InfoCard extends StatelessWidget {
               ),
             ),
             if (isPassword)
-              Icon(
-                Icons.visibility_off,
-                size: 18,
-                color: Colors.grey.shade400,
-              ),
+              Icon(Icons.visibility_off, size: 18, color: Colors.grey.shade400),
           ],
         ),
       ),
     );
   }
 }
-

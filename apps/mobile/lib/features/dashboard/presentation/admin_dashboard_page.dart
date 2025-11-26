@@ -4,6 +4,7 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 
 import "../../../core/session/session_provider.dart";
 import "../../../routing/app_router.dart";
+import "../../admin/presentation/views/admin_profile_page.dart";
 import "../../admin/presentation/views/assign_job_sheet.dart";
 import "../../admin/presentation/views/customers_view.dart";
 import "../../admin/presentation/views/inventory_view.dart";
@@ -390,6 +391,17 @@ class _AdminDrawer extends ConsumerWidget {
               Navigator.of(context).pop();
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const NotificationsView()),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.person),
+            title: const Text("Profil"),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AdminProfilePage()),
               );
             },
           ),

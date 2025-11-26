@@ -71,7 +71,6 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     super.dispose();
   }
 
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -222,7 +221,9 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                           final picked = await showDatePicker(
                             context: context,
                             initialDate: _createdAt!,
-                            firstDate: DateTime.now().subtract(const Duration(days: 3650)),
+                            firstDate: DateTime.now().subtract(
+                              const Duration(days: 3650),
+                            ),
                             lastDate: DateTime.now(),
                           );
                           if (picked != null) {
@@ -356,35 +357,39 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 12),
-                  // Ödeme Tarihi
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          "Ödeme Tarihi: ${_nextDebtDate != null ? DateFormat("dd MMM yyyy").format(_nextDebtDate!) : "Seçilmedi"}",
-                          style: Theme.of(context).textTheme.bodyMedium,
+                  // Ödeme Tarihi - Sadece taksit yoksa göster
+                  if (!_debtHasInstallment) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "Ödeme Tarihi: ${_nextDebtDate != null ? DateFormat("dd MMM yyyy").format(_nextDebtDate!) : "Seçilmedi"}",
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                         ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: _nextDebtDate ?? DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(const Duration(days: 3650)),
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _nextDebtDate = picked;
-                            });
-                          }
-                        },
-                        icon: const Icon(Icons.calendar_today, size: 18),
-                        label: const Text("Tarih Seç"),
-                      ),
-                    ],
-                  ),
+                        TextButton.icon(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _nextDebtDate ?? DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 3650),
+                              ),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                _nextDebtDate = picked;
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.calendar_today, size: 18),
+                          label: const Text("Tarih Seç"),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -393,6 +398,8 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                           onPressed: () {
                             setState(() {
                               _debtHasInstallment = true;
+                              _nextDebtDate =
+                                  null; // Taksit seçildiğinde ödeme tarihini temizle
                             });
                           },
                           style: OutlinedButton.styleFrom(
@@ -473,9 +480,12 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                           onPressed: () async {
                             final picked = await showDatePicker(
                               context: context,
-                              initialDate: _installmentStartDate ?? DateTime.now(),
+                              initialDate:
+                                  _installmentStartDate ?? DateTime.now(),
                               firstDate: DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 3650)),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 3650),
+                              ),
                             );
                             if (picked != null) {
                               setState(() {
@@ -489,19 +499,20 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Taksit Tekrar Günü
+                    // Ödeme Tekrar Günü
                     TextFormField(
                       controller: _installmentIntervalDaysController,
                       decoration: const InputDecoration(
-                        labelText: "Taksit Tekrar Günü",
+                        labelText: "Ödeme kaç günde bir olacak?",
                         prefixIcon: Icon(Icons.repeat),
-                        helperText: "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
+                        helperText:
+                            "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
                       ),
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (_debtHasInstallment &&
                             (value == null || value.trim().isEmpty)) {
-                          return "Taksit tekrar günü girin";
+                          return "Ödeme tekrar günü girin";
                         }
                         if (value != null && value.trim().isNotEmpty) {
                           final days = int.tryParse(value);

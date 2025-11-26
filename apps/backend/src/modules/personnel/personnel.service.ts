@@ -89,6 +89,16 @@ class PersonnelService {
     return prisma.personnel.findFirst({
       where: { id, adminId },
       include: {
+        locationLogs: {
+          orderBy: { startedAt: "desc" },
+          take: 1,
+          select: {
+            lat: true,
+            lng: true,
+            jobId: true,
+            startedAt: true,
+          },
+        },
         leaves: {
           orderBy: { startDate: "desc" },
         },

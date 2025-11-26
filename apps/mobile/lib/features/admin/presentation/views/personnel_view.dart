@@ -2,6 +2,7 @@ import "dart:typed_data";
 
 import "package:dio/dio.dart";
 import "package:flutter/material.dart";
+import "package:flutter_hooks/flutter_hooks.dart";
 import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:image_picker/image_picker.dart";
@@ -15,70 +16,317 @@ import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/personnel.dart";
 
-class PersonnelView extends ConsumerWidget {
+class PersonnelView extends HookConsumerWidget {
   const PersonnelView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(personnelListProvider);
     final notifier = ref.read(personnelListProvider.notifier);
-    final content = state.when(
-      data: (items) {
-        if (items.isEmpty) {
-          return RefreshIndicator(
-            onRefresh: notifier.refresh,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-              children: const [
-                SizedBox(height: 120),
-                EmptyState(
-                  icon: Icons.group_outlined,
-                  title: "Hiç personel bulunmuyor",
-                  subtitle:
-                      "Yeni personel ekleyerek ekibinizi oluşturabilirsiniz.",
-                ),
-              ],
-            ),
-          );
-        }
-        return RefreshIndicator(
-          onRefresh: notifier.refresh,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            cacheExtent: 500,
-            addAutomaticKeepAlives: false,
-            addRepaintBoundaries: true,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return RepaintBoundary(
-                child: GestureDetector(
-                  onTap: () => context.pushNamed(
-                    "admin-personnel-detail",
-                    pathParameters: {"id": item.id},
-                    extra: item,
-                  ),
-                  child: _PersonnelTile(item: item),
-                ),
-              );
-            },
-          ),
+    final searchController = useTextEditingController();
+    final phoneSearchController = useTextEditingController();
+    final searchQuery = useState<String>("");
+    final phoneSearchQuery = useState<String>("");
+    final showFilters = useState<bool>(false);
+    final dateFrom = useState<DateTime?>(null);
+    final dateTo = useState<DateTime?>(null);
+
+    // Helper function to apply filters
+    void applyFilters({
+      String? search,
+      String? phoneSearch,
+      DateTime? createdAtFrom,
+      DateTime? createdAtTo,
+    }) {
+      notifier.filter(
+        search: search?.isEmpty ?? true ? null : search,
+        phoneSearch: phoneSearch?.isEmpty ?? true ? null : phoneSearch,
+        createdAtFrom: createdAtFrom,
+        createdAtTo: createdAtTo,
+      );
+    }
+
+    // Apply filter on initial load
+    useEffect(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        applyFilters(
+          search: searchQuery.value,
+          phoneSearch: phoneSearchQuery.value,
+          createdAtFrom: dateFrom.value,
+          createdAtTo: dateTo.value,
         );
-      },
-      error: (error, _) => _ErrorState(
-        message: error.toString(),
-        onRetry: () => ref.read(personnelListProvider.notifier).refresh(),
-      ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-    );
+      });
+      return null;
+    }, []);
+
+    final state = ref.watch(personnelListProvider);
     final padding = MediaQuery.paddingOf(context).bottom;
+    
     return Scaffold(
       appBar: const AdminAppBar(title: Text("Personeller")),
       body: Stack(
         children: [
-          Positioned.fill(child: content),
+          Column(
+            children: [
+              // Arama kutusu
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: searchController,
+                        autofocus: false,
+                        textInputAction: TextInputAction.search,
+                        decoration: InputDecoration(
+                          hintText: "Personel ara...",
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: searchQuery.value.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    searchController.clear();
+                                    searchQuery.value = "";
+                                    applyFilters(
+                                      search: "",
+                                      phoneSearch: phoneSearchQuery.value,
+                                      createdAtFrom: dateFrom.value,
+                                      createdAtTo: dateTo.value,
+                                    );
+                                  },
+                                )
+                              : null,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                        ),
+                        onChanged: (value) {
+                          searchQuery.value = value;
+                          applyFilters(
+                            search: value,
+                            phoneSearch: phoneSearchQuery.value,
+                            createdAtFrom: dateFrom.value,
+                            createdAtTo: dateTo.value,
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(
+                        showFilters.value
+                            ? Icons.filter_alt
+                            : Icons.filter_alt_outlined,
+                      ),
+                      onPressed: () {
+                        showFilters.value = !showFilters.value;
+                      },
+                      tooltip: "Filtreler",
+                    ),
+                  ],
+                ),
+              ),
+              // Filtreler bölümü
+              if (showFilters.value)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                "Filtreler",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Spacer(),
+                              TextButton(
+                                onPressed: () {
+                                  phoneSearchController.clear();
+                                  phoneSearchQuery.value = "";
+                                  dateFrom.value = null;
+                                  dateTo.value = null;
+                                  applyFilters(
+                                    search: searchQuery.value,
+                                    phoneSearch: "",
+                                    createdAtFrom: null,
+                                    createdAtTo: null,
+                                  );
+                                },
+                                child: const Text("Temizle"),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // Telefon numarası araması
+                          TextField(
+                            controller: phoneSearchController,
+                            decoration: const InputDecoration(
+                              labelText: "Telefon Numarası",
+                              hintText: "Örn: 2324",
+                              prefixIcon: Icon(Icons.phone),
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: TextInputType.phone,
+                            onChanged: (value) {
+                              phoneSearchQuery.value = value;
+                              applyFilters(
+                                search: searchQuery.value,
+                                phoneSearch: value,
+                                createdAtFrom: dateFrom.value,
+                                createdAtTo: dateTo.value,
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          // Tarih filtreleme
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      initialDate:
+                                          dateFrom.value ?? DateTime.now(),
+                                      firstDate: DateTime(2000),
+                                      lastDate: DateTime.now(),
+                                    );
+                                    if (picked != null) {
+                                      dateFrom.value = picked;
+                                      applyFilters(
+                                        search: searchQuery.value,
+                                        phoneSearch: phoneSearchQuery.value,
+                                        createdAtFrom: picked,
+                                        createdAtTo: dateTo.value,
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(
+                                    Icons.calendar_today,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    dateFrom.value != null
+                                        ? DateFormat("dd MMM yyyy")
+                                            .format(dateFrom.value!)
+                                        : "Başlangıç Tarihi",
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      initialDate:
+                                          dateTo.value ?? DateTime.now(),
+                                      firstDate:
+                                          dateFrom.value ?? DateTime(2000),
+                                      lastDate: DateTime.now(),
+                                    );
+                                    if (picked != null) {
+                                      dateTo.value = picked;
+                                      applyFilters(
+                                        search: searchQuery.value,
+                                        phoneSearch: phoneSearchQuery.value,
+                                        createdAtFrom: dateFrom.value,
+                                        createdAtTo: picked,
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(
+                                    Icons.calendar_today,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    dateTo.value != null
+                                        ? DateFormat("dd MMM yyyy")
+                                            .format(dateTo.value!)
+                                        : "Bitiş Tarihi",
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              // Liste içeriği
+              Expanded(
+                child: state.when(
+                  data: (items) {
+                    if (items.isEmpty) {
+                      return RefreshIndicator(
+                        onRefresh: notifier.refresh,
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 48,
+                            horizontal: 24,
+                          ),
+                          children: const [
+                            SizedBox(height: 120),
+                            EmptyState(
+                              icon: Icons.group_outlined,
+                              title: "Hiç personel bulunmuyor",
+                              subtitle:
+                                  "Yeni personel ekleyerek ekibinizi oluşturabilirsiniz.",
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return RefreshIndicator(
+                      onRefresh: notifier.refresh,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 12,
+                        ),
+                        itemCount: items.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        cacheExtent: 500,
+                        addAutomaticKeepAlives: false,
+                        addRepaintBoundaries: true,
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          return RepaintBoundary(
+                            child: GestureDetector(
+                              onTap: () => context.pushNamed(
+                                "admin-personnel-detail",
+                                pathParameters: {"id": item.id},
+                                extra: item,
+                              ),
+                              child: _PersonnelTile(item: item),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                  error: (error, _) => _ErrorState(
+                    message: error.toString(),
+                    onRetry: () =>
+                        ref.read(personnelListProvider.notifier).refresh(),
+                  ),
+                  loading: () => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              ),
+            ],
+          ),
           Positioned(
             right: 16,
             bottom: 16 + padding,

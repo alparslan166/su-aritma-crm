@@ -81,10 +81,25 @@ Haritada personeller = (Personelin fotoğrafı gözükecek fotoğrafı yoksa ba�
 
 --------------------------<<<<<<<<<<
 
+Geçmiş işlerde detay sayfalarında müşteri kısmına detay diye bir buton ekle sağ alt köşeye basıldığı zaman müşterinin detay sayfasına gitsin,
+aynı şekilde personeller için de detay butonu ekle 
+
+
+
+
 
 anasayfadaki üst menülerin tam ortasına bir "Ana Sayfa" adlı bölüm ekle şimdilik boş kalsın
 
 ------------------------
+
+
+
+
+
+
+
+
+
 
 
 

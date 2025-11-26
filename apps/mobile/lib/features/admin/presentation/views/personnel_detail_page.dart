@@ -1060,12 +1060,36 @@ class _LeavesManagementSheetState
 
   Widget _buildLeavesList() {
     final now = DateTime.now();
+    // Sadece bugünün tarihini kullan (saat bilgisini sıfırla)
+    final today = DateTime(now.year, now.month, now.day);
+
     final activeLeaves = _leaves.where((leave) {
-      return now.isAfter(leave.startDate) &&
-          now.isBefore(leave.endDate.add(const Duration(days: 1)));
+      // İzin başlangıç ve bitiş tarihlerini sadece tarih olarak al
+      final start = DateTime(
+        leave.startDate.year,
+        leave.startDate.month,
+        leave.startDate.day,
+      );
+      final end = DateTime(
+        leave.endDate.year,
+        leave.endDate.month,
+        leave.endDate.day,
+      );
+      // Bugün izin aralığında mı kontrol et (başlangıç dahil, bitiş dahil)
+      // today >= start && today <= end
+      return today.compareTo(start) >= 0 && today.compareTo(end) <= 0;
     }).toList();
+
     final pastLeaves = _leaves.where((leave) {
-      return now.isAfter(leave.endDate.add(const Duration(days: 1)));
+      // İzin bitiş tarihini sadece tarih olarak al
+      final end = DateTime(
+        leave.endDate.year,
+        leave.endDate.month,
+        leave.endDate.day,
+      );
+      // Bugün izin bitiş tarihinden sonra mı kontrol et
+      // today > end
+      return today.compareTo(end) > 0;
     }).toList();
 
     return ListView(
@@ -1291,17 +1315,20 @@ class _PastJobsSection extends ConsumerWidget {
   }
 }
 
-class _PersonnelMapSection extends StatefulWidget {
+class _PersonnelMapSection extends ConsumerStatefulWidget {
   const _PersonnelMapSection({required this.personnel});
 
   final Personnel personnel;
 
   @override
-  State<_PersonnelMapSection> createState() => _PersonnelMapSectionState();
+  ConsumerState<_PersonnelMapSection> createState() =>
+      _PersonnelMapSectionState();
 }
 
-class _PersonnelMapSectionState extends State<_PersonnelMapSection> {
+class _PersonnelMapSectionState extends ConsumerState<_PersonnelMapSection> {
   LatLng? _personnelLocation;
+  bool _isLoading = false;
+  String? _error;
 
   @override
   void initState() {
@@ -1309,14 +1336,74 @@ class _PersonnelMapSectionState extends State<_PersonnelMapSection> {
     _loadLocation();
   }
 
-  void _loadLocation() {
-    // Personelin lastKnownLocation bilgisini kontrol et
+  Future<void> _loadLocation() async {
+    // Önce personelin lastKnownLocation bilgisini kontrol et
+    debugPrint(
+      "🗺️ Personnel location check: ${widget.personnel.lastKnownLocation != null}",
+    );
     if (widget.personnel.lastKnownLocation != null) {
+      debugPrint(
+        "🗺️ Personnel has location: ${widget.personnel.lastKnownLocation!.lat}, ${widget.personnel.lastKnownLocation!.lng}",
+      );
       setState(() {
         _personnelLocation = LatLng(
           widget.personnel.lastKnownLocation!.lat,
           widget.personnel.lastKnownLocation!.lng,
         );
+      });
+      return;
+    }
+
+    debugPrint("🗺️ Personnel location is null, trying to find from jobs...");
+
+    // lastKnownLocation yoksa, personelin son işlerinden birinin konumunu kullan
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final jobs = await ref
+          .read(adminRepositoryProvider)
+          .fetchJobs(personnelId: widget.personnel.id);
+
+      // Konum bilgisi olan en son işi bul
+      final jobWithLocation = jobs.where((job) => job.location != null).toList()
+        ..sort((a, b) {
+          // En son tarihli işi al
+          final aDate = a.scheduledAt ?? a.createdAt;
+          final bDate = b.scheduledAt ?? b.createdAt;
+          if (aDate == null && bDate == null) return 0;
+          if (aDate == null) return 1;
+          if (bDate == null) return -1;
+          return bDate.compareTo(aDate);
+        });
+
+      if (!mounted) return;
+
+      debugPrint("🗺️ Found ${jobWithLocation.length} jobs with location");
+      if (jobWithLocation.isNotEmpty &&
+          jobWithLocation.first.location != null) {
+        final location = jobWithLocation.first.location!;
+        debugPrint(
+          "🗺️ Using job location: ${location.latitude}, ${location.longitude}",
+        );
+        setState(() {
+          _personnelLocation = LatLng(location.latitude, location.longitude);
+          _isLoading = false;
+        });
+      } else {
+        debugPrint("🗺️ No jobs with location found");
+        setState(() {
+          _error = "Konum bilgisi bulunamadı";
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = "Konum yüklenemedi: $e";
+        _isLoading = false;
       });
     }
   }
@@ -1340,6 +1427,13 @@ class _PersonnelMapSectionState extends State<_PersonnelMapSection> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const Spacer(),
+                if (_error != null || _isLoading)
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _isLoading ? null : _loadLocation,
+                    tooltip: "Yeniden Yükle",
+                  ),
               ],
             ),
           ),
@@ -1358,111 +1452,176 @@ class _PersonnelMapSectionState extends State<_PersonnelMapSection> {
                 : null,
             child: SizedBox(
               height: 250,
-              child: _personnelLocation != null
-                  ? ClipRect(
-                      child: FlutterMap(
-                        key: ValueKey(
-                          "${_personnelLocation!.latitude}_${_personnelLocation!.longitude}",
-                        ),
-                        options: MapOptions(
-                          initialCenter: _personnelLocation!,
-                          initialZoom: 15.0,
-                          interactionOptions: const InteractionOptions(
-                            flags: InteractiveFlag.none,
-                          ),
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate:
-                                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                            userAgentPackageName: "com.suaritma.app",
-                            maxZoom: 19,
-                            minZoom: 3,
-                          ),
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: _personnelLocation!,
-                                width: 40,
-                                height: 40,
-                                child: const Icon(
-                                  Icons.person_pin_circle,
-                                  color: Color(0xFF2563EB),
-                                  size: 40,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+              child: _isLoading
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: CircularProgressIndicator(),
                       ),
                     )
-                  : Center(
+                  : _error != null
+                  ? Center(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.location_off,
-                              color: Colors.grey.shade400,
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
                               size: 48,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              "Konum bilgisi bulunmuyor",
+                              _error!,
                               textAlign: TextAlign.center,
                               style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton.icon(
+                              onPressed: _loadLocation,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text("Tekrar Dene"),
                             ),
                           ],
                         ),
                       ),
+                    )
+                  : _personnelLocation != null
+                  ? Builder(
+                      builder: (context) {
+                        debugPrint(
+                          "🗺️ Rendering personnel map at: ${_personnelLocation!.latitude}, ${_personnelLocation!.longitude}",
+                        );
+                        return ClipRect(
+                          child: FlutterMap(
+                            key: ValueKey(
+                              "${_personnelLocation!.latitude}_${_personnelLocation!.longitude}",
+                            ),
+                            options: MapOptions(
+                              initialCenter: _personnelLocation!,
+                              initialZoom: 15.0,
+                              interactionOptions: const InteractionOptions(
+                                flags: InteractiveFlag.none,
+                              ),
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate:
+                                    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                                userAgentPackageName: "com.suaritma.app",
+                                maxZoom: 19,
+                                minZoom: 3,
+                              ),
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    point: _personnelLocation!,
+                                    width: 40,
+                                    height: 40,
+                                    child: const Icon(
+                                      Icons.person_pin_circle,
+                                      color: Color(0xFF2563EB),
+                                      size: 40,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    )
+                  : Builder(
+                      builder: (context) {
+                        debugPrint(
+                          "🗺️ Personnel location is null, showing error message",
+                        );
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.location_off,
+                                  color: Colors.grey.shade400,
+                                  size: 48,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  "Konum bilgisi bulunmuyor",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.grey.shade600),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
             ),
           ),
-          if (_personnelLocation != null &&
-              widget.personnel.lastKnownLocation != null)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.place, size: 16, color: Colors.grey.shade600),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          "${widget.personnel.lastKnownLocation!.lat.toStringAsFixed(6)}, "
-                          "${widget.personnel.lastKnownLocation!.lng.toStringAsFixed(6)}",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ),
-                    ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Icon(Icons.place, size: 16, color: Colors.grey.shade600),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _personnelLocation != null &&
+                            widget.personnel.lastKnownLocation != null
+                        ? "${widget.personnel.lastKnownLocation!.lat.toStringAsFixed(6)}, "
+                              "${widget.personnel.lastKnownLocation!.lng.toStringAsFixed(6)}"
+                        : "Konum bilgisi yok",
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
-                  if (widget.personnel.lastKnownLocation!.timestamp !=
-                      null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time,
-                          size: 14,
-                          color: Colors.grey.shade500,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          "Son güncelleme: ${DateFormat("dd MMM yyyy HH:mm").format(widget.personnel.lastKnownLocation!.timestamp!.toLocal())}",
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade500,
+                ),
+                if (_personnelLocation != null) ...[
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => FullScreenMapPage(
+                            location: _personnelLocation!,
+                            title: widget.personnel.name,
                           ),
                         ),
-                      ],
+                      );
+                    },
+                    icon: const Icon(Icons.map, size: 18),
+                    label: const Text("Haritada Aç"),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      textStyle: const TextStyle(fontSize: 12),
                     ),
-                  ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (_personnelLocation != null &&
+              widget.personnel.lastKnownLocation != null &&
+              widget.personnel.lastKnownLocation!.timestamp != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.access_time,
+                    size: 14,
+                    color: Colors.grey.shade500,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    "Son güncelleme: ${DateFormat("dd MMM yyyy HH:mm").format(widget.personnel.lastKnownLocation!.timestamp!.toLocal())}",
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                  ),
                 ],
               ),
             ),

@@ -1,9 +1,13 @@
-import "dart:io";
-
 import "package:dio/dio.dart";
+import "package:flutter/foundation.dart" show kIsWeb;
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:path_provider/path_provider.dart";
 import "package:url_launcher/url_launcher.dart";
+
+// Conditional import for dart:io (not available on Web)
+// On Web, we import a stub file that doesn't export File
+// On other platforms, dart:io is imported
+import "dart:io" if (dart.library.html) "dart:html" as io;
 
 import "../../../core/network/api_client.dart";
 import "models/customer.dart";
@@ -26,12 +30,50 @@ class AdminRepository {
 
   final Dio _client;
 
-  Future<List<Personnel>> fetchPersonnel() async {
-    final response = await _client.get("/personnel");
+  Future<List<Personnel>> fetchPersonnel({
+    String? search,
+    String? phoneSearch,
+    DateTime? createdAtFrom,
+    DateTime? createdAtTo,
+  }) async {
+    // Backend'e search parametresi gönder (backend hem name, hem phone, hem email'de arar)
+    final queryParams = <String, dynamic>{};
+    if (search != null && search.isNotEmpty) {
+      queryParams["search"] = search;
+    }
+
+    final response = await _client.get(
+      "/personnel",
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
+    );
     final items = response.data["data"] as List<dynamic>? ?? [];
-    return items
+    var personnelList = items
         .map((e) => Personnel.fromJson(e as Map<String, dynamic>))
         .toList();
+
+    // Frontend'de ek filtreleme: phoneSearch
+    if (phoneSearch != null && phoneSearch.isNotEmpty) {
+      personnelList = personnelList.where((personnel) {
+        return personnel.phone.contains(phoneSearch);
+      }).toList();
+    }
+
+    // Frontend'de tarih filtrelemesi (hireDate'e göre)
+    if (createdAtFrom != null || createdAtTo != null) {
+      personnelList = personnelList.where((personnel) {
+        final date = personnel.hireDate;
+        if (createdAtFrom != null && date.isBefore(createdAtFrom)) {
+          return false;
+        }
+        if (createdAtTo != null &&
+            date.isAfter(createdAtTo.add(const Duration(days: 1)))) {
+          return false;
+        }
+        return true;
+      }).toList();
+    }
+
+    return personnelList;
   }
 
   Future<Personnel> fetchPersonnelDetail(String id) async {
@@ -197,8 +239,9 @@ class AdminRepository {
     if (category != null) data["category"] = category;
     if (stockQty != null) data["stockQty"] = stockQty;
     if (unitPrice != null) data["unitPrice"] = unitPrice;
-    if (criticalThreshold != null)
+    if (criticalThreshold != null) {
       data["criticalThreshold"] = criticalThreshold;
+    }
     if (photoUrl != null) data["photoUrl"] = photoUrl;
     if (sku != null) data["sku"] = sku;
     if (unit != null) data["unit"] = unit;
@@ -319,14 +362,16 @@ class AdminRepository {
       data["customer"] = <String, dynamic>{};
       if (customerName != null) data["customer"]["name"] = customerName;
       if (customerPhone != null) data["customer"]["phone"] = customerPhone;
-      if (customerAddress != null)
+      if (customerAddress != null) {
         data["customer"]["address"] = customerAddress;
+      }
       if (customerEmail != null && customerEmail.isNotEmpty) {
         data["customer"]["email"] = customerEmail;
       }
     }
-    if (scheduledAt != null)
+    if (scheduledAt != null) {
       data["scheduledAt"] = scheduledAt.toIso8601String();
+    }
     if (notes != null) data["notes"] = notes;
     if (price != null) data["price"] = price;
     if (priority != null) data["priority"] = priority;
@@ -449,12 +494,15 @@ class AdminRepository {
     if (debtAmount != null) data["debtAmount"] = debtAmount;
     if (hasInstallment != null) data["hasInstallment"] = hasInstallment;
     if (installmentCount != null) data["installmentCount"] = installmentCount;
-    if (nextDebtDate != null)
+    if (nextDebtDate != null) {
       data["nextDebtDate"] = nextDebtDate.toIso8601String();
-    if (installmentStartDate != null)
+    }
+    if (installmentStartDate != null) {
       data["installmentStartDate"] = installmentStartDate.toIso8601String();
-    if (installmentIntervalDays != null)
+    }
+    if (installmentIntervalDays != null) {
       data["installmentIntervalDays"] = installmentIntervalDays;
+    }
     if (remainingDebtAmount != null)
       data["remainingDebtAmount"] = remainingDebtAmount;
     final response = await _client.put("/customers/$id", data: data);
@@ -601,48 +649,121 @@ class AdminRepository {
     await _client.delete("/invoices/$invoiceId");
   }
 
+  // Profile methods
+  Future<Map<String, dynamic>> getProfile() async {
+    final response = await _client.get("/auth/profile");
+    return response.data["data"] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    String? name,
+    String? phone,
+    String? email,
+    String? companyName,
+    String? companyAddress,
+    String? companyPhone,
+    String? companyEmail,
+    String? taxOffice,
+    String? taxNumber,
+    String? logoUrl,
+  }) async {
+    final data = <String, dynamic>{};
+    if (name != null) data["name"] = name;
+    if (phone != null) data["phone"] = phone;
+    if (email != null) data["email"] = email;
+    if (companyName != null) data["companyName"] = companyName;
+    if (companyAddress != null) data["companyAddress"] = companyAddress;
+    if (companyPhone != null) data["companyPhone"] = companyPhone;
+    if (companyEmail != null) data["companyEmail"] = companyEmail;
+    if (taxOffice != null) data["taxOffice"] = taxOffice;
+    if (taxNumber != null) data["taxNumber"] = taxNumber;
+    if (logoUrl != null) data["logoUrl"] = logoUrl;
+    final response = await _client.put("/auth/profile", data: data);
+    return response.data["data"] as Map<String, dynamic>;
+  }
+
   Future<String> generateInvoicePdf(String jobId) async {
-    // First, try to get directory (this will fail if path_provider is not properly initialized)
-    Directory? directory;
+    // On Web, open PDF directly in browser using window.open
+    if (kIsWeb) {
+      final baseUrl = _client.options.baseUrl;
+      final pdfUrl = "$baseUrl/invoices/job/$jobId/pdf";
+
+      // On Web, open PDF using url_launcher
+      final uri = Uri.parse(pdfUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        // Return a placeholder path for Web
+        return "web_pdf_$jobId";
+      }
+      throw Exception("PDF açılamadı. Lütfen tekrar deneyin.");
+    }
+
+    // For mobile/desktop platforms, save PDF to file
+    // First, try to get directory (this will fail on Web)
     try {
-      directory = await getTemporaryDirectory();
+      final directory = await getTemporaryDirectory();
+
+      // Get PDF from backend
+      final response = await _client.get(
+        "/invoices/job/$jobId/pdf",
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: {"Accept": "application/pdf"},
+        ),
+      );
+
+      // Write PDF to file (only on non-Web platforms)
+      final filePath = "${directory.path}/fatura_$jobId.pdf";
+      final file = io.File(filePath);
+      await file.writeAsBytes(response.data as List<int>);
+      return filePath;
     } catch (e) {
-      // If temporary directory fails, try application documents directory
+      // If temporary directory fails, check if we're on Web
+      if (kIsWeb) {
+        // On Web, open PDF directly from URL using window.open
+        final baseUrl = _client.options.baseUrl;
+        final pdfUrl = "$baseUrl/invoices/job/$jobId/pdf";
+
+        // On Web, open PDF using url_launcher
+        final uri = Uri.parse(pdfUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          return "web_pdf_$jobId";
+        }
+        throw Exception("PDF açılamadı. Lütfen tekrar deneyin.");
+      }
+
+      // If not Web, try application documents directory
       try {
-        directory = await getApplicationDocumentsDirectory();
+        final directory = await getApplicationDocumentsDirectory();
+
+        // Get PDF from backend
+        final response = await _client.get(
+          "/invoices/job/$jobId/pdf",
+          options: Options(
+            responseType: ResponseType.bytes,
+            headers: {"Accept": "application/pdf"},
+          ),
+        );
+
+        // Write PDF to file
+        final filePath = "${directory.path}/fatura_$jobId.pdf";
+        final file = io.File(filePath);
+        await file.writeAsBytes(response.data as List<int>);
+        return filePath;
       } catch (e2) {
-        // If both fail, path_provider is not working - open PDF directly from URL
+        // If both fail, open PDF directly from URL
         final baseUrl = _client.options.baseUrl;
         final pdfUrl = "$baseUrl/invoices/job/$jobId/pdf";
         final uri = Uri.parse(pdfUrl);
 
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
-          throw Exception(
-            "PDF tarayıcıda açıldı. Dosya sistemi erişimi için lütfen uygulamayı tamamen kapatıp yeniden başlatın (hot reload yeterli değil).",
-          );
+          return "web_pdf_$jobId";
         }
 
-        throw Exception(
-          "Dosya sistemi erişimi sağlanamadı. Lütfen uygulamayı tamamen kapatıp yeniden başlatın (hot reload yeterli değil).",
-        );
+        throw Exception("PDF açılamadı. Lütfen tekrar deneyin.");
       }
     }
-
-    // Get PDF from backend
-    final response = await _client.get(
-      "/invoices/job/$jobId/pdf",
-      options: Options(
-        responseType: ResponseType.bytes,
-        headers: {"Accept": "application/pdf"},
-      ),
-    );
-
-    // Write PDF to file
-    final filePath = "${directory.path}/fatura_$jobId.pdf";
-    final file = File(filePath);
-    await file.writeAsBytes(response.data as List<int>);
-
-    return filePath;
   }
 }

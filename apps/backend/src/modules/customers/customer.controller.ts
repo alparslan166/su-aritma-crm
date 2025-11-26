@@ -1,7 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-import { getAdminId } from "@/lib/tenant";
+import { getAdminId, getPersonnelId } from "@/lib/tenant";
+import { notificationService } from "@/modules/notifications/notification.service";
+import { prisma } from "@/lib/prisma";
 
 import { customerService } from "./customer.service";
 
@@ -87,12 +89,52 @@ export const createCustomerHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const adminId = getAdminId(req);
+    // Check if request is from personnel
+    const personnelIdHeader = req.header("x-personnel-id");
+    const adminIdHeader = req.header("x-admin-id");
+    
+    let adminId: string;
+    let personnelId: string | null = null;
+    
+    if (personnelIdHeader && !adminIdHeader) {
+      // Request from personnel - get their adminId
+      personnelId = getPersonnelId(req);
+      const personnel = await prisma.personnel.findUnique({
+        where: { id: personnelId },
+        select: { adminId: true, name: true },
+      });
+      if (!personnel) {
+        return res.status(404).json({ success: false, message: "Personnel not found" });
+      }
+      adminId = personnel.adminId;
+    } else {
+      // Request from admin
+      adminId = getAdminId(req);
+    }
+    
     const payload = createSchema.parse(req.body);
     const data = await customerService.create(adminId, {
       ...payload,
       email: payload.email === "" ? undefined : payload.email,
     });
+    
+    // If customer was created by personnel, send notification to admin
+    if (personnelId) {
+      const personnel = await prisma.personnel.findUnique({
+        where: { id: personnelId },
+        select: { name: true },
+      });
+      await notificationService.notifyRole("admin", {
+        title: "Yeni Müşteri Eklendi",
+        body: `${personnel?.name || "Bir personel"} tarafından "${data.name}" adlı yeni müşteri eklendi.`,
+        data: {
+          type: "customer_created",
+          customerId: data.id,
+          personnelId: personnelId,
+        },
+      });
+    }
+    
     res.status(201).json({ success: true, data });
   } catch (error) {
     next(error as Error);

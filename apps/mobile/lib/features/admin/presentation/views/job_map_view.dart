@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:flutter_map/flutter_map.dart";
+import "package:geocoding/geocoding.dart";
 import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
@@ -8,73 +9,151 @@ import "package:mobile/core/constants/app_config.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 import "package:mobile/widgets/empty_state.dart";
 
-import "../../application/job_list_notifier.dart";
+import "../../application/customer_list_notifier.dart";
 import "../../application/personnel_list_notifier.dart";
-import "../../data/models/job.dart";
+import "../../data/admin_repository.dart";
+import "../../data/models/customer.dart";
 import "../../data/models/personnel.dart";
 
-enum MapFilter { all, personnelOnly, jobsOnly }
-
 class JobMapView extends ConsumerStatefulWidget {
-  const JobMapView({super.key, this.initialPersonnelLocation});
+  const JobMapView({
+    super.key,
+    this.initialCustomerLocation,
+    this.initialCustomerId,
+  });
 
-  final LatLng? initialPersonnelLocation;
+  final LatLng? initialCustomerLocation;
+  final String? initialCustomerId;
 
   @override
   ConsumerState<JobMapView> createState() => _JobMapViewState();
 }
 
+enum MapFilter { all, customersOnly, personnelOnly }
+
 class _JobMapViewState extends ConsumerState<JobMapView> {
-  MapFilter _filter = MapFilter.all;
   final MapController _mapController = MapController();
+  final Map<String, LatLng> _resolvedLocations = {};
+  final Set<String> _loadingLocations = {};
+  final Map<String, String> _locationErrors = {};
+  bool _initialized = false;
+  MapFilter _filter = MapFilter.all;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize customer and personnel lists when map view is opened
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Future.wait([
+          ref.read(customerListProvider.notifier).refresh(showLoading: true),
+          ref.read(personnelListProvider.notifier).refresh(),
+        ]).then((_) {
+          if (mounted) {
+            setState(() {
+              _initialized = true;
+            });
+          }
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final jobState = ref.watch(jobListProvider);
+    final customerState = ref.watch(customerListProvider);
     final personnelState = ref.watch(personnelListProvider);
 
-    // Always show map, even if loading or error
-    final jobs = jobState.value ?? [];
-    final personnel = personnelState.value ?? [];
-    final jobPoints = jobs.where((job) => job.location != null).toList();
-    final personnelPoints = personnel
+    // Handle loading state - show loading indicator if not initialized yet
+    if (!_initialized || customerState.isLoading || personnelState.isLoading) {
+      return Scaffold(
+        appBar: const AdminAppBar(title: Text("Harita")),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Use valueOrNull to safely handle error states
+    final customers = customerState.valueOrNull ?? [];
+    final personnel = personnelState.valueOrNull ?? [];
+
+    // Debug: Log to see what we're getting
+    if (customers.isNotEmpty) {
+      final withLocation = customers.where((c) => c.location != null).length;
+      debugPrint(
+        "🗺️ Customers with location: $withLocation/${customers.length}",
+      );
+      // Debug: Log first few customers' location data
+      for (final customer in customers.take(3)) {
+        debugPrint(
+          "  - ${customer.name}: location=${customer.location?.latitude},${customer.location?.longitude}",
+        );
+      }
+    }
+
+    // Resolve locations for customers without location
+    for (final customer in customers) {
+      if (customer.location == null &&
+          !_resolvedLocations.containsKey(customer.id) &&
+          !_loadingLocations.contains(customer.id) &&
+          !_locationErrors.containsKey(customer.id)) {
+        _resolveCustomerLocation(customer);
+      }
+    }
+
+    // Get all customers with location (either from backend or resolved)
+    final customersWithLocation = customers.where((c) {
+      return c.location != null || _resolvedLocations.containsKey(c.id);
+    }).toList();
+
+    // Get all personnel with location
+    final personnelWithLocation = personnel
         .where((p) => p.canShareLocation && p.lastKnownLocation != null)
         .toList();
 
-    final showJobs = _filter != MapFilter.personnelOnly;
-    final showPersonnel = _filter != MapFilter.jobsOnly;
+    // Apply filter
+    final showCustomers = _filter != MapFilter.personnelOnly;
+    final showPersonnel = _filter != MapFilter.customersOnly;
 
-    final visibleJobPoints = showJobs ? jobPoints : <Job>[];
-    final visiblePersonnelPoints = showPersonnel
-        ? personnelPoints
+    final visibleCustomers = showCustomers
+        ? customersWithLocation
+        : <Customer>[];
+    final visiblePersonnel = showPersonnel
+        ? personnelWithLocation
         : <Personnel>[];
 
     final markers = <Marker>[
-      ...visibleJobPoints.map(
-        (job) =>
-            _jobMarker(context, job, () => _showJobInfoSheet(context, job)),
-      ),
-      ...visiblePersonnelPoints.map(
-        (person) => _personnelMarker(
+      ...visibleCustomers.map((customer) {
+        final location = customer.location != null
+            ? LatLng(customer.location!.latitude, customer.location!.longitude)
+            : _resolvedLocations[customer.id];
+        if (location == null) return null;
+        return _customerMarker(
+          context,
+          customer,
+          location,
+          () => _showCustomerInfoSheet(context, customer),
+        );
+      }).whereType<Marker>(),
+      ...visiblePersonnel.map((person) {
+        final location = person.lastKnownLocation!;
+        return _personnelMarker(
           context,
           person,
+          LatLng(location.lat, location.lng),
           () => _showPersonnelInfoSheet(context, person),
-        ),
-      ),
+        );
+      }),
     ];
 
     // Always show map with default center (Istanbul) if no data
-    // Eğer initialPersonnelLocation varsa onu kullan
-    final center =
-        widget.initialPersonnelLocation ??
-        _initialCenter(jobPoints, personnelPoints);
+    final center = _initialCenter(visibleCustomers, visiblePersonnel);
 
     return Scaffold(
       appBar: const AdminAppBar(title: Text("Harita")),
       body: RefreshIndicator(
         onRefresh: () async {
           await Future.wait([
-            ref.read(jobListProvider.notifier).refresh(),
+            ref.read(customerListProvider.notifier).refresh(),
             ref.read(personnelListProvider.notifier).refresh(),
           ]);
         },
@@ -96,18 +175,19 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                       ),
                       onMapReady: () {
                         // Center map on data when ready
-                        if (widget.initialPersonnelLocation != null) {
+                        if (widget.initialCustomerLocation != null) {
+                          // If initial location is provided, zoom to that location
                           Future.delayed(const Duration(milliseconds: 300), () {
                             _mapController.move(
-                              widget.initialPersonnelLocation!,
-                              15.0,
+                              widget.initialCustomerLocation!,
+                              15.0, // Higher zoom for customer detail
                             );
                           });
                         } else if (markers.isNotEmpty) {
                           Future.delayed(const Duration(milliseconds: 300), () {
                             final target = _initialCenter(
-                              jobPoints,
-                              personnelPoints,
+                              visibleCustomers,
+                              visiblePersonnel,
                             );
                             _mapController.move(target, 11.0);
                           });
@@ -125,14 +205,8 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                       if (markers.isNotEmpty) MarkerLayer(markers: markers),
                     ],
                   ),
-                  // Loading indicator overlay
-                  if (jobState.isLoading || personnelState.isLoading)
-                    Container(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      child: const Center(child: CircularProgressIndicator()),
-                    ),
                   // Error messages overlay
-                  if (jobState.hasError || personnelState.hasError)
+                  if (customerState.hasError)
                     Positioned(
                       top: 12,
                       left: 12,
@@ -154,9 +228,7 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                jobState.hasError
-                                    ? "İş konumları alınamadı"
-                                    : "Personel konumları alınamadı",
+                                "Müşteri konumları alınamadı",
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.red.shade700,
@@ -175,8 +247,8 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                       heroTag: "map-center-btn",
                       onPressed: () {
                         final target = _initialCenter(
-                          jobPoints,
-                          personnelPoints,
+                          visibleCustomers,
+                          visiblePersonnel,
                         );
                         final zoom = markers.isEmpty
                             ? 10.0
@@ -190,13 +262,26 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
               ),
             ),
             const SizedBox(height: 16),
+            // Filter buttons
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Wrap(
                 spacing: 8,
+                runSpacing: 8,
                 children: [
                   FilterChip(
-                    label: const Text("Sadece personeller"),
+                    label: const Text("Sadece Müşteriler"),
+                    selected: _filter == MapFilter.customersOnly,
+                    onSelected: (_) {
+                      setState(() {
+                        _filter = _filter == MapFilter.customersOnly
+                            ? MapFilter.all
+                            : MapFilter.customersOnly;
+                      });
+                    },
+                  ),
+                  FilterChip(
+                    label: const Text("Sadece Personeller"),
                     selected: _filter == MapFilter.personnelOnly,
                     onSelected: (_) {
                       setState(() {
@@ -206,29 +291,18 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                       });
                     },
                   ),
-                  FilterChip(
-                    label: const Text("Sadece işler"),
-                    selected: _filter == MapFilter.jobsOnly,
-                    onSelected: (_) {
-                      setState(() {
-                        _filter = _filter == MapFilter.jobsOnly
-                            ? MapFilter.all
-                            : MapFilter.jobsOnly;
-                      });
-                    },
-                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            if (visibleJobPoints.isEmpty && visiblePersonnelPoints.isEmpty)
+            const SizedBox(height: 16),
+            if (visibleCustomers.isEmpty && visiblePersonnel.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: EmptyState(
                   icon: Icons.map_outlined,
                   title: "Henüz konum verisi yok",
                   subtitle:
-                      "İş veya personel konumları geldiğinde harita güncellenecek.",
+                      "Müşteri veya personel konumları geldiğinde harita güncellenecek.",
                 ),
               )
             else
@@ -237,49 +311,87 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (showJobs) ...[
+                    if (showCustomers && visibleCustomers.isNotEmpty) ...[
                       Text(
-                        "İş Konumları",
+                        "Müşteri Konumları",
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
-                      if (visibleJobPoints.isEmpty)
-                        const Text("Görüntülenecek iş konumu yok.")
-                      else
-                        ...visibleJobPoints.map(
-                          (job) => ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.location_on),
-                            title: Text(job.title),
-                            subtitle: Text(job.location?.address ?? "-"),
-                            trailing: Text(_getJobStatusText(job.status)),
-                            onTap: () => _openJobDetail(job),
+                      ...visibleCustomers.map((customer) {
+                        // Müşteri iş durumuna göre renk belirleme
+                        Color markerColor = Colors.blue;
+                        String statusText = "Tamamlandı";
+
+                        if (customer.jobs != null &&
+                            customer.jobs!.isNotEmpty) {
+                          // PENDING (beklemede) veya IN_PROGRESS (işlenen) işleri kontrol et
+                          final hasPending = customer.jobs!.any(
+                            (job) => job.status == "PENDING",
+                          );
+                          final hasInProgress = customer.jobs!.any(
+                            (job) => job.status == "IN_PROGRESS",
+                          );
+
+                          if (hasPending) {
+                            markerColor = Colors.red;
+                            statusText = "Beklemede";
+                          } else if (hasInProgress) {
+                            markerColor = Colors.orange;
+                            statusText = "İşleniyor";
+                          }
+                        }
+
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(Icons.location_on, color: markerColor),
+                          title: Text(customer.name),
+                          subtitle: Text(customer.address),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: markerColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: markerColor),
+                            ),
+                            child: Text(
+                              statusText,
+                              style: TextStyle(
+                                color: markerColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
-                        ),
+                          onTap: () => _openCustomerDetail(customer),
+                        );
+                      }),
                       const SizedBox(height: 16),
                     ],
-                    if (showPersonnel) ...[
+                    if (showPersonnel && visiblePersonnel.isNotEmpty) ...[
                       Text(
                         "Personel Konumları",
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
-                      if (visiblePersonnelPoints.isEmpty)
-                        const Text("Görüntülenecek personel konumu yok.")
-                      else
-                        ...visiblePersonnelPoints.map((person) {
-                          final ts = person.lastKnownLocation?.timestamp;
-                          final subtitle = ts == null
-                              ? "Son konum zamanı bilinmiyor"
-                              : "Son konum: ${ts.toLocal()}";
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.person_pin_circle),
-                            title: Text(person.name),
-                            subtitle: Text(subtitle),
-                            onTap: () => _openPersonnelDetail(person),
-                          );
-                        }),
+                      ...visiblePersonnel.map((person) {
+                        final location = person.lastKnownLocation!;
+                        final subtitle = location.timestamp != null
+                            ? "Son konum: ${location.timestamp!.toLocal()}"
+                            : "Son konum zamanı bilinmiyor";
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(
+                            Icons.person_pin_circle,
+                            color: Color(0xFF2563EB),
+                          ),
+                          title: Text(person.name),
+                          subtitle: Text(subtitle),
+                          onTap: () => _openPersonnelDetail(person),
+                        );
+                      }),
                     ],
                   ],
                 ),
@@ -291,11 +403,97 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
     );
   }
 
-  void _openJobDetail(Job job) {
+  Future<void> _resolveCustomerLocation(Customer customer) async {
+    if (_loadingLocations.contains(customer.id)) return;
+    _loadingLocations.add(customer.id);
+
+    try {
+      // Note: CustomerJob model doesn't have location data,
+      // so we'll use geocoding first, then fallback to fetching jobs
+
+      // Try geocoding from address (faster than fetching all jobs)
+      if (customer.address.isNotEmpty) {
+        try {
+          final locations = await locationFromAddress(customer.address);
+          if (locations.isNotEmpty && mounted) {
+            setState(() {
+              _resolvedLocations[customer.id] = LatLng(
+                locations.first.latitude,
+                locations.first.longitude,
+              );
+              _loadingLocations.remove(customer.id);
+            });
+            return;
+          }
+        } catch (e) {
+          debugPrint("Geocoding error for ${customer.name}: $e");
+        }
+      }
+
+      // If geocoding fails, try to get location from jobs (as fallback)
+      try {
+        final jobs = await ref
+            .read(adminRepositoryProvider)
+            .fetchJobs(personnelId: null);
+        final customerJobs =
+            jobs
+                .where(
+                  (job) =>
+                      job.customer.name == customer.name &&
+                      job.customer.address == customer.address,
+                )
+                .where((job) => job.location != null)
+                .toList()
+              ..sort((a, b) {
+                // Get most recent job
+                final aDate = a.scheduledAt ?? a.createdAt;
+                final bDate = b.scheduledAt ?? b.createdAt;
+                if (aDate == null && bDate == null) return 0;
+                if (aDate == null) return 1;
+                if (bDate == null) return -1;
+                return bDate.compareTo(aDate);
+              });
+
+        if (customerJobs.isNotEmpty && customerJobs.first.location != null) {
+          final jobLocation = customerJobs.first.location!;
+          if (mounted) {
+            setState(() {
+              _resolvedLocations[customer.id] = LatLng(
+                jobLocation.latitude,
+                jobLocation.longitude,
+              );
+              _loadingLocations.remove(customer.id);
+            });
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint("Error fetching jobs for ${customer.name}: $e");
+      }
+
+      // If all fails, mark as error
+      if (mounted) {
+        setState(() {
+          _locationErrors[customer.id] = "Konum bulunamadı";
+          _loadingLocations.remove(customer.id);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error resolving location for ${customer.name}: $e");
+      if (mounted) {
+        setState(() {
+          _locationErrors[customer.id] = "Konum yüklenemedi";
+          _loadingLocations.remove(customer.id);
+        });
+      }
+    }
+  }
+
+  void _openCustomerDetail(Customer customer) {
     context.pushNamed(
-      "admin-job-detail",
-      pathParameters: {"id": job.id},
-      extra: job,
+      "admin-customer-detail",
+      pathParameters: {"id": customer.id},
+      extra: customer,
     );
   }
 
@@ -307,12 +505,26 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
     );
   }
 
-  void _showJobInfoSheet(BuildContext context, Job job) {
-    final location = job.location!;
-    final isActiveJob = job.status == "PENDING" || job.status == "IN_PROGRESS";
-    final markerColor = isActiveJob
-        ? Colors.red
-        : Theme.of(context).colorScheme.primary;
+  void _showCustomerInfoSheet(BuildContext context, Customer customer) {
+    // Müşteri iş durumuna göre renk belirleme
+    Color markerColor = Colors.blue; // Varsayılan: tamamlanan işler
+    String statusText = "Tamamlandı";
+
+    if (customer.jobs != null && customer.jobs!.isNotEmpty) {
+      // PENDING (beklemede) veya IN_PROGRESS (işlenen) işleri kontrol et
+      final hasPending = customer.jobs!.any((job) => job.status == "PENDING");
+      final hasInProgress = customer.jobs!.any(
+        (job) => job.status == "IN_PROGRESS",
+      );
+
+      if (hasPending) {
+        markerColor = Colors.red;
+        statusText = "Beklemede";
+      } else if (hasInProgress) {
+        markerColor = Colors.orange;
+        statusText = "İşleniyor";
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -328,11 +540,11 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
           children: [
             Row(
               children: [
-                Icon(Icons.place, size: 20, color: markerColor),
+                Icon(Icons.person, size: 20, color: markerColor),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    job.title,
+                    customer.name,
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -347,9 +559,9 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
               ],
             ),
             const SizedBox(height: 12),
-            if (location.address != null && location.address!.isNotEmpty) ...[
+            if (customer.address.isNotEmpty) ...[
               Text(
-                location.address!,
+                customer.address,
                 style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
               const SizedBox(height: 12),
@@ -367,7 +579,7 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                     border: Border.all(color: markerColor),
                   ),
                   child: Text(
-                    _getJobStatusText(job.status),
+                    statusText,
                     style: TextStyle(
                       color: markerColor,
                       fontSize: 12,
@@ -379,7 +591,7 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                 TextButton.icon(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    _openJobDetail(job);
+                    _openCustomerDetail(customer);
                   },
                   icon: const Icon(Icons.arrow_forward, color: Colors.white),
                   label: const Text(
@@ -478,13 +690,14 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
   }
 }
 
-LatLng _initialCenter(List<Job> jobs, List<Personnel> personnel) {
-  // If we have jobs with locations, use first job
-  if (jobs.isNotEmpty && jobs.first.location != null) {
-    return LatLng(
-      jobs.first.location!.latitude,
-      jobs.first.location!.longitude,
-    );
+LatLng _initialCenter(List<Customer> customers, List<Personnel> personnel) {
+  // If we have customers with locations, use first customer
+  if (customers.isNotEmpty) {
+    final firstCustomer = customers.first;
+    if (firstCustomer.location != null) {
+      final location = firstCustomer.location!;
+      return LatLng(location.latitude, location.longitude);
+    }
   }
   // If we have personnel with locations, use first personnel
   if (personnel.isNotEmpty && personnel.first.lastKnownLocation != null) {
@@ -495,36 +708,36 @@ LatLng _initialCenter(List<Job> jobs, List<Personnel> personnel) {
   return const LatLng(41.015137, 28.97953);
 }
 
-String _getJobStatusText(String status) {
-  switch (status) {
-    case "PENDING":
-      return "Beklemede";
-    case "IN_PROGRESS":
-      return "Devam Ediyor";
-    case "DELIVERED":
-      return "Teslim Edildi";
-    case "ARCHIVED":
-      return "Arşivlendi";
-    default:
-      return status;
-  }
-}
+Marker _customerMarker(
+  BuildContext context,
+  Customer customer,
+  LatLng location,
+  VoidCallback onTap,
+) {
+  // Müşteri iş durumuna göre renk belirleme
+  Color markerColor = Colors.blue; // Varsayılan: tamamlanan işler
 
-Marker _jobMarker(BuildContext context, Job job, VoidCallback onTap) {
-  final location = job.location!;
-  // Mevcut işler (PENDING, IN_PROGRESS) kırmızı, geçmiş işler (DELIVERED, ARCHIVED) primary color
-  final isActiveJob = job.status == "PENDING" || job.status == "IN_PROGRESS";
-  final markerColor = isActiveJob
-      ? Colors.red
-      : Theme.of(context).colorScheme.primary;
+  if (customer.jobs != null && customer.jobs!.isNotEmpty) {
+    // PENDING (beklemede) veya IN_PROGRESS (işlenen) işleri kontrol et
+    final hasPending = customer.jobs!.any((job) => job.status == "PENDING");
+    final hasInProgress = customer.jobs!.any(
+      (job) => job.status == "IN_PROGRESS",
+    );
+
+    if (hasPending) {
+      markerColor = Colors.red; // Beklemede olanlar kırmızı
+    } else if (hasInProgress) {
+      markerColor = Colors.orange; // İşlenen işler turuncu
+    }
+  }
 
   return Marker(
-    point: LatLng(location.latitude, location.longitude),
+    point: location,
     width: 40,
     height: 40,
     child: GestureDetector(
       onTap: onTap,
-      child: Icon(Icons.place, size: 32, color: markerColor),
+      child: Icon(Icons.location_on, size: 32, color: markerColor),
     ),
   );
 }
@@ -532,11 +745,11 @@ Marker _jobMarker(BuildContext context, Job job, VoidCallback onTap) {
 Marker _personnelMarker(
   BuildContext context,
   Personnel person,
+  LatLng location,
   VoidCallback onTap,
 ) {
-  final location = person.lastKnownLocation!;
   return Marker(
-    point: LatLng(location.lat, location.lng),
+    point: location,
     width: 40,
     height: 40,
     child: GestureDetector(

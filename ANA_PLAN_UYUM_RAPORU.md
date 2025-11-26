@@ -5,11 +5,11 @@
 
 ---
 
-## ✅ UYUMLU OLANLAR
+## ✅ UYUMLU OLANLAR 
 
 ### 1. Teknoloji Yığını
 - ✅ Flutter + Dart kullanılıyor
-- ✅ PostgreSQL veritabanı kullanılıyor
+- ✅ PostgrSQLe veritabanı kullanılıyor
 - ✅ TypeScript + Express.js backend kullanılıyor
 - ✅ Riverpod durum yönetimi kullanılıyor (Plan: Riverpod veya Bloc)
 - ✅ Prisma ORM kullanılıyor (Plan: Prisma veya TypeORM)

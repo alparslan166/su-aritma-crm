@@ -17,12 +17,7 @@ export class NotificationService {
     realtimeGateway.emitToRole(role, "notification", payload);
   }
 
-  private async sendPush({
-    topic,
-    title,
-    body,
-    data,
-  }: NotificationPayload & { topic: string }) {
+  private async sendPush({ topic, title, body, data }: NotificationPayload & { topic: string }) {
     const response = await fetch("https://fcm.googleapis.com/fcm/send", {
       method: "POST",
       headers: {
@@ -44,4 +39,3 @@ export class NotificationService {
 }
 
 export const notificationService = new NotificationService();
-

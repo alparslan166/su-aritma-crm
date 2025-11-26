@@ -1,11 +1,11 @@
 import "package:flutter/material.dart";
 import "package:geocoding/geocoding.dart";
+import "package:geolocator/geolocator.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 
 import "../../application/customer_list_notifier.dart";
 import "../../data/admin_repository.dart";
-import "../../data/models/personnel.dart";
 
 class AddCustomerSheet extends ConsumerStatefulWidget {
   const AddCustomerSheet({super.key});
@@ -30,7 +30,6 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
   DateTime? _nextDebtDate;
   DateTime? _installmentStartDate;
   bool _submitting = false;
-  List<Personnel> _selectedPersonnelList = [];
 
   @override
   void initState() {
@@ -51,39 +50,113 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
     super.dispose();
   }
 
-  Future<void> _selectPersonnel() async {
+  Future<void> _getCurrentLocation() async {
     try {
-      // Fetch personnel directly from repository
-      final repository = ref.read(adminRepositoryProvider);
-      final personnelList = await repository.fetchPersonnel();
-      
-      if (!mounted) return;
-      
-      if (personnelList.isEmpty) {
+      // Konum izni kontrolü
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Personel bulunamadı")),
+          const SnackBar(
+            content: Text("Konum servisleri kapalı. Lütfen açın."),
+          ),
         );
         return;
       }
-      
-      final selected = await showDialog<List<Personnel>>(
-        context: context,
-        builder: (context) => _PersonnelSelectionDialog(
-          personnelList: personnelList,
-          initialSelection: _selectedPersonnelList,
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Konum izni reddedildi.")),
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Konum izni kalıcı olarak reddedilmiş. Ayarlardan açın.",
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Mevcut konumu al
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Konum alınıyor..."),
+          duration: Duration(seconds: 1),
         ),
       );
-      if (selected != null) {
-        setState(() {
-          _selectedPersonnelList = selected;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // Reverse geocoding ile adres bilgisini al
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        final placemark = placemarks.first;
+        // Adres bilgisini formatla
+        final addressParts = <String>[];
+        if (placemark.street != null && placemark.street!.isNotEmpty) {
+          addressParts.add(placemark.street!);
+        }
+        if (placemark.subThoroughfare != null &&
+            placemark.subThoroughfare!.isNotEmpty) {
+          addressParts.add('No: ${placemark.subThoroughfare}');
+        }
+        if (placemark.subLocality != null &&
+            placemark.subLocality!.isNotEmpty) {
+          addressParts.add(placemark.subLocality!);
+        }
+        if (placemark.locality != null && placemark.locality!.isNotEmpty) {
+          addressParts.add(placemark.locality!);
+        }
+        if (placemark.administrativeArea != null &&
+            placemark.administrativeArea!.isNotEmpty) {
+          addressParts.add(placemark.administrativeArea!);
+        }
+        if (placemark.postalCode != null && placemark.postalCode!.isNotEmpty) {
+          addressParts.add(placemark.postalCode!);
+        }
+
+        final address = addressParts.join(', ');
+
+        if (mounted) {
+          setState(() {
+            _addressController.text = address;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Adres otomatik olarak eklendi"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Personel listesi yüklenemedi: $e")),
+          const SnackBar(content: Text("Adres bilgisi alınamadı")),
         );
       }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Konum alınamadı: $e")));
     }
   }
 
@@ -163,7 +236,9 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
           // Geocode address to get location
           Location? location;
           try {
-            final locations = await locationFromAddress(_addressController.text.trim());
+            final locations = await locationFromAddress(
+              _addressController.text.trim(),
+            );
             if (locations.isNotEmpty) {
               location = locations.first;
             }
@@ -171,15 +246,15 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
             // Geocoding failed, continue without location
           }
 
-          await ref.read(adminRepositoryProvider).createJobForCustomer(
+          await ref
+              .read(adminRepositoryProvider)
+              .createJobForCustomer(
                 customerId: customer.id,
                 title: jobTitle,
                 latitude: location?.latitude,
                 longitude: location?.longitude,
                 locationDescription: _addressController.text.trim(),
-                personnelIds: _selectedPersonnelList.isNotEmpty
-                    ? _selectedPersonnelList.map((p) => p.id).toList()
-                    : null,
+                personnelIds: null, // Personel seçimi kaldırıldı
               );
         } catch (e) {
           // Job creation failed, but customer was created successfully
@@ -198,13 +273,13 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
       await ref.read(customerListProvider.notifier).refresh();
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(jobTitle.isNotEmpty 
-            ? "Müşteri ve iş eklendi" 
-            : "Müşteri eklendi"),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            jobTitle.isNotEmpty ? "Müşteri ve iş eklendi" : "Müşteri eklendi",
+          ),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -252,7 +327,9 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                         final picked = await showDatePicker(
                           context: context,
                           initialDate: _createdAt,
-                          firstDate: DateTime.now().subtract(const Duration(days: 3650)),
+                          firstDate: DateTime.now().subtract(
+                            const Duration(days: 3650),
+                          ),
                           lastDate: DateTime.now(),
                         );
                         if (picked != null) {
@@ -302,50 +379,24 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                       ? "Adres girin"
                       : null,
                 ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _getCurrentLocation,
+                  icon: const Icon(Icons.my_location, size: 18),
+                  label: const Text("Bulunduğum Konumu Seç"),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _jobTitleController,
                   decoration: const InputDecoration(
-                    labelText: "Yapılacak İşlem",
+                    labelText: "Yapılacak İşlem (Opsiyonel)",
                     hintText: "Örn: Su arıtma cihazı bakımı",
                   ),
                   maxLines: 3,
                 ),
-                const SizedBox(height: 12),
-                // Personel Ata
-                OutlinedButton.icon(
-                  onPressed: _selectPersonnel,
-                  icon: const Icon(Icons.person),
-                  label: Text(
-                    _selectedPersonnelList.isEmpty
-                        ? "Personel Seç"
-                        : "${_selectedPersonnelList.length} personel seçildi",
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.all(16),
-                    alignment: Alignment.centerLeft,
-                  ),
-                ),
-                if (_selectedPersonnelList.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _selectedPersonnelList.map((personnel) {
-                        return Chip(
-                          label: Text(personnel.name),
-                          onDeleted: () {
-                            setState(() {
-                              _selectedPersonnelList.remove(personnel);
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),
@@ -430,35 +481,39 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 12),
-                  // Ödeme Tarihi
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          "Ödeme Tarihi: ${_nextDebtDate != null ? DateFormat("dd MMM yyyy").format(_nextDebtDate!) : "Seçilmedi"}",
-                          style: Theme.of(context).textTheme.bodyMedium,
+                  // Ödeme Tarihi - Sadece taksit yoksa göster
+                  if (!_debtHasInstallment) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "Ödeme Tarihi: ${_nextDebtDate != null ? DateFormat("dd MMM yyyy").format(_nextDebtDate!) : "Seçilmedi"}",
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                         ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: _nextDebtDate ?? DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(const Duration(days: 3650)),
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _nextDebtDate = picked;
-                            });
-                          }
-                        },
-                        icon: const Icon(Icons.calendar_today, size: 18),
-                        label: const Text("Tarih Seç"),
-                      ),
-                    ],
-                  ),
+                        TextButton.icon(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _nextDebtDate ?? DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 3650),
+                              ),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                _nextDebtDate = picked;
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.calendar_today, size: 18),
+                          label: const Text("Tarih Seç"),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -467,6 +522,8 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                           onPressed: () {
                             setState(() {
                               _debtHasInstallment = true;
+                              _nextDebtDate =
+                                  null; // Taksit seçildiğinde ödeme tarihini temizle
                             });
                           },
                           style: OutlinedButton.styleFrom(
@@ -547,9 +604,12 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                           onPressed: () async {
                             final picked = await showDatePicker(
                               context: context,
-                              initialDate: _installmentStartDate ?? DateTime.now(),
+                              initialDate:
+                                  _installmentStartDate ?? DateTime.now(),
                               firstDate: DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 3650)),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 3650),
+                              ),
                             );
                             if (picked != null) {
                               setState(() {
@@ -563,19 +623,20 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // Taksit Tekrar Günü
+                    // Ödeme Tekrar Günü
                     TextFormField(
                       controller: _installmentIntervalDaysController,
                       decoration: const InputDecoration(
-                        labelText: "Taksit Tekrar Günü",
+                        labelText: "Ödeme kaç günde bir olacak?",
                         prefixIcon: Icon(Icons.repeat),
-                        helperText: "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
+                        helperText:
+                            "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
                       ),
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (_debtHasInstallment &&
                             (value == null || value.trim().isEmpty)) {
-                          return "Taksit tekrar günü girin";
+                          return "Ödeme tekrar günü girin";
                         }
                         if (value != null && value.trim().isNotEmpty) {
                           final days = int.tryParse(value);
@@ -607,148 +668,6 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _PersonnelSelectionDialog extends StatefulWidget {
-  const _PersonnelSelectionDialog({
-    required this.personnelList,
-    required this.initialSelection,
-  });
-
-  final List<Personnel> personnelList;
-  final List<Personnel> initialSelection;
-
-  @override
-  State<_PersonnelSelectionDialog> createState() =>
-      _PersonnelSelectionDialogState();
-}
-
-class _PersonnelSelectionDialogState extends State<_PersonnelSelectionDialog> {
-  final _searchController = TextEditingController();
-  List<Personnel> _filteredList = [];
-  final Set<String> _selectedIds = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _filteredList = widget.personnelList;
-    _selectedIds.addAll(widget.initialSelection.map((p) => p.id));
-    _searchController.addListener(_filterList);
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _filterList() {
-    final query = _searchController.text.toLowerCase();
-    setState(() {
-      _filteredList = widget.personnelList.where((personnel) {
-        return personnel.name.toLowerCase().contains(query) ||
-            personnel.phone.contains(query) ||
-            (personnel.personnelId?.toLowerCase().contains(query) ?? false);
-      }).toList();
-    });
-  }
-
-  void _toggleSelection(Personnel personnel) {
-    setState(() {
-      if (_selectedIds.contains(personnel.id)) {
-        _selectedIds.remove(personnel.id);
-      } else {
-        _selectedIds.add(personnel.id);
-      }
-    });
-  }
-
-  void _confirmSelection() {
-    final selected = widget.personnelList
-        .where((p) => _selectedIds.contains(p.id))
-        .toList();
-    Navigator.of(context).pop(selected);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: const InputDecoration(
-                      labelText: "Personel Ara",
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
-                    ),
-                    autofocus: true,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          ),
-          if (_filteredList.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text("Personel bulunamadı"),
-            )
-          else
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _filteredList.length,
-                itemBuilder: (context, index) {
-                  final personnel = _filteredList[index];
-                  final isSelected = _selectedIds.contains(personnel.id);
-                  return CheckboxListTile(
-                    value: isSelected,
-                    onChanged: (_) => _toggleSelection(personnel),
-                    title: Text(personnel.name),
-                    subtitle: Text(personnel.phone),
-                    secondary: personnel.personnelId != null
-                        ? Chip(
-                            label: Text(
-                              personnel.personnelId!,
-                              style: const TextStyle(fontSize: 10),
-                            ),
-                          )
-                        : const Icon(Icons.person),
-                  );
-                },
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "${_selectedIds.length} personel seçildi",
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                FilledButton(
-                  onPressed: _confirmSelection,
-                  child: const Text("Seç"),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

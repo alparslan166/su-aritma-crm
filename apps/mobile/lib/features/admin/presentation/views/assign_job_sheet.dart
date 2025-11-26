@@ -1,8 +1,8 @@
 import "package:flutter/material.dart";
 import "package:geocoding/geocoding.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
-import "package:intl/intl.dart";
 
+import "../../../../core/constants/app_config.dart";
 import "../../application/customer_list_notifier.dart";
 import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
@@ -34,16 +34,16 @@ class _AssignJobSheetState extends ConsumerState<AssignJobSheet> {
       // Fetch personnel directly from repository
       final repository = ref.read(adminRepositoryProvider);
       final personnelList = await repository.fetchPersonnel();
-      
+
       if (!mounted) return;
-      
+
       if (personnelList.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Personel bulunamadı")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Personel bulunamadı")));
         return;
       }
-      
+
       final selected = await showDialog<List<Personnel>>(
         context: context,
         builder: (context) => _PersonnelSelectionDialog(
@@ -68,25 +68,24 @@ class _AssignJobSheetState extends ConsumerState<AssignJobSheet> {
   Future<void> _selectCustomer() async {
     // Ensure customer list is loaded
     await ref.read(customerListProvider.notifier).refresh();
-    
+
     // Get data from provider
     final customerState = ref.read(customerListProvider);
     final customerList = customerState.value ?? [];
-    
+
     if (!mounted) return;
-    
+
     if (customerList.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Müşteri bulunamadı")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Müşteri bulunamadı")));
       return;
     }
-    
+
     final selected = await showDialog<Customer>(
       context: context,
-      builder: (context) => _CustomerSelectionDialog(
-        customerList: customerList,
-      ),
+      builder: (context) =>
+          _CustomerSelectionDialog(customerList: customerList),
     );
     if (selected != null) {
       setState(() {
@@ -104,9 +103,9 @@ class _AssignJobSheetState extends ConsumerState<AssignJobSheet> {
       return;
     }
     if (_selectedCustomer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Lütfen müşteri seçin")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Lütfen müşteri seçin")));
       return;
     }
 
@@ -126,7 +125,9 @@ class _AssignJobSheetState extends ConsumerState<AssignJobSheet> {
         // Geocoding failed, continue without location
       }
 
-      await ref.read(adminRepositoryProvider).createJob(
+      await ref
+          .read(adminRepositoryProvider)
+          .createJob(
             title: _titleController.text.trim(),
             customerName: _selectedCustomer!.name,
             customerPhone: _selectedCustomer!.phone,
@@ -152,9 +153,9 @@ class _AssignJobSheetState extends ConsumerState<AssignJobSheet> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("İş atanamadı: $error")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("İş atanamadı: $error")));
     } finally {
       if (mounted) {
         setState(() {
@@ -396,14 +397,11 @@ class _PersonnelSelectionDialogState extends State<_PersonnelSelectionDialog> {
                     onChanged: (_) => _toggleSelection(personnel),
                     title: Text(personnel.name),
                     subtitle: Text(personnel.phone),
-                    secondary: personnel.personnelId != null
-                        ? Chip(
-                            label: Text(
-                              personnel.personnelId!,
-                              style: const TextStyle(fontSize: 10),
-                            ),
-                          )
-                        : const Icon(Icons.person),
+                    secondary: _PersonnelAvatar(
+                      photoUrl: personnel.photoUrl,
+                      name: personnel.name,
+                      size: 48,
+                    ),
                   );
                 },
               ),
@@ -529,3 +527,84 @@ class _CustomerSelectionDialogState extends State<_CustomerSelectionDialog> {
   }
 }
 
+class _PersonnelAvatar extends StatelessWidget {
+  const _PersonnelAvatar({
+    required this.photoUrl,
+    required this.name,
+    this.size = 48,
+  });
+
+  final String? photoUrl;
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    // Eğer photoUrl varsa ve boş değilse, fotoğrafı göster
+    if (photoUrl != null && photoUrl!.isNotEmpty) {
+      // Default fotoğraflar için asset kullan
+      if (photoUrl!.startsWith("default/")) {
+        final gender = photoUrl!
+            .replaceAll("default/", "")
+            .replaceAll(".jpg", "");
+        return ClipOval(
+          child: Image.asset(
+            "assets/images/$gender.jpg",
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildInitialsAvatar();
+            },
+          ),
+        );
+      }
+      // S3 URL için network image kullan
+      final imageUrl = AppConfig.getMediaUrl(photoUrl!);
+      return ClipOval(
+        child: Image.network(
+          imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            // Hata durumunda baş harf göster
+            return _buildInitialsAvatar();
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return _buildInitialsAvatar();
+          },
+        ),
+      );
+    }
+    // Fotoğraf yoksa baş harf göster
+    return _buildInitialsAvatar();
+  }
+
+  Widget _buildInitialsAvatar() {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF2563EB).withValues(alpha: 0.1),
+            const Color(0xFF10B981).withValues(alpha: 0.1),
+          ],
+        ),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : "P",
+          style: TextStyle(
+            fontSize: size * 0.4,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF2563EB),
+          ),
+        ),
+      ),
+    );
+  }
+}

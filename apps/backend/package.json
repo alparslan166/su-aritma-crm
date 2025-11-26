@@ -16,7 +16,8 @@
     "seed:test-admin": "ts-node scripts/seed-test-admin.ts",
     "seed:full": "ts-node -r tsconfig-paths/register scripts/seed-full.ts",
     "seed:update-customers": "ts-node -r tsconfig-paths/register scripts/update-customers-for-filters.ts",
-    "seed:add-operations": "ts-node -r tsconfig-paths/register scripts/add-operations.ts"
+    "seed:add-operations": "ts-node -r tsconfig-paths/register scripts/add-operations.ts",
+    "update:customer-locations": "ts-node -r tsconfig-paths/register scripts/update-customer-locations.ts"
   },
   "keywords": [],
   "author": "",

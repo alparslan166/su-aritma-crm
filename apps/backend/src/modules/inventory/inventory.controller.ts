@@ -2,7 +2,8 @@ import { InventoryTransactionType } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-import { getAdminId } from "@/lib/tenant";
+import { getAdminId, getPersonnelId } from "@/lib/tenant";
+import { prisma } from "@/lib/prisma";
 
 import { inventoryService } from "./inventory.service";
 
@@ -29,7 +30,28 @@ const adjustSchema = z.object({
 
 export const listInventoryHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const adminId = getAdminId(req);
+    // Check if request is from personnel
+    const personnelIdHeader = req.header("x-personnel-id");
+    const adminIdHeader = req.header("x-admin-id");
+
+    let adminId: string;
+
+    if (personnelIdHeader && !adminIdHeader) {
+      // Request from personnel - get their adminId
+      const personnelId = getPersonnelId(req);
+      const personnel = await prisma.personnel.findUnique({
+        where: { id: personnelId },
+        select: { adminId: true },
+      });
+      if (!personnel) {
+        return res.status(404).json({ success: false, message: "Personnel not found" });
+      }
+      adminId = personnel.adminId;
+    } else {
+      // Request from admin
+      adminId = getAdminId(req);
+    }
+
     const data = await inventoryService.list(adminId);
     res.json({ success: true, data });
   } catch (error) {
@@ -79,4 +101,3 @@ export const adjustInventoryHandler = async (req: Request, res: Response, next: 
     next(error as Error);
   }
 };
-

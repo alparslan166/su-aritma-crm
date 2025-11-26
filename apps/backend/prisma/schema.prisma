@@ -3,9 +3,10 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
 }
+
 
 enum AdminRole {
   ANA
@@ -64,6 +65,14 @@ model Admin {
   role           AdminRole
   status         String             @default("active")
   passwordHash   String?
+  // Company/Invoice settings
+  companyName    String?
+  companyAddress String?
+  companyPhone   String?
+  companyEmail   String?
+  taxOffice      String?
+  taxNumber      String?
+  logoUrl        String?
   personnel      Personnel[]
   jobs           Job[]
   customers      Customer[]

@@ -63,5 +63,5 @@ kill $(lsof -ti :4000)
 # Veya zorla durdur
 kill -9 $(lsof -ti :4000)
 
-Personel ID: AHIZ9Q
+Personel ID:XAWBJD
 Şifre: 7WV3CJ (Giriş Kodu)

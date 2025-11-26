@@ -210,7 +210,21 @@ class InvoiceService {
   async getInvoiceForPdf(adminId: string, invoiceId: string) {
     const invoice = await this.ensureInvoice(adminId, invoiceId);
 
-    // Get materials if job exists - fetch job separately to ensure materials are included
+    // Get admin/company info
+    const admin = await prisma.admin.findUnique({
+      where: { id: adminId },
+      select: {
+        companyName: true,
+        companyAddress: true,
+        companyPhone: true,
+        companyEmail: true,
+        taxOffice: true,
+        taxNumber: true,
+        logoUrl: true,
+      },
+    });
+
+    // Get materials from invoice.job.materials (already included in ensureInvoice)
     let materials: Array<{
       name: string;
       quantity: number;
@@ -218,26 +232,18 @@ class InvoiceService {
       total: number;
     }> = [];
 
-    if (invoice.jobId) {
-      try {
-        const job = await jobService.getById(adminId, invoice.jobId);
-        if (job && (job as any).materials) {
-          const jobMaterials = (job as any).materials || [];
-          materials = jobMaterials.map((material: any) => ({
-            name: material.inventoryItem?.name || "Bilinmeyen Malzeme",
-            quantity: material.quantity || 0,
-            unitPrice: Number(material.unitPrice || 0),
-            total: (material.quantity || 0) * Number(material.unitPrice || 0),
-          }));
-        }
-      } catch (error) {
-        // If job fetch fails, continue without materials
-        console.error("Failed to fetch job materials:", error);
-      }
+    if (invoice.job && invoice.job.materials && Array.isArray(invoice.job.materials)) {
+      materials = invoice.job.materials.map((material) => ({
+        name: material.inventoryItem?.name || "Bilinmeyen Malzeme",
+        quantity: material.quantity || 0,
+        unitPrice: Number(material.unitPrice || 0),
+        total: (material.quantity || 0) * Number(material.unitPrice || 0),
+      }));
     }
 
     return {
       invoiceNumber: invoice.invoiceNumber,
+      invoiceDate: invoice.createdAt,
       customerName: invoice.customerName,
       customerPhone: invoice.customerPhone,
       customerAddress: invoice.customerAddress,
@@ -245,11 +251,17 @@ class InvoiceService {
       jobTitle: invoice.jobTitle,
       jobDate: invoice.jobDate,
       subtotal: Number(invoice.subtotal),
-      tax: invoice.tax ? Number(invoice.tax) : null,
+      tax: invoice.tax ? Number(invoice.tax) : 0,
       total: Number(invoice.total),
       notes: invoice.notes,
       materials,
-      createdAt: invoice.createdAt,
+      companyName: admin?.companyName || "Firma Adı",
+      companyAddress: admin?.companyAddress || "Firma Adresi",
+      companyPhone: admin?.companyPhone || "Firma Telefonu",
+      companyEmail: admin?.companyEmail || "info@firma.com",
+      taxOffice: admin?.taxOffice || "Vergi Dairesi",
+      taxNumber: admin?.taxNumber || "Vergi Numarası",
+      logoUrl: admin?.logoUrl || null,
     };
   }
 
@@ -283,4 +295,3 @@ class InvoiceService {
 }
 
 export const invoiceService = new InvoiceService();
-

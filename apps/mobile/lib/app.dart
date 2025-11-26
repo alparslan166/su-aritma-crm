@@ -4,7 +4,6 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "core/notifications/push_notification_service.dart";
 import "core/session/session_provider.dart";
 import "core/theme/app_theme.dart";
-import "features/auth/domain/auth_role.dart";
 import "routing/app_router.dart";
 
 class SuAritmaApp extends HookConsumerWidget {
@@ -13,7 +12,6 @@ class SuAritmaApp extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
-    final session = ref.watch(authSessionProvider);
     final pushService = ref.watch(pushNotificationServiceProvider);
 
     // Initialize push notifications on app start
@@ -27,24 +25,22 @@ class SuAritmaApp extends HookConsumerWidget {
     ref.listen<AuthSession?>(authSessionProvider, (previous, next) {
       if (previous != null && previous.role != next?.role) {
         // Unsubscribe from previous role
-        pushService
-            .unsubscribeFromRoleTopic(previous.role.name)
-            .catchError((error) {
+        pushService.unsubscribeFromRoleTopic(previous.role.name).catchError((
+          error,
+        ) {
           debugPrint("Failed to unsubscribe from topic: $error");
         });
       }
       if (next != null) {
         // Subscribe to new role
-        pushService
-            .subscribeToRoleTopic(next.role.name)
-            .catchError((error) {
+        pushService.subscribeToRoleTopic(next.role.name).catchError((error) {
           debugPrint("Failed to subscribe to topic: $error");
         });
       } else if (previous != null) {
         // Logged out - unsubscribe from previous role
-        pushService
-            .unsubscribeFromRoleTopic(previous.role.name)
-            .catchError((error) {
+        pushService.unsubscribeFromRoleTopic(previous.role.name).catchError((
+          error,
+        ) {
           debugPrint("Failed to unsubscribe from topic: $error");
         });
       }

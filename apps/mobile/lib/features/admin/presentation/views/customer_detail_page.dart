@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_map/flutter_map.dart";
 import "package:geocoding/geocoding.dart";
@@ -6,14 +8,15 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 import "package:latlong2/latlong.dart";
 import "package:open_file/open_file.dart";
+import "package:url_launcher/url_launcher.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
-import "full_screen_map_page.dart";
 
 import "../../application/customer_list_notifier.dart";
 import "../../application/job_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
 import "edit_customer_sheet.dart";
+import "job_map_view.dart";
 
 final customerDetailProvider = FutureProvider.family<Customer, String>((
   ref,
@@ -854,7 +857,13 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
 
   Future<void> _loadLocation() async {
     // Önce müşterinin location bilgisini kontrol et
+    debugPrint(
+      "🗺️ Customer location check: ${widget.customer.location != null}",
+    );
     if (widget.customer.location != null) {
+      debugPrint(
+        "🗺️ Customer has location: ${widget.customer.location!.latitude}, ${widget.customer.location!.longitude}",
+      );
       setState(() {
         _customerLocation = LatLng(
           widget.customer.location!.latitude,
@@ -863,6 +872,10 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
       });
       return;
     }
+
+    debugPrint(
+      "🗺️ Customer location is null, trying geocoding for: ${widget.customer.address}",
+    );
 
     // Location yoksa adresten geocoding yap
     if (widget.customer.address.isEmpty) {
@@ -878,22 +891,33 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
     });
 
     try {
-      final locations = await locationFromAddress(widget.customer.address);
+      // Timeout ile geocoding yap (10 saniye)
+      final locations = await locationFromAddress(
+        widget.customer.address,
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException("Geocoding timeout");
+        },
+      );
+      if (!mounted) return;
       if (locations.isNotEmpty) {
         final location = locations.first;
         setState(() {
           _customerLocation = LatLng(location.latitude, location.longitude);
           _isLoading = false;
+          _error = null;
         });
       } else {
         setState(() {
-          _error = "Adres için konum bulunamadı";
+          _error = "Adres için konum bulunamadı. Google Maps'te açmak için adrese tıklayın.";
           _isLoading = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _error = "Konum yüklenemedi: $e";
+        _error = "Konum yüklenemedi. Google Maps'te açmak için adrese tıklayın.";
         _isLoading = false;
       });
     }
@@ -933,10 +957,9 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                 ? () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => FullScreenMapPage(
-                          location: _customerLocation!,
-                          title: widget.customer.name,
-                          address: widget.customer.address,
+                        builder: (context) => JobMapView(
+                          initialCustomerLocation: _customerLocation!,
+                          initialCustomerId: widget.customer.id,
                         ),
                       ),
                     );
@@ -952,7 +975,7 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                       ),
                     )
                   : _error != null
-                  ? Center(
+                  ? SingleChildScrollView(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
@@ -980,54 +1003,78 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                       ),
                     )
                   : _customerLocation != null
-                  ? ClipRect(
-                      child: FlutterMap(
-                        key: ValueKey(
-                          "${_customerLocation!.latitude}_${_customerLocation!.longitude}",
-                        ),
-                        options: MapOptions(
-                          initialCenter: _customerLocation!,
-                          initialZoom: 15.0,
-                          interactionOptions: const InteractionOptions(
-                            flags: InteractiveFlag.none,
-                          ),
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate:
-                                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                            userAgentPackageName: "com.suaritma.app",
-                            maxZoom: 19,
-                            minZoom: 3,
-                          ),
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: _customerLocation!,
-                                width: 40,
-                                height: 40,
-                                child: const Icon(
-                                  Icons.location_on,
-                                  color: Color(0xFF2563EB),
-                                  size: 40,
-                                ),
+                  ? Builder(
+                      builder: (context) {
+                        debugPrint(
+                          "🗺️ Rendering customer map at: ${_customerLocation!.latitude}, ${_customerLocation!.longitude}",
+                        );
+                        return ClipRect(
+                          child: FlutterMap(
+                            key: ValueKey(
+                              "${_customerLocation!.latitude}_${_customerLocation!.longitude}",
+                            ),
+                            options: MapOptions(
+                              initialCenter: _customerLocation!,
+                              initialZoom: 15.0,
+                              interactionOptions: const InteractionOptions(
+                                flags: InteractiveFlag.none,
+                              ),
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate:
+                                    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                                userAgentPackageName: "com.suaritma.app",
+                                maxZoom: 19,
+                                minZoom: 3,
+                              ),
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    point: _customerLocation!,
+                                    width: 40,
+                                    height: 40,
+                                    child: const Icon(
+                                      Icons.location_on,
+                                      color: Color(0xFF2563EB),
+                                      size: 40,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     )
-                  : const Center(child: Text("Konum bilgisi bulunamadı")),
+                  : Builder(
+                      builder: (context) {
+                        debugPrint(
+                          "🗺️ Customer location is null, showing error message",
+                        );
+                        return const Center(
+                          child: Text("Konum bilgisi bulunamadı"),
+                        );
+                      },
+                    ),
             ),
           ),
-          if (_customerLocation != null)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Icon(Icons.place, size: 16, color: Colors.grey.shade600),
-                  const SizedBox(width: 8),
-                  Expanded(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Icon(Icons.place, size: 16, color: Colors.grey.shade600),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      // Google Maps'te adresi aç
+                      final encodedAddress = Uri.encodeComponent(widget.customer.address);
+                      final googleMapsUrl = "https://www.google.com/maps/search/?api=1&query=$encodedAddress";
+                      final uri = Uri.parse(googleMapsUrl);
+                      // ignore: unawaited_futures
+                      launchUrl(uri, mode: LaunchMode.externalApplication);
+                    },
                     child: Text(
                       widget.customer.address,
                       style: TextStyle(
@@ -1036,9 +1083,31 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                       ),
                     ),
                   ),
+                ),
+                if (_customerLocation != null) ...[
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => JobMapView(
+                            initialCustomerLocation: _customerLocation!,
+                            initialCustomerId: widget.customer.id,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.map, size: 18),
+                    label: const Text("Haritada Aç"),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      textStyle: const TextStyle(fontSize: 12),
+                    ),
+                  ),
                 ],
-              ),
+              ],
             ),
+          ),
         ],
       ),
     );

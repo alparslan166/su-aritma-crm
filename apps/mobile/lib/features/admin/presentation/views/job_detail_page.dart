@@ -1,5 +1,3 @@
-import "dart:io";
-
 import "package:flutter/material.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
@@ -10,7 +8,6 @@ import "../../application/job_list_notifier.dart";
 import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/job.dart";
-import "invoice_create_page.dart";
 
 final _jobDetailProvider = FutureProvider.family<Job, String>((ref, jobId) {
   final repository = ref.read(adminRepositoryProvider);
@@ -18,18 +15,13 @@ final _jobDetailProvider = FutureProvider.family<Job, String>((ref, jobId) {
 });
 
 class AdminJobDetailPage extends ConsumerStatefulWidget {
-  const AdminJobDetailPage({
-    super.key,
-    required this.jobId,
-    this.initialJob,
-  });
+  const AdminJobDetailPage({super.key, required this.jobId, this.initialJob});
 
   final String jobId;
   final Job? initialJob;
 
   @override
-  ConsumerState<AdminJobDetailPage> createState() =>
-      _AdminJobDetailPageState();
+  ConsumerState<AdminJobDetailPage> createState() => _AdminJobDetailPageState();
 }
 
 class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
@@ -58,7 +50,8 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
               Text("Hata: $error"),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => ref.invalidate(_jobDetailProvider(widget.jobId)),
+                onPressed: () =>
+                    ref.invalidate(_jobDetailProvider(widget.jobId)),
                 child: const Text("Tekrar Dene"),
               ),
             ],
@@ -69,7 +62,6 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
   }
 
   Widget _buildContent(Job job) {
-
     return Scaffold(
       appBar: AdminAppBar(
         title: Text(job.title),
@@ -101,12 +93,31 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
               _Row(
                 "Planlanan Tarih",
                 job.scheduledAt != null
-                    ? DateFormat("dd MMM yyyy HH:mm").format(job.scheduledAt!.toLocal())
+                    ? DateFormat(
+                        "dd MMM yyyy HH:mm",
+                      ).format(job.scheduledAt!.toLocal())
                     : "-",
               ),
               _Row("Öncelik", job.priority?.toString() ?? "-"),
               _Row("Adres", job.location?.address ?? job.customer.address),
               _Row("Yapılan İşlem", job.title),
+              if (job.materials != null && job.materials!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                const Divider(),
+                const SizedBox(height: 8),
+                Text(
+                  "Kullanılan Malzemeler",
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...job.materials!.map((m) => _Row(
+                  m.inventoryItemName,
+                  "${m.quantity} adet",
+                )),
+              ],
             ],
           ),
           const SizedBox(height: 16),
@@ -126,43 +137,37 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                   .map((p) => _Row("Personel", p.personnelName))
                   .toList(),
             ),
-          if (job.price != null || job.paymentStatus != null || job.collectedAmount != null)
+          if (job.price != null ||
+              job.paymentStatus != null ||
+              job.collectedAmount != null)
             _Section(
               title: "Ödeme Bilgileri",
               children: [
                 if (job.price != null)
                   _Row("Ücret", "${job.price!.toStringAsFixed(2)} ₺"),
                 if (job.paymentStatus != null)
-                  _Row("Ödeme Durumu", _getPaymentStatusText(job.paymentStatus!)),
+                  _Row(
+                    "Ödeme Durumu",
+                    _getPaymentStatusText(job.paymentStatus!),
+                  ),
                 if (job.collectedAmount != null)
-                  _Row("Tahsil Edilen", "${job.collectedAmount!.toStringAsFixed(2)} ₺"),
+                  _Row(
+                    "Tahsil Edilen",
+                    "${job.collectedAmount!.toStringAsFixed(2)} ₺",
+                  ),
               ],
             ),
           if (job.notes != null && job.notes!.isNotEmpty)
-            _Section(
-              title: "Notlar",
-              children: [
-                Text(job.notes!),
-              ],
-            ),
-          if (job.materials != null && job.materials!.isNotEmpty)
-            _Section(
-              title: "Kullanılan Malzemeler",
-              children: job.materials!.map((m) {
-                final total = m.quantity * m.unitPrice;
-                return _Row(
-                  "${m.inventoryItemName} (${m.quantity} adet)",
-                  "${total.toStringAsFixed(2)} ₺",
-                );
-              }).toList(),
-            ),
+            _Section(title: "Notlar", children: [Text(job.notes!)]),
           if (job.maintenanceDueAt != null)
             _Section(
               title: "Bakım Bilgileri",
               children: [
                 _Row(
                   "Bakım Tarihi",
-                  DateFormat("dd MMM yyyy").format(job.maintenanceDueAt!.toLocal()),
+                  DateFormat(
+                    "dd MMM yyyy",
+                  ).format(job.maintenanceDueAt!.toLocal()),
                 ),
                 _Row(
                   "Kalan Süre",
@@ -170,7 +175,8 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                 ),
               ],
             ),
-          if (job.deliveryMediaUrls != null && job.deliveryMediaUrls!.isNotEmpty)
+          if (job.deliveryMediaUrls != null &&
+              job.deliveryMediaUrls!.isNotEmpty)
             _Section(
               title: "Teslim Fotoğrafları",
               children: [
@@ -210,8 +216,8 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                     Text(
                       "Fatura",
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Center(
@@ -221,7 +227,10 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                         label: const Text("Fatura Oluştur"),
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF10B981),
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 24,
+                          ),
                         ),
                       ),
                     ),
@@ -240,9 +249,7 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
@@ -328,20 +335,26 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => _PersonnelAssignmentSheet(
-        job: job,
-      ),
+      builder: (context) => _PersonnelAssignmentSheet(job: job),
     );
   }
 
   Future<void> _showEditSheet(Job job) async {
     final titleController = TextEditingController(text: job.title);
-    final customerNameController = TextEditingController(text: job.customer.name);
-    final customerPhoneController = TextEditingController(text: job.customer.phone);
-    final customerAddressController = TextEditingController(text: job.customer.address);
+    final customerNameController = TextEditingController(
+      text: job.customer.name,
+    );
+    final customerPhoneController = TextEditingController(
+      text: job.customer.phone,
+    );
+    final customerAddressController = TextEditingController(
+      text: job.customer.address,
+    );
     final notesController = TextEditingController();
     final priceController = TextEditingController();
-    final priorityController = TextEditingController(text: job.priority?.toString() ?? "");
+    final priorityController = TextEditingController(
+      text: job.priority?.toString() ?? "",
+    );
     DateTime? scheduledAt = job.scheduledAt;
     final formKey = GlobalKey<FormState>();
 
@@ -375,17 +388,19 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                         decoration: const InputDecoration(labelText: "Başlık"),
                         validator: (value) =>
                             value == null || value.trim().length < 2
-                                ? "Başlık girin"
-                                : null,
+                            ? "Başlık girin"
+                            : null,
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: customerNameController,
-                        decoration: const InputDecoration(labelText: "Müşteri Adı"),
+                        decoration: const InputDecoration(
+                          labelText: "Müşteri Adı",
+                        ),
                         validator: (value) =>
                             value == null || value.trim().length < 2
-                                ? "Müşteri adı girin"
-                                : null,
+                            ? "Müşteri adı girin"
+                            : null,
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
@@ -394,8 +409,8 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                         keyboardType: TextInputType.phone,
                         validator: (value) =>
                             value == null || value.trim().length < 6
-                                ? "Telefon girin"
-                                : null,
+                            ? "Telefon girin"
+                            : null,
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
@@ -403,8 +418,8 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                         decoration: const InputDecoration(labelText: "Adres"),
                         validator: (value) =>
                             value == null || value.trim().length < 5
-                                ? "Adres girin"
-                                : null,
+                            ? "Adres girin"
+                            : null,
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -439,13 +454,17 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: notesController,
-                        decoration: const InputDecoration(labelText: "Notlar (opsiyonel)"),
+                        decoration: const InputDecoration(
+                          labelText: "Notlar (opsiyonel)",
+                        ),
                         maxLines: 3,
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: priceController,
-                        decoration: const InputDecoration(labelText: "Ücret (₺) (opsiyonel)"),
+                        decoration: const InputDecoration(
+                          labelText: "Ücret (₺) (opsiyonel)",
+                        ),
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
@@ -453,7 +472,9 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: priorityController,
-                        decoration: const InputDecoration(labelText: "Öncelik (opsiyonel)"),
+                        decoration: const InputDecoration(
+                          labelText: "Öncelik (opsiyonel)",
+                        ),
                         keyboardType: TextInputType.number,
                       ),
                       const SizedBox(height: 16),
@@ -469,27 +490,32 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                               await repo.updateJob(
                                 id: job.id,
                                 title: titleController.text.trim(),
-                                customerName: customerNameController.text.trim(),
-                                customerPhone: customerPhoneController.text.trim(),
-                                customerAddress: customerAddressController.text.trim(),
+                                customerName: customerNameController.text
+                                    .trim(),
+                                customerPhone: customerPhoneController.text
+                                    .trim(),
+                                customerAddress: customerAddressController.text
+                                    .trim(),
                                 scheduledAt: scheduledAt,
                                 notes: notesController.text.trim().isEmpty
                                     ? null
                                     : notesController.text.trim(),
                                 price: priceController.text.trim().isEmpty
                                     ? null
-                                    : double.tryParse(priceController.text.trim()),
+                                    : double.tryParse(
+                                        priceController.text.trim(),
+                                      ),
                                 priority: priorityController.text.trim().isEmpty
                                     ? null
-                                    : int.tryParse(priorityController.text.trim()),
+                                    : int.tryParse(
+                                        priorityController.text.trim(),
+                                      ),
                               );
                               ref.invalidate(jobListProvider);
                               ref.invalidate(_jobDetailProvider(widget.jobId));
                               navigator.pop();
                               messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text("İş güncellendi"),
-                                ),
+                                const SnackBar(content: Text("İş güncellendi")),
                               );
                             } catch (error) {
                               messenger.showSnackBar(
@@ -589,10 +615,9 @@ class _Row extends StatelessWidget {
             flex: 2,
             child: Text(
               label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
           Expanded(flex: 3, child: Text(value)),
@@ -603,16 +628,14 @@ class _Row extends StatelessWidget {
 }
 
 class _PersonnelAssignmentSheet extends ConsumerWidget {
-  const _PersonnelAssignmentSheet({
-    required this.job,
-  });
+  const _PersonnelAssignmentSheet({required this.job});
 
   final Job job;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final personnelState = ref.watch(personnelListProvider);
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
@@ -634,18 +657,16 @@ class _PersonnelAssignmentSheet extends ConsumerWidget {
           ),
           Text(
             "Personel Seç",
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Expanded(
             child: personnelState.when(
               data: (personnelList) {
                 if (personnelList.isEmpty) {
-                  return const Center(
-                    child: Text("Personel bulunamadı"),
-                  );
+                  return const Center(child: Text("Personel bulunamadı"));
                 }
                 final assignedPersonnelIds = job.assignments
                     .map((a) => a.personnelId)
@@ -655,7 +676,9 @@ class _PersonnelAssignmentSheet extends ConsumerWidget {
                   itemCount: personnelList.length,
                   itemBuilder: (context, index) {
                     final personnel = personnelList[index];
-                    final isAssigned = assignedPersonnelIds.contains(personnel.id);
+                    final isAssigned = assignedPersonnelIds.contains(
+                      personnel.id,
+                    );
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
@@ -721,7 +744,9 @@ class _PersonnelAssignmentSheet extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Personel Ata"),
-        content: const Text("Bu personele iş atamak istediğinize emin misiniz?"),
+        content: const Text(
+          "Bu personele iş atamak istediğinize emin misiniz?",
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -742,30 +767,31 @@ class _PersonnelAssignmentSheet extends ConsumerWidget {
           .map((a) => a.personnelId)
           .whereType<String>()
           .toList();
-      
+
       // Yeni personeli ekle (zaten varsa ekleme)
       if (!currentPersonnelIds.contains(personnelId)) {
         currentPersonnelIds.add(personnelId);
       }
 
-      await ref.read(adminRepositoryProvider).assignPersonnelToJob(
+      await ref
+          .read(adminRepositoryProvider)
+          .assignPersonnelToJob(
             jobId: job.id,
             personnelIds: currentPersonnelIds,
           );
       await ref.read(jobListProvider.notifier).refresh();
       if (context.mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Personel atandı")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Personel atandı")));
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Atama başarısız: $error")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Atama başarısız: $error")));
       }
     }
   }
 }
-

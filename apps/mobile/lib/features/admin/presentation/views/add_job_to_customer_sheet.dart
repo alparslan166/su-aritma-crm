@@ -102,7 +102,8 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
           ? int.tryParse(_installmentCountController.text)
           : null;
       final installmentIntervalDays =
-          hasInstallmentForDebt && _installmentIntervalDaysController.text.isNotEmpty
+          hasInstallmentForDebt &&
+              _installmentIntervalDaysController.text.isNotEmpty
           ? int.tryParse(_installmentIntervalDaysController.text)
           : null;
 
@@ -130,6 +131,7 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
               debtAmount: debtAmount,
               hasInstallment: hasInstallmentForDebt,
               installmentCount: installmentCount,
+              installmentIntervalDays: installmentIntervalDays,
             );
       }
 
@@ -378,7 +380,9 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                                 context: context,
                                 initialDate: _nextDebtDate ?? DateTime.now(),
                                 firstDate: DateTime.now(),
-                                lastDate: DateTime.now().add(const Duration(days: 3650)),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 3650),
+                                ),
                               );
                               if (picked != null) {
                                 setState(() {
@@ -484,9 +488,12 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                               onPressed: () async {
                                 final picked = await showDatePicker(
                                   context: context,
-                                  initialDate: _installmentStartDate ?? DateTime.now(),
+                                  initialDate:
+                                      _installmentStartDate ?? DateTime.now(),
                                   firstDate: DateTime.now(),
-                                  lastDate: DateTime.now().add(const Duration(days: 3650)),
+                                  lastDate: DateTime.now().add(
+                                    const Duration(days: 3650),
+                                  ),
                                 );
                                 if (picked != null) {
                                   setState(() {
@@ -500,20 +507,21 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        // Taksit Tekrar Günü
+                        // Ödeme Tekrar Günü
                         TextFormField(
                           controller: _installmentIntervalDaysController,
                           decoration: const InputDecoration(
-                            labelText: "Taksit Tekrar Günü",
+                            labelText: "Ödeme kaç günde bir olacak?",
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.repeat),
-                            helperText: "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
+                            helperText:
+                                "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
                           ),
                           keyboardType: TextInputType.number,
                           validator: (value) {
                             if (_debtHasInstallment &&
                                 (value == null || value.trim().isEmpty)) {
-                              return "Taksit tekrar günü girin";
+                              return "Ödeme tekrar günü girin";
                             }
                             if (value != null && value.trim().isNotEmpty) {
                               final days = int.tryParse(value);
