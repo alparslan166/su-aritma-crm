@@ -1,3 +1,4 @@
+import "dart:async";
 import "dart:typed_data";
 
 import "package:dio/dio.dart";
@@ -60,7 +61,7 @@ class PersonnelView extends HookConsumerWidget {
 
     final state = ref.watch(personnelListProvider);
     final padding = MediaQuery.paddingOf(context).bottom;
-    
+
     return Scaffold(
       appBar: const AdminAppBar(title: Text("Personeller")),
       body: Stack(
@@ -215,8 +216,9 @@ class PersonnelView extends HookConsumerWidget {
                                   ),
                                   label: Text(
                                     dateFrom.value != null
-                                        ? DateFormat("dd MMM yyyy")
-                                            .format(dateFrom.value!)
+                                        ? DateFormat(
+                                            "dd MMM yyyy",
+                                          ).format(dateFrom.value!)
                                         : "Başlangıç Tarihi",
                                   ),
                                 ),
@@ -249,8 +251,9 @@ class PersonnelView extends HookConsumerWidget {
                                   ),
                                   label: Text(
                                     dateTo.value != null
-                                        ? DateFormat("dd MMM yyyy")
-                                            .format(dateTo.value!)
+                                        ? DateFormat(
+                                            "dd MMM yyyy",
+                                          ).format(dateTo.value!)
                                         : "Bitiş Tarihi",
                                   ),
                                 ),
@@ -287,42 +290,15 @@ class PersonnelView extends HookConsumerWidget {
                         ),
                       );
                     }
-                    return RefreshIndicator(
-                      onRefresh: notifier.refresh,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 12,
-                        ),
-                        itemCount: items.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        cacheExtent: 500,
-                        addAutomaticKeepAlives: false,
-                        addRepaintBoundaries: true,
-                        itemBuilder: (context, index) {
-                          final item = items[index];
-                          return RepaintBoundary(
-                            child: GestureDetector(
-                              onTap: () => context.pushNamed(
-                                "admin-personnel-detail",
-                                pathParameters: {"id": item.id},
-                                extra: item,
-                              ),
-                              child: _PersonnelTile(item: item),
-                            ),
-                          );
-                        },
-                      ),
-                    );
+                    return _buildPersonnelList(context, items, notifier);
                   },
                   error: (error, _) => _ErrorState(
                     message: error.toString(),
                     onRetry: () =>
                         ref.read(personnelListProvider.notifier).refresh(),
                   ),
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                 ),
               ),
             ],
@@ -341,6 +317,80 @@ class PersonnelView extends HookConsumerWidget {
     );
   }
 
+  Widget _buildPersonnelList(
+    BuildContext context,
+    List<Personnel> items,
+    PersonnelListNotifier notifier,
+  ) {
+    final scrollController = useScrollController();
+    final scrollOffset = useState<double>(0.0);
+    final previousScrollOffset = useRef<double>(0.0);
+    final scrollVelocity = useState<double>(0.0);
+    final lastUpdateTime = useRef<DateTime>(DateTime.now());
+    final velocityDecayTimer = useRef<Timer?>(null);
+
+    useEffect(() {
+      void listener() {
+        final now = DateTime.now();
+        final timeDelta = now.difference(lastUpdateTime.value).inMilliseconds;
+        final offsetDelta =
+            scrollController.offset - previousScrollOffset.value;
+
+        if (timeDelta > 0 && timeDelta < 100) {
+          // Scroll hızını hesapla (pixels per second)
+          final velocity = (offsetDelta / timeDelta) * 1000;
+          scrollVelocity.value = velocity.abs();
+
+          // Scroll durduğunda hızı yavaşça azalt
+          velocityDecayTimer.value?.cancel();
+          velocityDecayTimer.value = Timer(
+            const Duration(milliseconds: 100),
+            () {
+              scrollVelocity.value = scrollVelocity.value * 0.7;
+              if (scrollVelocity.value < 10) {
+                scrollVelocity.value = 0;
+              }
+            },
+          );
+        }
+
+        scrollOffset.value = scrollController.offset;
+        previousScrollOffset.value = scrollController.offset;
+        lastUpdateTime.value = now;
+      }
+
+      scrollController.addListener(listener);
+      return () {
+        scrollController.removeListener(listener);
+        velocityDecayTimer.value?.cancel();
+      };
+    }, [scrollController]);
+
+    return RefreshIndicator(
+      onRefresh: notifier.refresh,
+      child: ListView.separated(
+        controller: scrollController,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        cacheExtent: 500,
+        addAutomaticKeepAlives: false,
+        addRepaintBoundaries: true,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return RepaintBoundary(
+            child: _AnimatedPersonnelTile(
+              personnel: item,
+              scrollOffset: scrollOffset.value,
+              scrollVelocity: scrollVelocity.value,
+              index: index,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _openAddPersonnelSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
@@ -350,6 +400,85 @@ class PersonnelView extends HookConsumerWidget {
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
         child: const _PersonnelFormSheet(),
+      ),
+    );
+  }
+}
+
+class _AnimatedPersonnelTile extends StatelessWidget {
+  const _AnimatedPersonnelTile({
+    required this.personnel,
+    required this.scrollOffset,
+    required this.scrollVelocity,
+    required this.index,
+  });
+
+  final Personnel personnel;
+  final double scrollOffset;
+  final double scrollVelocity;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    // iOS bildirim animasyonu: scroll sırasında kartlar birbirine yaklaşır
+    // Kart yüksekliği + separator = yaklaşık 180px
+    final cardHeight = 180.0;
+    final cardPosition = index * cardHeight;
+
+    // Viewport içindeki kartlar için animasyon uygula
+    final viewportHeight = MediaQuery.of(context).size.height;
+    final cardTop = cardPosition - scrollOffset;
+    final cardBottom = cardTop + cardHeight;
+    final cardCenter = cardTop + cardHeight / 2;
+    final viewportCenter = viewportHeight / 2;
+
+    // Viewport dışındaki kartlar için animasyon uygulama
+    if (cardBottom < -50 || cardTop > viewportHeight + 50) {
+      return GestureDetector(
+        onTap: () => context.pushNamed(
+          "admin-personnel-detail",
+          pathParameters: {"id": personnel.id},
+          extra: personnel,
+        ),
+        child: _PersonnelTile(item: personnel),
+      );
+    }
+
+    // Scroll hızına göre scale hesapla (birbirine yaklaşma efekti)
+    // Maksimum scroll hızı: 2000 pixels/second
+    final maxVelocity = 2000.0;
+    final normalizedVelocity = (scrollVelocity / maxVelocity).clamp(0.0, 1.0);
+
+    // Scroll hızına göre scale: hızlı scroll'da kartlar küçülür (birbirine yaklaşır)
+    // Minimum scale: 0.98 (kartlar %2 küçülür)
+    final scale = 1.0 - (normalizedVelocity * 0.02);
+
+    // Viewport merkezine göre hafif bir offset hesapla
+    final distanceFromCenter = (cardCenter - viewportCenter).abs();
+    final maxDistance = viewportHeight / 2;
+    final normalizedDistance = (distanceFromCenter / maxDistance).clamp(
+      0.0,
+      1.0,
+    );
+
+    // Merkeze yakın kartlar daha az, uzak kartlar daha fazla hareket eder
+    final offset =
+        (1.0 - normalizedDistance) *
+        1.5 *
+        (cardCenter < viewportCenter ? -1 : 1);
+
+    return GestureDetector(
+      onTap: () => context.pushNamed(
+        "admin-personnel-detail",
+        pathParameters: {"id": personnel.id},
+        extra: personnel,
+      ),
+      child: Transform(
+        transform: Matrix4.identity()
+          ..translate(0.0, offset)
+          ..scale(scale),
+        alignment: Alignment.center,
+        child: _PersonnelTile(item: personnel),
       ),
     );
   }
@@ -491,7 +620,9 @@ class _PersonnelTile extends StatelessWidget {
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
-                            item.isOnLeave ? "İZİNLİ" : _getPersonnelStatusText(item.status),
+                            item.isOnLeave
+                                ? "İZİNLİ"
+                                : _getPersonnelStatusText(item.status),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -670,20 +801,20 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
     }
   }
 
-
   Future<String?> _uploadImage(XFile image) async {
     try {
       final bytes = await image.readAsBytes();
-      final contentType = image.path.endsWith(".jpg") || image.path.endsWith(".jpeg")
+      final contentType =
+          image.path.endsWith(".jpg") || image.path.endsWith(".jpeg")
           ? "image/jpeg"
           : "image/png";
 
       // Get presigned URL from backend
       final client = ref.read(apiClientProvider);
-      final presignedResponse = await client.post("/media/sign", data: {
-        "contentType": contentType,
-        "prefix": "personnel-photos",
-      });
+      final presignedResponse = await client.post(
+        "/media/sign",
+        data: {"contentType": contentType, "prefix": "personnel-photos"},
+      );
       final uploadUrl = presignedResponse.data["data"]["uploadUrl"] as String;
       final photoKey = presignedResponse.data["data"]["key"] as String;
 
@@ -695,9 +826,7 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
           uploadUrl,
           data: bytes,
           options: Options(
-            headers: {
-              "Content-Type": contentType,
-            },
+            headers: {"Content-Type": contentType},
             contentType: contentType,
             validateStatus: (status) => status != null && status < 600,
           ),
@@ -713,7 +842,8 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
       return photoKey;
     } catch (e) {
       if (mounted) {
-        final errorMessage = e.toString().contains("connection error") ||
+        final errorMessage =
+            e.toString().contains("connection error") ||
                 e.toString().contains("XMLHttpRequest")
             ? "Fotoğraf yüklenemedi: Ağ bağlantı hatası. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin."
             : "Fotoğraf yüklenemedi: ${e.toString()}";
@@ -735,7 +865,7 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
     });
     try {
       String? photoUrl;
-      
+
       // Upload image if selected
       if (_selectedImage != null) {
         photoUrl = await _uploadImage(_selectedImage!);
@@ -811,8 +941,12 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
-                                  const Color(0xFF2563EB).withValues(alpha: 0.1),
-                                  const Color(0xFF10B981).withValues(alpha: 0.1),
+                                  const Color(
+                                    0xFF2563EB,
+                                  ).withValues(alpha: 0.1),
+                                  const Color(
+                                    0xFF10B981,
+                                  ).withValues(alpha: 0.1),
                                 ],
                               ),
                               shape: BoxShape.circle,
@@ -826,7 +960,11 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
                             radius: 18,
                             backgroundColor: const Color(0xFF2563EB),
                             child: IconButton(
-                              icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                              icon: const Icon(
+                                Icons.camera_alt,
+                                size: 18,
+                                color: Colors.white,
+                              ),
                               onPressed: _pickImage,
                               padding: EdgeInsets.zero,
                             ),
@@ -940,7 +1078,9 @@ class _PersonnelAvatar extends StatelessWidget {
     if (photoUrl != null && photoUrl!.isNotEmpty) {
       // Default fotoğraflar için asset kullan
       if (photoUrl!.startsWith("default/")) {
-        final gender = photoUrl!.replaceAll("default/", "").replaceAll(".jpg", "");
+        final gender = photoUrl!
+            .replaceAll("default/", "")
+            .replaceAll(".jpg", "");
         return ClipOval(
           child: Image.asset(
             "assets/images/$gender.jpg",

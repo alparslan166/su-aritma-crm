@@ -12,6 +12,7 @@ import "../../admin/presentation/views/job_map_view.dart";
 import "../../admin/presentation/views/notifications_view.dart";
 import "../../admin/presentation/views/past_jobs_view.dart";
 import "../../admin/presentation/views/personnel_view.dart";
+import "home_page_tab.dart";
 
 class AdminDashboardPage extends StatefulWidget {
   const AdminDashboardPage({super.key});
@@ -214,30 +215,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
         children: [
           const CustomersView(filterType: CustomerFilterType.all),
           const CustomersView(filterType: CustomerFilterType.overduePayment),
-          const _HomePageTab(),
+          const HomePageTab(),
           const CustomersView(
             filterType: CustomerFilterType.upcomingMaintenance,
           ),
           _AssignJobTab(),
         ],
-      ),
-    );
-  }
-}
-
-class _HomePageTab extends StatelessWidget {
-  const _HomePageTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text(
-        "Ana Sayfa",
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: Colors.grey,
-        ),
       ),
     );
   }

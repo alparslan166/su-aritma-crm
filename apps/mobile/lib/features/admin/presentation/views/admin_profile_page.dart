@@ -417,6 +417,11 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                               labelText: "Firma Adı",
                               border: OutlineInputBorder(),
                             ),
+                            keyboardType: TextInputType.text,
+                            textInputAction: TextInputAction.next,
+                            textCapitalization: TextCapitalization.none,
+                            enableSuggestions: true,
+                            autocorrect: false,
                           ),
                           const SizedBox(height: 16),
                           TextFormField(

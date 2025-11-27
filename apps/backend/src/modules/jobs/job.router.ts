@@ -4,6 +4,7 @@ import {
   addJobNoteHandler,
   assignJobHandler,
   createJobHandler,
+  deleteJobHandler,
   getJobHandler,
   listJobHistoryHandler,
   listJobNotesHandler,
@@ -28,6 +29,6 @@ router.post("/:id/notes", addJobNoteHandler);
 // General routes (must come after specific routes)
 router.get("/:id", getJobHandler);
 router.put("/:id", updateJobHandler);
+router.delete("/:id", deleteJobHandler);
 
 export const jobRouter = router;
-

@@ -205,10 +205,7 @@ Gelir-gider hesaplayıcı sistemi en son yapılacak
 
 --------------------------------
 
-personel müşteri eklerken otomatik olarak bulunudğu konumu seçebilsin ?? 
-taksit var ssçildiği zaman borçtaki tarih jkalksın
-taksit tekrar günü = ödeme kaç günde bir olacak
-çoklu müşteri silme ***
-müşteriler için ajtif-pasif (yeşil ve gri),
 
-kartların sağ üste anahtar ve saat logosu
+
+tüm müşteriler - ödemesi gelenler - bakımı gelenler - bugün tamamlanan işler - günlük kazanç - stoktan eksilen ürün
+

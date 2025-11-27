@@ -8,8 +8,8 @@ import {
   PrismaClient,
 } from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
 import { AppError } from "@/middleware/error-handler";
 import { notificationService } from "@/modules/notifications/notification.service";
 import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
@@ -18,7 +18,7 @@ import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
 function normalizePhoneNumber(phone: string): string {
   // Tüm boşlukları, tireleri, parantezleri ve diğer özel karakterleri temizle
   // Sadece rakamları ve başta + işaretini tut
-  return phone.replace(/[\s\-\(\)]/g, "");
+  return phone.replace(/[\s\-()]/g, "");
 }
 
 type CustomerInput = {
@@ -113,7 +113,11 @@ class JobService {
           ? {
               OR: [
                 { title: { contains: filters.search, mode: Prisma.QueryMode.insensitive } },
-                { customer: { name: { contains: filters.search, mode: Prisma.QueryMode.insensitive } } },
+                {
+                  customer: {
+                    name: { contains: filters.search, mode: Prisma.QueryMode.insensitive },
+                  },
+                },
                 { notes: { contains: filters.search, mode: Prisma.QueryMode.insensitive } },
               ],
             }
@@ -181,21 +185,20 @@ class JobService {
       logger.error("Error type:", error?.constructor?.name);
       logger.error("Error message:", (error as Error)?.message);
       logger.error("Error stack:", (error as Error)?.stack);
-      if ((error as any)?.code) {
-        logger.error("Prisma error code:", (error as any).code);
+      if (error && typeof error === "object" && "code" in error) {
+        logger.error("Prisma error code:", (error as { code: unknown }).code);
       }
-      if ((error as any)?.meta) {
-        logger.error("Prisma error meta:", JSON.stringify((error as any).meta, null, 2));
+      if (error && typeof error === "object" && "meta" in error) {
+        logger.error(
+          "Prisma error meta:",
+          JSON.stringify((error as { meta: unknown }).meta, null, 2),
+        );
       }
       throw error;
     }
   }
 
-  private async validatePersonnel(
-    adminId: string,
-    ids: string[],
-    tx: PrismaClientOrTx = prisma,
-  ) {
+  private async validatePersonnel(adminId: string, ids: string[], tx: PrismaClientOrTx = prisma) {
     if (!ids.length) return [];
     const personnel = await tx.personnel.findMany({
       where: { adminId, id: { in: ids }, status: PersonnelStatus.ACTIVE },
@@ -215,7 +218,7 @@ class JobService {
       return await prisma.$transaction(async (tx) => {
         try {
           logger.debug("🔄 Transaction started");
-          
+
           // Resolve customer
           let customer;
           if (payload.customerId) {
@@ -313,11 +316,14 @@ class JobService {
           logger.error("Error type:", txError?.constructor?.name);
           logger.error("Error message:", (txError as Error)?.message);
           logger.error("Error stack:", (txError as Error)?.stack);
-          if ((txError as any)?.code) {
-            logger.error("Prisma error code:", (txError as any).code);
+          if (txError && typeof txError === "object" && "code" in txError) {
+            logger.error("Prisma error code:", (txError as { code: unknown }).code);
           }
-          if ((txError as any)?.meta) {
-            logger.error("Prisma error meta:", JSON.stringify((txError as any).meta, null, 2));
+          if (txError && typeof txError === "object" && "meta" in txError) {
+            logger.error(
+              "Prisma error meta:",
+              JSON.stringify((txError as { meta: unknown }).meta, null, 2),
+            );
           }
           throw txError;
         }
@@ -327,11 +333,14 @@ class JobService {
       logger.error("Error type:", error?.constructor?.name);
       logger.error("Error message:", (error as Error)?.message);
       logger.error("Error stack:", (error as Error)?.stack);
-      if ((error as any)?.code) {
-        logger.error("Prisma error code:", (error as any).code);
+      if (error && typeof error === "object" && "code" in error) {
+        logger.error("Prisma error code:", (error as { code: unknown }).code);
       }
-      if ((error as any)?.meta) {
-        logger.error("Prisma error meta:", JSON.stringify((error as any).meta, null, 2));
+      if (error && typeof error === "object" && "meta" in error) {
+        logger.error(
+          "Prisma error meta:",
+          JSON.stringify((error as { meta: unknown }).meta, null, 2),
+        );
       }
       throw error;
     }
@@ -465,7 +474,7 @@ class JobService {
     }
 
     realtimeGateway.emitJobStatus(jobId, job);
-    
+
     // Notification göndermeyi try-catch ile sarmalayalım - hata durumunda job update devam etmeli
     try {
       await notificationService.notifyRole("admin", {
@@ -509,6 +518,13 @@ class JobService {
     });
   }
 
+  async delete(adminId: string, jobId: string) {
+    await this.ensureJob(adminId, jobId);
+    await prisma.job.delete({
+      where: { id: jobId },
+    });
+  }
+
   private isAssignmentReadOnly(deliveredAt?: Date | null) {
     if (!deliveredAt) {
       return false;
@@ -543,7 +559,11 @@ class JobService {
           ? {
               OR: [
                 { title: { contains: filters.search, mode: Prisma.QueryMode.insensitive } },
-                { customer: { name: { contains: filters.search, mode: Prisma.QueryMode.insensitive } } },
+                {
+                  customer: {
+                    name: { contains: filters.search, mode: Prisma.QueryMode.insensitive },
+                  },
+                },
                 { notes: { contains: filters.search, mode: Prisma.QueryMode.insensitive } },
               ],
             }
@@ -706,18 +726,19 @@ class JobService {
     });
   }
 
-  private emitMaintenanceUpdate(reminder: Prisma.MaintenanceReminderGetPayload<{
-    select: {
-      id: true;
-      jobId: true;
-      dueAt: true;
-      status: true;
-      lastWindowNotified: true;
-    };
-  }>, jobTitle: string) {
-    const daysUntilDue = Math.ceil(
-      (reminder.dueAt.getTime() - Date.now()) / MS_IN_DAY,
-    );
+  private emitMaintenanceUpdate(
+    reminder: Prisma.MaintenanceReminderGetPayload<{
+      select: {
+        id: true;
+        jobId: true;
+        dueAt: true;
+        status: true;
+        lastWindowNotified: true;
+      };
+    }>,
+    jobTitle: string,
+  ) {
+    const daysUntilDue = Math.ceil((reminder.dueAt.getTime() - Date.now()) / MS_IN_DAY);
     realtimeGateway.emitMaintenanceReminder({
       id: reminder.id,
       jobId: reminder.jobId,
@@ -731,4 +752,3 @@ class JobService {
 }
 
 export const jobService = new JobService();
-

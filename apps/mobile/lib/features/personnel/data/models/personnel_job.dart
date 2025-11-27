@@ -51,8 +51,20 @@ class PersonnelJobMaterial {
   final PersonnelJobMaterialItem inventoryItem;
 
   factory PersonnelJobMaterial.fromJson(Map<String, dynamic> json) {
+    final quantityValue = json["quantity"];
+    int quantity = 0;
+    if (quantityValue != null) {
+      if (quantityValue is int) {
+        quantity = quantityValue;
+      } else if (quantityValue is num) {
+        quantity = quantityValue.toInt();
+      } else if (quantityValue is String) {
+        quantity = int.tryParse(quantityValue) ?? 0;
+      }
+    }
+    
     return PersonnelJobMaterial(
-      quantity: (json["quantity"] as num?)?.toInt() ?? 0,
+      quantity: quantity,
       inventoryItem: PersonnelJobMaterialItem.fromJson(
         json["inventoryItem"] as Map<String, dynamic>? ?? {},
       ),
@@ -84,8 +96,8 @@ class PersonnelJob {
     required this.status,
     required this.readOnly,
     required this.customer,
-    required this.scheduledAt,
-    required this.priority,
+    this.scheduledAt,
+    this.priority,
     this.materials,
   });
 

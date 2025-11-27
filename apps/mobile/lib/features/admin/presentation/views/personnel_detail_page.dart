@@ -10,6 +10,7 @@ import "package:intl/intl.dart";
 import "package:latlong2/latlong.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 import "package:mobile/widgets/empty_state.dart";
+import "package:url_launcher/url_launcher.dart";
 import "full_screen_map_page.dart";
 
 import "../../../../core/constants/app_config.dart";
@@ -1566,20 +1567,32 @@ class _PersonnelMapSectionState extends ConsumerState<_PersonnelMapSection> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                Icon(Icons.place, size: 16, color: Colors.grey.shade600),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _personnelLocation != null &&
-                            widget.personnel.lastKnownLocation != null
-                        ? "${widget.personnel.lastKnownLocation!.lat.toStringAsFixed(6)}, "
-                              "${widget.personnel.lastKnownLocation!.lng.toStringAsFixed(6)}"
-                        : "Konum bilgisi yok",
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                if (_personnelLocation != null &&
+                    widget.personnel.lastKnownLocation != null)
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      // Google Maps'te koordinatları aç
+                      final lat = widget.personnel.lastKnownLocation!.lat;
+                      final lng = widget.personnel.lastKnownLocation!.lng;
+                      final googleMapsUrl =
+                          "https://www.google.com/maps/search/?api=1&query=$lat,$lng";
+                      final uri = Uri.parse(googleMapsUrl);
+                      // ignore: unawaited_futures
+                      launchUrl(uri, mode: LaunchMode.externalApplication);
+                    },
+                    icon: const Icon(Icons.place, size: 18),
+                    label: const Text("Google Maps ile Aç"),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      textStyle: const TextStyle(fontSize: 12),
+                    ),
                   ),
-                ),
                 if (_personnelLocation != null) ...[
-                  const SizedBox(width: 8),
+                  if (widget.personnel.lastKnownLocation != null)
+                    const Spacer(),
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).push(

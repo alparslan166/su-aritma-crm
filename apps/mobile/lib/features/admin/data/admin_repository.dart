@@ -473,6 +473,7 @@ class AdminRepository {
     String? address,
     String? email,
     Map<String, dynamic>? location,
+    String? status,
     DateTime? createdAt,
     bool? hasDebt,
     double? debtAmount,
@@ -487,6 +488,7 @@ class AdminRepository {
     if (name != null) data["name"] = name;
     if (phone != null) data["phone"] = phone;
     if (address != null) data["address"] = address;
+    if (status != null) data["status"] = status;
     if (email != null) data["email"] = email;
     if (location != null) data["location"] = location;
     if (createdAt != null) data["createdAt"] = createdAt.toIso8601String();

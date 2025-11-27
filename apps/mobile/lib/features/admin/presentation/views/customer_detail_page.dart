@@ -1,5 +1,6 @@
 import "dart:async";
 
+import "package:dio/dio.dart";
 import "package:flutter/material.dart";
 import "package:flutter_map/flutter_map.dart";
 import "package:geocoding/geocoding.dart";
@@ -118,6 +119,12 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
               _Row("Telefon", customer.phone),
               if (customer.email != null) _Row("E-posta", customer.email!),
               _Row("Adres", customer.address),
+              _StatusRow(
+                "Durum",
+                customer.status,
+                onChanged: (newStatus) =>
+                    _updateCustomerStatus(customer, newStatus),
+              ),
             ],
           ),
           if (customer.nextMaintenanceDate != null) ...[
@@ -185,11 +192,12 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                     ),
                   ],
                 ],
-                // Borç geçmişse (taksit olmasa bile) göster
+                // Borç durumu: Sadece müşteri seviyesinde borç varsa, kalan borç > 0 ise ve ödeme tarihi geçmişse göster
                 if (customer.hasDebt &&
                     customer.remainingDebtAmount != null &&
                     customer.remainingDebtAmount! > 0 &&
-                    customer.hasOverduePayment) ...[
+                    customer.nextDebtDate != null &&
+                    customer.nextDebtDate!.isBefore(DateTime.now())) ...[
                   _Row("Borç Durumu", "Ödeme gecikmiş", valueColor: Colors.red),
                 ],
               ],
@@ -251,6 +259,35 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
     );
   }
 
+  Future<void> _updateCustomerStatus(
+    Customer customer,
+    String newStatus,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(adminRepositoryProvider)
+          .updateCustomer(id: customer.id, status: newStatus);
+      ref.invalidate(customerDetailProvider(customer.id));
+      ref.invalidate(customerListProvider);
+      if (context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              "Müşteri durumu ${newStatus == "ACTIVE" ? "Aktif" : "Pasif"} olarak güncellendi",
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text("Durum güncellenemedi: $error")),
+        );
+      }
+    }
+  }
+
   Future<void> _deleteCustomer(Customer customer) async {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -283,7 +320,27 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
         SnackBar(content: Text("${customer.name} silindi")),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text("Silinemedi: $error")));
+      String errorMessage = "Müşteri silinemedi";
+
+      // Parse DioException to get backend error message
+      if (error is DioException) {
+        final message = error.response?.data?["message"]?.toString() ?? "";
+        if (message.contains("active jobs") ||
+            message.contains("Cannot delete customer with active jobs")) {
+          errorMessage =
+              "Aktif işleri olan müşteri silinemez. Önce müşterinin tüm aktif işlerini arşivleyin veya silin.";
+        } else if (message.isNotEmpty) {
+          errorMessage = message;
+        }
+      }
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
   }
 
@@ -323,6 +380,57 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
         messenger.showSnackBar(SnackBar(content: Text("Silinemedi: $error")));
       }
     }
+  }
+}
+
+class _StatusRow extends StatelessWidget {
+  const _StatusRow(this.label, this.status, {required this.onChanged});
+
+  final String label;
+  final String status;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                  value: "ACTIVE",
+                  label: Text("Aktif"),
+                  icon: Icon(Icons.check_circle, size: 16),
+                ),
+                ButtonSegment(
+                  value: "INACTIVE",
+                  label: Text("Pasif"),
+                  icon: Icon(Icons.cancel, size: 16),
+                ),
+              ],
+              selected: {status},
+              onSelectionChanged: (Set<String> newSelection) {
+                if (newSelection.isNotEmpty) {
+                  onChanged(newSelection.first);
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -892,14 +1000,13 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
 
     try {
       // Timeout ile geocoding yap (10 saniye)
-      final locations = await locationFromAddress(
-        widget.customer.address,
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw TimeoutException("Geocoding timeout");
-        },
-      );
+      final locations = await locationFromAddress(widget.customer.address)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw TimeoutException("Geocoding timeout");
+            },
+          );
       if (!mounted) return;
       if (locations.isNotEmpty) {
         final location = locations.first;
@@ -910,14 +1017,16 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
         });
       } else {
         setState(() {
-          _error = "Adres için konum bulunamadı. Google Maps'te açmak için adrese tıklayın.";
+          _error =
+              "Adres için konum bulunamadı. Google Maps'te açmak için adrese tıklayın.";
           _isLoading = false;
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = "Konum yüklenemedi. Google Maps'te açmak için adrese tıklayın.";
+        _error =
+            "Konum yüklenemedi. Google Maps'te açmak için adrese tıklayın.";
         _isLoading = false;
       });
     }
@@ -1063,29 +1172,30 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                Icon(Icons.place, size: 16, color: Colors.grey.shade600),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      // Google Maps'te adresi aç
-                      final encodedAddress = Uri.encodeComponent(widget.customer.address);
-                      final googleMapsUrl = "https://www.google.com/maps/search/?api=1&query=$encodedAddress";
-                      final uri = Uri.parse(googleMapsUrl);
-                      // ignore: unawaited_futures
-                      launchUrl(uri, mode: LaunchMode.externalApplication);
-                    },
-                    child: Text(
+                ElevatedButton.icon(
+                  onPressed: () {
+                    // Google Maps'te adresi aç
+                    final encodedAddress = Uri.encodeComponent(
                       widget.customer.address,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
+                    );
+                    final googleMapsUrl =
+                        "https://www.google.com/maps/search/?api=1&query=$encodedAddress";
+                    final uri = Uri.parse(googleMapsUrl);
+                    // ignore: unawaited_futures
+                    launchUrl(uri, mode: LaunchMode.externalApplication);
+                  },
+                  icon: const Icon(Icons.place, size: 18),
+                  label: const Text("Google Maps ile Aç"),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
                     ),
+                    textStyle: const TextStyle(fontSize: 12),
                   ),
                 ),
                 if (_customerLocation != null) ...[
-                  const SizedBox(width: 8),
+                  const Spacer(),
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).push(
@@ -1100,7 +1210,10 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                     icon: const Icon(Icons.map, size: 18),
                     label: const Text("Haritada Aç"),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       textStyle: const TextStyle(fontSize: 12),
                     ),
                   ),

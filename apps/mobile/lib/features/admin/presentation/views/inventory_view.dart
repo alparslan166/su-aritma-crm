@@ -48,10 +48,8 @@ class InventoryView extends ConsumerWidget {
               return RepaintBoundary(
                 child: _InventoryTile(
                   item: item,
-                  onTap: () => context.push(
-                    "/admin/inventory/${item.id}",
-                    extra: item,
-                  ),
+                  onTap: () =>
+                      context.push("/admin/inventory/${item.id}", extra: item),
                 ),
               );
             },
@@ -106,7 +104,8 @@ class _InventoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = item.isBelowThreshold
+    // 6 adetten az kalanlar kırmızı, diğerleri yeşil
+    final statusColor = item.stockQty < 6
         ? const Color(0xFFEF4444)
         : const Color(0xFF10B981);
     return Card(
@@ -198,43 +197,6 @@ class _InventoryTile extends StatelessWidget {
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF1F2937),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: statusColor.withValues(alpha: 0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: statusColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          item.isBelowThreshold ? "Kritik" : "Yeterli",
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: statusColor,
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                 ],

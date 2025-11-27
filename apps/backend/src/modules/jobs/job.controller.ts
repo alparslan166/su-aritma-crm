@@ -38,10 +38,14 @@ const jobBaseSchema = z.object({
   maintenanceDueAt: z.string().datetime().optional(),
   priority: z.number().int().optional(),
   personnelIds: z.array(z.string()).optional(),
-  materialIds: z.array(z.object({
-    inventoryItemId: z.string(),
-    quantity: z.number().int().positive(),
-  })).optional(),
+  materialIds: z
+    .array(
+      z.object({
+        inventoryItemId: z.string(),
+        quantity: z.number().int().positive(),
+      }),
+    )
+    .optional(),
 });
 
 const jobUpdateSchema = jobBaseSchema.partial().extend({
@@ -214,3 +218,12 @@ export const addJobNoteHandler = async (req: Request, res: Response, next: NextF
   }
 };
 
+export const deleteJobHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const adminId = getAdminId(req);
+    await jobService.delete(adminId, req.params.id);
+    res.status(204).send();
+  } catch (error) {
+    next(error as Error);
+  }
+};

@@ -9,6 +9,7 @@ class Customer {
     this.location,
     this.jobs,
     this.createdAt,
+    this.status = "ACTIVE",
     this.hasDebt = false,
     this.debtAmount,
     this.hasInstallment = false,
@@ -28,6 +29,7 @@ class Customer {
   final CustomerLocation? location;
   final List<CustomerJob>? jobs;
   final DateTime? createdAt;
+  final String status;
   final bool hasDebt;
   final double? debtAmount;
   final bool hasInstallment;
@@ -51,6 +53,7 @@ class Customer {
       createdAt: json["createdAt"] != null
           ? DateTime.tryParse(json["createdAt"] as String)
           : null,
+      status: json["status"] != null ? (json["status"] as String) : "ACTIVE",
       hasDebt: json["hasDebt"] as bool? ?? false,
       debtAmount: _parseDouble(json["debtAmount"]),
       hasInstallment: json["hasInstallment"] as bool? ?? false,
@@ -76,6 +79,7 @@ class Customer {
     CustomerLocation? location,
     List<CustomerJob>? jobs,
     DateTime? createdAt,
+    String? status,
     bool? hasDebt,
     double? debtAmount,
     bool? hasInstallment,
@@ -95,6 +99,7 @@ class Customer {
       location: location ?? this.location,
       jobs: jobs ?? this.jobs,
       createdAt: createdAt ?? this.createdAt,
+      status: status ?? this.status,
       hasDebt: hasDebt ?? this.hasDebt,
       debtAmount: debtAmount ?? this.debtAmount,
       hasInstallment: hasInstallment ?? this.hasInstallment,
@@ -108,17 +113,40 @@ class Customer {
   }
 
   bool get hasOverduePayment {
-    if (jobs == null) return false;
-    return jobs!.any((job) {
-      if (job.price == null) return false;
-      final collected = job.collectedAmount ?? 0.0;
-      final remaining = job.price! - collected;
-      // Borç varsa ve ödeme durumu NOT_PAID veya PARTIAL ise
-      if (remaining > 0) {
-        return job.paymentStatus == "NOT_PAID" || job.paymentStatus == "PARTIAL";
+    // 1. Müşterinin kendi borç bilgilerini kontrol et
+    if (hasDebt && nextDebtDate != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final debtDate = DateTime(
+        nextDebtDate!.year,
+        nextDebtDate!.month,
+        nextDebtDate!.day,
+      );
+      // Borç ödeme tarihi geçmişse (bugün dahil)
+      if (debtDate.isBefore(today) || debtDate == today) {
+        // Kalan borç varsa ödemesi geçmiş
+        if (remainingDebtAmount != null && remainingDebtAmount! > 0) {
+          return true;
+        }
       }
-      return false;
-    });
+    }
+    
+    // 2. Job'lardaki ödeme durumunu kontrol et
+    if (jobs != null && jobs!.isNotEmpty) {
+      final hasUnpaidJob = jobs!.any((job) {
+        if (job.price == null) return false;
+        final collected = job.collectedAmount ?? 0.0;
+        final remaining = job.price! - collected;
+        // Borç varsa ve ödeme durumu NOT_PAID veya PARTIAL ise
+        if (remaining > 0) {
+          return job.paymentStatus == "NOT_PAID" || job.paymentStatus == "PARTIAL";
+        }
+        return false;
+      });
+      if (hasUnpaidJob) return true;
+    }
+    
+    return false;
   }
 
   bool get hasUpcomingMaintenance {

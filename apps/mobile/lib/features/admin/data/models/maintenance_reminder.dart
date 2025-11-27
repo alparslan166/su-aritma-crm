@@ -28,13 +28,16 @@ class MaintenanceReminder {
       _ => null,
     };
 
+    final daysUntilDueValue = _parseInt(json["daysUntilDue"]);
+    final daysUntilDue = daysUntilDueValue ?? 0;
+
     return MaintenanceReminder(
       id: json["id"] as String,
       jobId: json["jobId"] as String,
       jobTitle: json["jobTitle"] as String? ?? "İş",
       dueAt: DateTime.parse(json["dueAt"] as String),
       status: json["status"] as String? ?? "PENDING",
-      daysUntilDue: _parseInt(json["daysUntilDue"]) ?? 0,
+      daysUntilDue: daysUntilDue,
       lastWindowNotified: window,
     );
   }

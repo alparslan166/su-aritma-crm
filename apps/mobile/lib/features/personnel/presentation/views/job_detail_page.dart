@@ -8,6 +8,7 @@ import "package:geocoding/geocoding.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:image_picker/image_picker.dart";
 import "package:latlong2/latlong.dart";
+import "package:url_launcher/url_launcher.dart";
 
 import "../../../admin/application/inventory_list_notifier.dart";
 import "../../../admin/data/models/inventory_item.dart";
@@ -804,18 +805,29 @@ class _JobMapSectionState extends State<_JobMapSection> {
           ),
           if (_customerLocation != null)
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  Icon(Icons.place, size: 16, color: Colors.grey.shade600),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      widget.customer.address,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      // Google Maps'te adresi aç
+                      final encodedAddress = Uri.encodeComponent(
+                        widget.customer.address,
+                      );
+                      final googleMapsUrl =
+                          "https://www.google.com/maps/search/?api=1&query=$encodedAddress";
+                      final uri = Uri.parse(googleMapsUrl);
+                      // ignore: unawaited_futures
+                      launchUrl(uri, mode: LaunchMode.externalApplication);
+                    },
+                    icon: const Icon(Icons.place, size: 18),
+                    label: const Text("Google Maps ile Aç"),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
+                      textStyle: const TextStyle(fontSize: 12),
                     ),
                   ),
                 ],

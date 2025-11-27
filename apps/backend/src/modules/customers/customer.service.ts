@@ -7,7 +7,7 @@ import { AppError } from "@/middleware/error-handler";
 function normalizePhoneNumber(phone: string): string {
   // Tüm boşlukları, tireleri, parantezleri ve diğer özel karakterleri temizle
   // Sadece rakamları ve başta + işaretini tut
-  return phone.replace(/[\s\-\(\)]/g, "");
+  return phone.replace(/[\s\-()]/g, "");
 }
 
 type CreateCustomerPayload = {
@@ -16,6 +16,7 @@ type CreateCustomerPayload = {
   email?: string;
   address: string;
   location?: Record<string, unknown>;
+  status?: "ACTIVE" | "INACTIVE";
   createdAt?: string;
   hasDebt?: boolean;
   debtAmount?: number;
@@ -120,7 +121,7 @@ class CustomerService {
         // Bugünün tarihini sıfırla (sadece tarih karşılaştırması için)
         const today = new Date(now);
         today.setHours(0, 0, 0, 0);
-        
+
         // 1. Borç ödeme tarihi geçmiş müşteriler
         // hasDebt = true ve nextDebtDate var ve nextDebtDate <= bugün (bugün dahil)
         let hasOverdueDebtDate = false;
@@ -130,14 +131,16 @@ class CustomerService {
           // Bugün dahil geçmiş tarihleri kontrol et
           hasOverdueDebtDate = debtDate <= today;
         }
-        
+
         // 2. Borç durumu "Ödeme gecikmiş" olan müşteriler
         // hasDebt = true ve remainingDebtAmount > 0 ve nextDebtDate geçmiş
         // (Frontend'de "Ödeme gecikmiş" durumu: remainingDebtAmount > 0 ve nextDebtDate geçmiş)
         let hasOverdueDebtStatus = false;
-        if (customer.hasDebt && 
-            customer.remainingDebtAmount && 
-            Number(customer.remainingDebtAmount) > 0) {
+        if (
+          customer.hasDebt &&
+          customer.remainingDebtAmount &&
+          Number(customer.remainingDebtAmount) > 0
+        ) {
           // Eğer nextDebtDate var ve geçmişse, borç durumu "Ödeme gecikmiş"
           if (customer.nextDebtDate) {
             const debtDate = new Date(customer.nextDebtDate);
@@ -152,45 +155,72 @@ class CustomerService {
             hasOverdueDebtStatus = true;
           }
         }
-        
+
         // 3. Taksit ödeme tarihi geçmiş müşteriler
         // hasInstallment = true ve taksit tekrar günü geçmiş
         let hasOverdueInstallment = false;
-        if (customer.hasInstallment && 
-            customer.installmentStartDate && 
-            customer.installmentIntervalDays &&
-            customer.installmentIntervalDays > 0) {
+        if (
+          customer.hasInstallment &&
+          customer.installmentStartDate &&
+          customer.installmentIntervalDays &&
+          customer.installmentIntervalDays > 0
+        ) {
           const startDate = new Date(customer.installmentStartDate);
           startDate.setHours(0, 0, 0, 0);
           const intervalDays = customer.installmentIntervalDays;
-          
+
           // Başlangıç tarihinden bu yana geçen gün sayısı
-          const daysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-          
+          const daysSinceStart = Math.floor(
+            (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+          );
+
           // Eğer başlangıç tarihi bugünden önceyse ve en az bir taksit aralığı geçtiyse kontrol et
           if (daysSinceStart > 0 && daysSinceStart >= intervalDays) {
             // Kaç taksit geçti (tam sayı)
             const installmentsPassed = Math.floor(daysSinceStart / intervalDays);
-            
+
             if (installmentsPassed > 0) {
               // Son taksit ödeme tarihini hesapla
               // Örnek: Başlangıç: 1 Ocak, Aralık: 30 gün, Bugün: 15 Şubat (45 gün geçmiş)
               // installmentsPassed = 1, Son taksit tarihi = 1 Ocak + 30 gün = 31 Ocak
               const lastInstallmentDate = new Date(startDate);
-              lastInstallmentDate.setDate(lastInstallmentDate.getDate() + (installmentsPassed * intervalDays));
+              lastInstallmentDate.setDate(
+                lastInstallmentDate.getDate() + installmentsPassed * intervalDays,
+              );
               lastInstallmentDate.setHours(0, 0, 0, 0);
-              
+
               // Son taksit tarihi bugünden önce veya bugüne eşitse, ödeme gecikmiş
               hasOverdueInstallment = lastInstallmentDate <= today;
             }
           }
         }
-        
-        // Sonuç: Borç ödeme tarihi geçmiş, borç durumu "Ödeme gecikmiş" veya taksit ödeme tarihi geçmiş müşteriler
-        const result = hasOverdueDebtDate || hasOverdueDebtStatus || hasOverdueInstallment;
-        
+
+        // 4. Job'lardaki ödenmemiş borçlar
+        // Job'larda ödeme durumu NOT_PAID veya PARTIAL olan ve kalan borç > 0 olan müşteriler
+        let hasUnpaidJob = false;
+        if (customer.jobs && customer.jobs.length > 0) {
+          hasUnpaidJob = customer.jobs.some((job) => {
+            if (!job.price || job.status === "ARCHIVED") return false;
+            const collectedAmount = job.collectedAmount ? Number(job.collectedAmount) : 0;
+            const remaining = Number(job.price) - collectedAmount;
+            // Kalan borç varsa ve ödeme durumu NOT_PAID veya PARTIAL ise
+            if (remaining > 0) {
+              return job.paymentStatus === "NOT_PAID" || job.paymentStatus === "PARTIAL";
+            }
+            return false;
+          });
+        }
+
+        // Sonuç: Borç ödeme tarihi geçmiş, borç durumu "Ödeme gecikmiş", taksit ödeme tarihi geçmiş veya job'larda ödenmemiş borç olan müşteriler
+        const result =
+          hasOverdueDebtDate || hasOverdueDebtStatus || hasOverdueInstallment || hasUnpaidJob;
+
         // Debug log (tüm müşteriler için - sorun tespiti için)
-        if (customer.hasDebt || customer.hasInstallment) {
+        if (
+          customer.hasDebt ||
+          customer.hasInstallment ||
+          (customer.jobs && customer.jobs.length > 0)
+        ) {
           console.log(`[OverduePayment] Customer ${customer.id} (${customer.name}):`, {
             hasDebt: customer.hasDebt,
             nextDebtDate: customer.nextDebtDate,
@@ -201,11 +231,13 @@ class CustomerService {
             installmentStartDate: customer.installmentStartDate,
             installmentIntervalDays: customer.installmentIntervalDays,
             hasOverdueInstallment,
+            hasUnpaidJob,
+            jobsCount: customer.jobs?.length || 0,
             result,
             today: today.toISOString(),
           });
         }
-        
+
         return result;
       });
     }
@@ -247,20 +279,22 @@ class CustomerService {
     const hasInstallment = payload.hasInstallment ?? false;
     const installmentCount = payload.installmentCount ?? null;
     const installmentIntervalDays = payload.installmentIntervalDays ?? null;
-    
+
     // Parse dates
     const createdAt = payload.createdAt ? new Date(payload.createdAt) : new Date();
     const nextDebtDate = payload.nextDebtDate ? new Date(payload.nextDebtDate) : null;
-    const installmentStartDate = payload.installmentStartDate ? new Date(payload.installmentStartDate) : null;
-    
+    const installmentStartDate = payload.installmentStartDate
+      ? new Date(payload.installmentStartDate)
+      : null;
+
     // Calculate remaining debt amount
     let remainingDebtAmount: Prisma.Decimal | null = null;
-    
+
     if (hasDebt && debtAmount) {
       // Remaining debt is total debt minus paid amount (initially 0)
       remainingDebtAmount = debtAmount;
     }
-    
+
     return prisma.customer.create({
       data: {
         adminId,
@@ -269,6 +303,7 @@ class CustomerService {
         email: payload.email,
         address: payload.address,
         location: payload.location as Prisma.InputJsonValue,
+        status: payload.status ?? "ACTIVE",
         createdAt,
         hasDebt,
         debtAmount,
@@ -284,7 +319,7 @@ class CustomerService {
 
   async update(adminId: string, customerId: string, payload: UpdateCustomerPayload) {
     const existing = await this.ensureCustomer(adminId, customerId);
-    
+
     const updateData: Prisma.CustomerUpdateInput = {
       name: payload.name,
       phone: payload.phone ? normalizePhoneNumber(payload.phone) : undefined,
@@ -292,63 +327,71 @@ class CustomerService {
       address: payload.address,
       location: payload.location as Prisma.InputJsonValue | undefined,
     };
-    
+
+    if (payload.status !== undefined) {
+      updateData.status = payload.status;
+    }
+
     // Handle debt fields
     const hasDebt = payload.hasDebt ?? existing.hasDebt;
-    const debtAmount = payload.debtAmount !== undefined 
-      ? (payload.debtAmount ? new Prisma.Decimal(payload.debtAmount) : null)
-      : existing.debtAmount;
+    const debtAmount =
+      payload.debtAmount !== undefined
+        ? payload.debtAmount
+          ? new Prisma.Decimal(payload.debtAmount)
+          : null
+        : existing.debtAmount;
     const hasInstallment = payload.hasInstallment ?? existing.hasInstallment;
     const installmentCount = payload.installmentCount ?? existing.installmentCount;
-    const installmentIntervalDays = payload.installmentIntervalDays ?? existing.installmentIntervalDays;
-    
+
     // Parse dates
     if (payload.nextDebtDate !== undefined) {
       updateData.nextDebtDate = payload.nextDebtDate ? new Date(payload.nextDebtDate) : null;
     }
     if (payload.installmentStartDate !== undefined) {
-      updateData.installmentStartDate = payload.installmentStartDate ? new Date(payload.installmentStartDate) : null;
+      updateData.installmentStartDate = payload.installmentStartDate
+        ? new Date(payload.installmentStartDate)
+        : null;
     }
     if (payload.installmentIntervalDays !== undefined) {
       updateData.installmentIntervalDays = payload.installmentIntervalDays;
     }
-    
+
     if (payload.hasDebt !== undefined) {
       updateData.hasDebt = payload.hasDebt;
     }
-    
+
     if (payload.debtAmount !== undefined) {
       updateData.debtAmount = payload.debtAmount ? new Prisma.Decimal(payload.debtAmount) : null;
     }
-    
+
     if (payload.hasInstallment !== undefined) {
       updateData.hasInstallment = payload.hasInstallment;
     }
-    
+
     if (payload.installmentCount !== undefined) {
       updateData.installmentCount = payload.installmentCount;
     }
-    
+
     // Handle remainingDebtAmount - can be updated directly
     if (payload.remainingDebtAmount !== undefined) {
-      updateData.remainingDebtAmount = payload.remainingDebtAmount 
-        ? new Prisma.Decimal(payload.remainingDebtAmount) 
+      updateData.remainingDebtAmount = payload.remainingDebtAmount
+        ? new Prisma.Decimal(payload.remainingDebtAmount)
         : null;
-      
+
       // Recalculate paidDebtAmount based on new remainingDebtAmount
       if (hasDebt && debtAmount && payload.remainingDebtAmount !== null) {
         const newRemaining = new Prisma.Decimal(payload.remainingDebtAmount);
         const totalDebt = debtAmount;
         const newPaid = totalDebt.sub(newRemaining);
         updateData.paidDebtAmount = newPaid.gt(0) ? newPaid : new Prisma.Decimal(0);
-        
+
         // Update installment count if has installment
         if (hasInstallment && installmentCount && installmentCount > 0) {
           const installmentAmount = totalDebt.div(installmentCount);
           const paidInstallments = Math.floor(Number(newPaid) / Number(installmentAmount));
           const remainingInstallments = installmentCount - paidInstallments;
           updateData.installmentCount = remainingInstallments > 0 ? remainingInstallments : null;
-          
+
           // Update next debt date
           if (remainingInstallments > 0) {
             const nextDate = new Date();
@@ -360,7 +403,7 @@ class CustomerService {
         }
       }
     }
-    
+
     // Recalculate next debt date and remaining debt amount if debtAmount changed
     if (hasDebt && debtAmount && payload.debtAmount !== undefined) {
       // If remainingDebtAmount was not explicitly set, add new debt to existing remaining
@@ -372,7 +415,7 @@ class CustomerService {
         const newRemaining = existingRemaining.add(newDebtAmount);
         updateData.remainingDebtAmount = newRemaining.gt(0) ? newRemaining : new Prisma.Decimal(0);
       }
-      
+
       if (hasInstallment && installmentCount && installmentCount > 0) {
         const nextDate = new Date();
         nextDate.setMonth(nextDate.getMonth() + 1);
@@ -388,7 +431,7 @@ class CustomerService {
       updateData.remainingDebtAmount = null;
       updateData.paidDebtAmount = null;
     }
-    
+
     return prisma.customer.update({
       where: { id: customerId },
       data: updateData,
@@ -397,24 +440,27 @@ class CustomerService {
 
   async markInstallmentOverdue(adminId: string, customerId: string) {
     const customer = await this.ensureCustomer(adminId, customerId);
-    
-    if (!customer.hasInstallment || !customer.installmentStartDate || !customer.installmentIntervalDays) {
+
+    if (
+      !customer.hasInstallment ||
+      !customer.installmentStartDate ||
+      !customer.installmentIntervalDays
+    ) {
       throw new AppError("Customer does not have installment plan", 400);
     }
 
     const now = new Date();
-    const startDate = new Date(customer.installmentStartDate);
     const intervalDays = customer.installmentIntervalDays;
-    
+
     // Taksit başlangıç tarihini geçmiş bir tarihe ayarla
     // En az bir taksit aralığı geçmiş olacak şekilde ayarla
     const overdueStartDate = new Date(now);
     overdueStartDate.setDate(overdueStartDate.getDate() - (intervalDays + 1)); // En az 1 gün daha geçmiş
-    
+
     // nextDebtDate'i de geçmiş bir tarihe ayarla
     const overdueNextDebtDate = new Date(overdueStartDate);
     overdueNextDebtDate.setDate(overdueNextDebtDate.getDate() + intervalDays);
-    
+
     return prisma.customer.update({
       where: { id: customerId },
       data: {
@@ -426,7 +472,7 @@ class CustomerService {
 
   async payDebt(adminId: string, customerId: string, amount: number, installmentCount?: number) {
     const customer = await this.ensureCustomer(adminId, customerId);
-    
+
     if (!customer.hasDebt || !customer.remainingDebtAmount) {
       throw new AppError("Customer has no debt to pay", 400);
     }
@@ -434,23 +480,24 @@ class CustomerService {
     const paymentAmount = new Prisma.Decimal(amount);
     const currentPaid = customer.paidDebtAmount || new Prisma.Decimal(0);
     const currentRemaining = customer.remainingDebtAmount;
-    
+
     // Ensure payment doesn't exceed remaining debt
     if (paymentAmount.gt(currentRemaining)) {
       throw new AppError("Payment amount cannot exceed remaining debt", 400);
     }
-    
+
     const newPaid = currentPaid.add(paymentAmount);
     const newRemaining = currentRemaining.sub(paymentAmount);
 
     // If remaining debt becomes 0 or negative, mark as no debt
     const hasDebt = newRemaining.gt(0);
     const finalRemaining = hasDebt ? newRemaining : new Prisma.Decimal(0);
-    
+
     // Use manual installment count if provided, otherwise keep existing
-    let updatedInstallmentCount = installmentCount !== undefined ? installmentCount : customer.installmentCount;
+    let updatedInstallmentCount =
+      installmentCount !== undefined ? installmentCount : customer.installmentCount;
     let nextDebtDate = customer.nextDebtDate;
-    
+
     if (customer.hasInstallment && updatedInstallmentCount && updatedInstallmentCount > 0) {
       if (hasDebt) {
         // Next debt date is 1 month from now
@@ -496,4 +543,3 @@ class CustomerService {
 }
 
 export const customerService = new CustomerService();
-

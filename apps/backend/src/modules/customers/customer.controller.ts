@@ -1,63 +1,84 @@
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
+import { customerService } from "./customer.service";
+import { prisma } from "@/lib/prisma";
 import { getAdminId, getPersonnelId } from "@/lib/tenant";
 import { notificationService } from "@/modules/notifications/notification.service";
-import { prisma } from "@/lib/prisma";
-
-import { customerService } from "./customer.service";
 
 const listQuerySchema = z.object({
   search: z.string().optional(),
   phoneSearch: z.string().optional(),
-  createdAtFrom: z.string().datetime().optional().transform((val) => val ? new Date(val) : undefined),
-  createdAtTo: z.string().datetime().optional().transform((val) => val ? new Date(val) : undefined),
-  hasOverduePayment: z.string().transform((val) => val === "true").optional(),
-  hasUpcomingMaintenance: z.string().transform((val) => val === "true").optional(),
-  hasOverdueInstallment: z.string().transform((val) => val === "true").optional(),
+  createdAtFrom: z
+    .string()
+    .datetime()
+    .optional()
+    .transform((val) => (val ? new Date(val) : undefined)),
+  createdAtTo: z
+    .string()
+    .datetime()
+    .optional()
+    .transform((val) => (val ? new Date(val) : undefined)),
+  hasOverduePayment: z
+    .string()
+    .transform((val) => val === "true")
+    .optional(),
+  hasUpcomingMaintenance: z
+    .string()
+    .transform((val) => val === "true")
+    .optional(),
+  hasOverdueInstallment: z
+    .string()
+    .transform((val) => val === "true")
+    .optional(),
 });
 
-const createSchema = z.object({
-  name: z.string().min(2),
-  phone: z.string().min(6),
-  email: z.string().email().optional().or(z.literal("")),
-  address: z.string().min(3),
-  location: z.record(z.string(), z.any()).optional(),
-  createdAt: z.string().datetime().optional(),
-  hasDebt: z.boolean().optional(),
-  debtAmount: z.number().positive().optional(),
-  hasInstallment: z.boolean().optional(),
-  installmentCount: z.number().int().positive().optional(),
-  nextDebtDate: z.string().datetime().optional(),
-  installmentStartDate: z.string().datetime().optional(),
-  installmentIntervalDays: z.number().int().positive().optional(),
-}).refine((data) => {
-  // If hasDebt is true, debtAmount must be provided
-  if (data.hasDebt === true && !data.debtAmount) {
-    return false;
-  }
-  // If hasInstallment is true, installmentCount must be provided
-  if (data.hasInstallment === true && !data.installmentCount) {
-    return false;
-  }
-  // If hasDebt is false, other debt fields should not be set
-  if (data.hasDebt === false && (data.debtAmount || data.hasInstallment || data.installmentCount)) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Invalid debt configuration",
-});
+const createSchema = z
+  .object({
+    name: z.string().min(2),
+    phone: z.string().min(6),
+    email: z.string().email().optional().or(z.literal("")),
+    address: z.string().min(3),
+    location: z.record(z.string(), z.any()).optional(),
+    status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+    createdAt: z.string().datetime().optional(),
+    hasDebt: z.boolean().optional(),
+    debtAmount: z.number().positive().optional(),
+    hasInstallment: z.boolean().optional(),
+    installmentCount: z.number().int().positive().optional(),
+    nextDebtDate: z.string().datetime().optional(),
+    installmentStartDate: z.string().datetime().optional(),
+    installmentIntervalDays: z.number().int().positive().optional(),
+  })
+  .refine(
+    (data) => {
+      // If hasDebt is true, debtAmount must be provided
+      if (data.hasDebt === true && !data.debtAmount) {
+        return false;
+      }
+      // If hasInstallment is true, installmentCount must be provided
+      if (data.hasInstallment === true && !data.installmentCount) {
+        return false;
+      }
+      // If hasDebt is false, other debt fields should not be set
+      if (
+        data.hasDebt === false &&
+        (data.debtAmount || data.hasInstallment || data.installmentCount)
+      ) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Invalid debt configuration",
+    },
+  );
 
 const updateSchema = createSchema.partial().extend({
   remainingDebtAmount: z.number().nonnegative().optional(),
 });
 
-export const listCustomersHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const listCustomersHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
     const filters = listQuerySchema.parse(req.query);
@@ -68,11 +89,7 @@ export const listCustomersHandler = async (
   }
 };
 
-export const getCustomerHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const getCustomerHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
     const { id } = req.params;
@@ -83,19 +100,15 @@ export const getCustomerHandler = async (
   }
 };
 
-export const createCustomerHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const createCustomerHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Check if request is from personnel
     const personnelIdHeader = req.header("x-personnel-id");
     const adminIdHeader = req.header("x-admin-id");
-    
+
     let adminId: string;
     let personnelId: string | null = null;
-    
+
     if (personnelIdHeader && !adminIdHeader) {
       // Request from personnel - get their adminId
       personnelId = getPersonnelId(req);
@@ -111,13 +124,13 @@ export const createCustomerHandler = async (
       // Request from admin
       adminId = getAdminId(req);
     }
-    
+
     const payload = createSchema.parse(req.body);
     const data = await customerService.create(adminId, {
       ...payload,
       email: payload.email === "" ? undefined : payload.email,
     });
-    
+
     // If customer was created by personnel, send notification to admin
     if (personnelId) {
       const personnel = await prisma.personnel.findUnique({
@@ -134,18 +147,14 @@ export const createCustomerHandler = async (
         },
       });
     }
-    
+
     res.status(201).json({ success: true, data });
   } catch (error) {
     next(error as Error);
   }
 };
 
-export const updateCustomerHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const updateCustomerHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
     const { id } = req.params;
@@ -160,18 +169,16 @@ export const updateCustomerHandler = async (
   }
 };
 
-export const payDebtHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const payDebtHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
     const { id } = req.params;
-    const { amount, installmentCount } = z.object({ 
-      amount: z.number().positive(),
-      installmentCount: z.number().int().positive().optional(),
-    }).parse(req.body);
+    const { amount, installmentCount } = z
+      .object({
+        amount: z.number().positive(),
+        installmentCount: z.number().int().positive().optional(),
+      })
+      .parse(req.body);
     const data = await customerService.payDebt(adminId, id, amount, installmentCount);
     res.json({ success: true, data });
   } catch (error) {
@@ -194,11 +201,7 @@ export const markInstallmentOverdueHandler = async (
   }
 };
 
-export const deleteCustomerHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const deleteCustomerHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
     const { id } = req.params;
@@ -208,4 +211,3 @@ export const deleteCustomerHandler = async (
     next(error as Error);
   }
 };
-

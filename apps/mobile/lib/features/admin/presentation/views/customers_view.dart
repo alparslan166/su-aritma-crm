@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_hooks/flutter_hooks.dart";
 import "package:go_router/go_router.dart";
@@ -33,6 +35,8 @@ class CustomersView extends HookConsumerWidget {
     final showFilters = useState<bool>(false);
     final dateFrom = useState<DateTime?>(null);
     final dateTo = useState<DateTime?>(null);
+    final isSelectionMode = useState<bool>(false);
+    final selectedCustomers = useState<Set<String>>({});
 
     // Helper function to apply filters (for filterType changes and clear button)
     void applyFilters({
@@ -87,7 +91,14 @@ class CustomersView extends HookConsumerWidget {
       debugPrint(
         "🔄 useEffect: filterType=$filterType, filterTypeKey=$filterTypeKey, searchQuery=${searchQuery.value}",
       );
-      // Widget tamamen oluştuktan sonra filtreleri uygula
+      // Filter'ı hemen uygula, PostFrameCallback beklemeyelim
+      applyFilters(
+        search: searchQuery.value,
+        phoneSearch: phoneSearchQuery.value,
+        createdAtFrom: dateFrom.value,
+        createdAtTo: dateTo.value,
+      );
+      // Widget tamamen oluştuktan sonra da filtreleri tekrar uygula (eğer değişmişse)
       WidgetsBinding.instance.addPostFrameCallback((_) {
         debugPrint(
           "📞 PostFrameCallback: applyFilters çağrılıyor, filterType=$filterType",
@@ -111,16 +122,79 @@ class CustomersView extends HookConsumerWidget {
           data: (customers) {
             return Column(
               children: [
+                // Seçim modu AppBar
+                if (isSelectionMode.value)
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    color: Theme.of(
+                      context,
+                    ).primaryColor.withValues(alpha: 0.1),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () {
+                            isSelectionMode.value = false;
+                            selectedCustomers.value = {};
+                          },
+                          tooltip: "Seçim Modunu Kapat",
+                        ),
+                        Expanded(
+                          child: Text(
+                            "${selectedCustomers.value.length} müşteri seçildi",
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        if (selectedCustomers.value.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _deleteSelectedCustomers(
+                              context,
+                              ref,
+                              selectedCustomers.value,
+                              customers,
+                              notifier,
+                              isSelectionMode,
+                              selectedCustomers,
+                            ),
+                            tooltip: "Seçilenleri Sil",
+                          ),
+                      ],
+                    ),
+                  ),
                 // Arama kutusu
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Row(
                     children: [
+                      if (isSelectionMode.value)
+                        IconButton(
+                          icon: const Icon(Icons.check_box_outline_blank),
+                          onPressed: () {
+                            // Tümünü seç/seçimi kaldır
+                            if (selectedCustomers.value.length ==
+                                customers.length) {
+                              selectedCustomers.value = {};
+                            } else {
+                              selectedCustomers.value = customers
+                                  .map((c) => c.id)
+                                  .toSet();
+                            }
+                          },
+                          tooltip:
+                              selectedCustomers.value.length == customers.length
+                              ? "Seçimi Kaldır"
+                              : "Tümünü Seç",
+                        ),
                       Expanded(
                         child: TextField(
                           controller: searchController,
                           autofocus: false,
                           textInputAction: TextInputAction.search,
+                          enabled: !isSelectionMode.value,
                           decoration: InputDecoration(
                             hintText: "Müşteri ara...",
                             prefixIcon: const Icon(Icons.search),
@@ -157,22 +231,31 @@ class CustomersView extends HookConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      IconButton(
-                        icon: Icon(
-                          showFilters.value
-                              ? Icons.filter_alt
-                              : Icons.filter_alt_outlined,
+                      if (!isSelectionMode.value) ...[
+                        IconButton(
+                          icon: Icon(
+                            showFilters.value
+                                ? Icons.filter_alt
+                                : Icons.filter_alt_outlined,
+                          ),
+                          onPressed: () {
+                            showFilters.value = !showFilters.value;
+                          },
+                          tooltip: "Filtreler",
                         ),
-                        onPressed: () {
-                          showFilters.value = !showFilters.value;
-                        },
-                        tooltip: "Filtreler",
-                      ),
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () {
+                            isSelectionMode.value = true;
+                          },
+                          tooltip: "Çoklu Seçim",
+                        ),
+                      ],
                     ],
                   ),
                 ),
                 // Filtreler bölümü
-                if (showFilters.value)
+                if (showFilters.value && !isSelectionMode.value)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                     child: Card(
@@ -312,7 +395,14 @@ class CustomersView extends HookConsumerWidget {
                 Expanded(
                   child: customers.isEmpty
                       ? _buildEmptyState(context, notifier)
-                      : _buildCustomerList(context, ref, customers, notifier),
+                      : _buildCustomerList(
+                          context,
+                          ref,
+                          customers,
+                          notifier,
+                          isSelectionMode,
+                          selectedCustomers,
+                        ),
                 ),
               ],
             );
@@ -332,15 +422,16 @@ class CustomersView extends HookConsumerWidget {
             ),
           ),
         ),
-        Positioned(
-          right: 16,
-          bottom: 16 + padding,
-          child: FloatingActionButton.extended(
-            onPressed: () => _openAddCustomerSheet(context, ref),
-            icon: const Icon(Icons.person_add),
-            label: const Text("Müşteri Ekle"),
+        if (!isSelectionMode.value)
+          Positioned(
+            right: 16,
+            bottom: 16 + padding,
+            child: FloatingActionButton.extended(
+              onPressed: () => _openAddCustomerSheet(context, ref),
+              icon: const Icon(Icons.person_add),
+              label: const Text("Müşteri Ekle"),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -387,10 +478,57 @@ class CustomersView extends HookConsumerWidget {
     WidgetRef ref,
     List<Customer> customers,
     CustomerListNotifier notifier,
+    ValueNotifier<bool> isSelectionMode,
+    ValueNotifier<Set<String>> selectedCustomers,
   ) {
+    final scrollController = useScrollController();
+    final scrollOffset = useState<double>(0.0);
+    final previousScrollOffset = useRef<double>(0.0);
+    final scrollVelocity = useState<double>(0.0);
+    final lastUpdateTime = useRef<DateTime>(DateTime.now());
+    final velocityDecayTimer = useRef<Timer?>(null);
+
+    useEffect(() {
+      void listener() {
+        final now = DateTime.now();
+        final timeDelta = now.difference(lastUpdateTime.value).inMilliseconds;
+        final offsetDelta =
+            scrollController.offset - previousScrollOffset.value;
+
+        if (timeDelta > 0 && timeDelta < 100) {
+          // Scroll hızını hesapla (pixels per second)
+          final velocity = (offsetDelta / timeDelta) * 1000;
+          scrollVelocity.value = velocity.abs();
+
+          // Scroll durduğunda hızı yavaşça azalt
+          velocityDecayTimer.value?.cancel();
+          velocityDecayTimer.value = Timer(
+            const Duration(milliseconds: 100),
+            () {
+              scrollVelocity.value = scrollVelocity.value * 0.7;
+              if (scrollVelocity.value < 10) {
+                scrollVelocity.value = 0;
+              }
+            },
+          );
+        }
+
+        scrollOffset.value = scrollController.offset;
+        previousScrollOffset.value = scrollController.offset;
+        lastUpdateTime.value = now;
+      }
+
+      scrollController.addListener(listener);
+      return () {
+        scrollController.removeListener(listener);
+        velocityDecayTimer.value?.cancel();
+      };
+    }, [scrollController]);
+
     return RefreshIndicator(
       onRefresh: () => notifier.refresh(showLoading: true),
       child: ListView.separated(
+        controller: scrollController,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         itemCount: customers.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -399,13 +537,30 @@ class CustomersView extends HookConsumerWidget {
         addRepaintBoundaries: true,
         itemBuilder: (context, index) {
           final customer = customers[index];
+          final isSelected = selectedCustomers.value.contains(customer.id);
           return RepaintBoundary(
-            child: _CustomerTile(
+            child: _AnimatedCustomerTile(
               customer: customer,
-              onTap: () => context.push(
-                "/admin/customers/${customer.id}",
-                extra: customer,
-              ),
+              isSelectionMode: isSelectionMode.value,
+              isSelected: isSelected,
+              scrollOffset: scrollOffset.value,
+              scrollVelocity: scrollVelocity.value,
+              index: index,
+              onTap: isSelectionMode.value
+                  ? () {
+                      // Seçim modunda: seç/seçimi kaldır
+                      final newSet = Set<String>.from(selectedCustomers.value);
+                      if (isSelected) {
+                        newSet.remove(customer.id);
+                      } else {
+                        newSet.add(customer.id);
+                      }
+                      selectedCustomers.value = newSet;
+                    }
+                  : () => context.push(
+                      "/admin/customers/${customer.id}",
+                      extra: customer,
+                    ),
               onDelete: () => _deleteCustomer(context, ref, customer, notifier),
               onEdit: () => _showEditCustomerSheet(context, ref, customer),
               onLocation: () => _openLocationMap(context, customer),
@@ -509,6 +664,102 @@ class CustomersView extends HookConsumerWidget {
       }
     }
   }
+
+  Future<void> _deleteSelectedCustomers(
+    BuildContext context,
+    WidgetRef ref,
+    Set<String> selectedIds,
+    List<Customer> customers,
+    CustomerListNotifier notifier,
+    ValueNotifier<bool> isSelectionMode,
+    ValueNotifier<Set<String>> selectedCustomers,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final selectedCustomersList = customers
+        .where((c) => selectedIds.contains(c.id))
+        .toList();
+    final count = selectedCustomersList.length;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Müşterileri Sil"),
+        content: Text(
+          "$count müşteriyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text("İptal"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Sil"),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    // Loading göster
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    int successCount = 0;
+    int failCount = 0;
+    final repository = ref.read(adminRepositoryProvider);
+
+    for (final customer in selectedCustomersList) {
+      try {
+        await repository.deleteCustomer(customer.id);
+        successCount++;
+      } catch (error) {
+        failCount++;
+        debugPrint("Müşteri silinemedi (${customer.name}): $error");
+      }
+    }
+
+    // Loading'i kapat
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
+
+    // Listeyi yenile
+    await notifier.refresh(showLoading: false);
+
+    // Seçim modunu kapat ve seçimleri temizle
+    if (context.mounted) {
+      isSelectionMode.value = false;
+      selectedCustomers.value = {};
+    }
+
+    // Sonuç mesajı göster
+    if (context.mounted) {
+      if (failCount == 0) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text("$successCount müşteri başarıyla silindi"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              "$successCount müşteri silindi, $failCount müşteri silinemedi",
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
+  }
 }
 
 enum CustomerFilterType {
@@ -523,6 +774,60 @@ enum _MaintenanceStatus {
   upcoming, // Yaklaşıyor
 }
 
+// Animasyonlu ikon widget'ı
+class _AnimatedIconWidget extends StatefulWidget {
+  const _AnimatedIconWidget({required this.assetPath});
+
+  final String assetPath;
+
+  @override
+  State<_AnimatedIconWidget> createState() => _AnimatedIconWidgetState();
+}
+
+class _AnimatedIconWidgetState extends State<_AnimatedIconWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _animation = Tween<double>(
+      begin: 0.0,
+      end: 8.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _controller.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _animation.value),
+          child: Image.asset(
+            widget.assetPath,
+            width: 48,
+            height: 48,
+            fit: BoxFit.contain,
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _CustomerTile extends StatelessWidget {
   const _CustomerTile({
     required this.customer,
@@ -530,6 +835,8 @@ class _CustomerTile extends StatelessWidget {
     required this.onDelete,
     required this.onEdit,
     required this.onLocation,
+    this.isSelectionMode = false,
+    this.isSelected = false,
   });
 
   final Customer customer;
@@ -537,18 +844,32 @@ class _CustomerTile extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onEdit;
   final VoidCallback onLocation;
+  final bool isSelectionMode;
+  final bool isSelected;
 
   Color _getStatusColor() {
-    // Öncelik sırası: Ödemesi geçen (kırmızı) > Bakım geçmiş/yaklaşan (turuncu)
-    // Taksit geçen müşteriler de "Ödemesi Geçti" olarak gösteriliyor
+    // Öncelik sırası: Borç/Taksit/Bakım (kırmızı/turuncu) > Aktif/Pasif (yeşil/gri)
+    // 1. Öncelik: Ödemesi geçen veya taksit geçen (kırmızı)
     if (customer.hasOverduePayment || customer.hasOverdueInstallment) {
       return const Color(0xFFEF4444);
     }
-    // Bakım durumu kontrolü - turuncu renk
+    // 2. Öncelik: Bakım geçmiş/yaklaşan (turuncu)
     if (customer.hasUpcomingMaintenance) {
       return const Color(0xFFF59E0B);
     }
+    // 3. Öncelik: Aktif/Pasif durumu
+    if (customer.status == "ACTIVE") {
+      return const Color(0xFF10B981); // Yeşil - Aktif
+    }
+    if (customer.status == "INACTIVE") {
+      return Colors.grey; // Gri - Pasif
+    }
     return Colors.transparent;
+  }
+
+  // Animasyonlu ikon widget'ı
+  Widget _buildAnimatedIcon(String assetPath) {
+    return _AnimatedIconWidget(assetPath: assetPath);
   }
 
   // Bakım durumunu kontrol et (geçmiş mi, yaklaşıyor mu)
@@ -713,26 +1034,58 @@ class _CustomerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor();
     final hasStatus = statusColor != Colors.transparent;
+    // Çerçeve rengi: Öncelik sırasına göre (borç/taksit/bakım > aktif/pasif)
+    final borderColor = statusColor;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      color: hasStatus ? statusColor.withValues(alpha: 0.05) : null,
+      color: hasStatus
+          ? statusColor.withValues(alpha: 0.05)
+          : isSelected
+          ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
+          : null,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          decoration: hasStatus
-              ? BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: statusColor, width: 4),
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                )
-              : null,
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                color: isSelected
+                    ? Theme.of(context).primaryColor
+                    : borderColor,
+                width: 4,
+              ),
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Stack(
               children: [
+                // Animasyonlu ikonlar - sağ üst köşe
+                if (customer.hasOverduePayment ||
+                    customer.hasOverdueInstallment)
+                  Positioned(
+                    top: 0,
+                    right: isSelectionMode ? 48 : 8,
+                    child: _buildAnimatedIcon("assets/images/clock.png"),
+                  )
+                else if (customer.hasUpcomingMaintenance)
+                  Positioned(
+                    top: 0,
+                    right: isSelectionMode ? 48 : 8,
+                    child: _buildAnimatedIcon("assets/images/wrench.png"),
+                  ),
+                if (isSelectionMode)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Checkbox(
+                      value: isSelected,
+                      onChanged: (value) => onTap(),
+                    ),
+                  ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -804,6 +1157,15 @@ class _CustomerTile extends StatelessWidget {
                             ],
                           ),
                         ),
+                        // İkonlar için sabit boşluk (responsivity için)
+                        SizedBox(
+                          width:
+                              (customer.hasOverduePayment ||
+                                  customer.hasOverdueInstallment ||
+                                  customer.hasUpcomingMaintenance)
+                              ? 52
+                              : (isSelectionMode ? 24 : 0),
+                        ),
                       ],
                     ),
                     if (customer.jobs != null && customer.jobs!.isNotEmpty) ...[
@@ -851,45 +1213,47 @@ class _CustomerTile extends StatelessWidget {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 16),
-                    // Butonlar - Sadece ikonlar
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _ActionButton(
-                          icon: Icons.message_rounded,
-                          color: const Color(
-                            0xFF10B981,
-                          ), // Yeşil - WhatsApp/SMS
-                          onPressed: () => _showMessageOptions(context),
-                          tooltip: "Mesaj",
-                        ),
-                        _ActionButton(
-                          icon: Icons.phone_rounded,
-                          color: const Color(0xFF2563EB), // Mavi - Telefon
-                          onPressed: () => _showCallOptions(context),
-                          tooltip: "Ara",
-                        ),
-                        _ActionButton(
-                          icon: Icons.location_on_rounded,
-                          color: const Color(0xFF64748B), // Mavi gri - Konum
-                          onPressed: onLocation,
-                          tooltip: "Konum",
-                        ),
-                        _ActionButton(
-                          icon: Icons.edit_rounded,
-                          color: const Color(0xFF7C3AED), // Mor - Düzenleme
-                          onPressed: onEdit,
-                          tooltip: "Düzenle",
-                        ),
-                        _ActionButton(
-                          icon: Icons.delete_outline_rounded,
-                          color: const Color(0xFFEF4444), // Kırmızı - Silme
-                          onPressed: onDelete,
-                          tooltip: "Sil",
-                        ),
-                      ],
-                    ),
+                    if (!isSelectionMode) ...[
+                      const SizedBox(height: 16),
+                      // Butonlar - Sadece ikonlar
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _ActionButton(
+                            icon: Icons.message_rounded,
+                            color: const Color(
+                              0xFF10B981,
+                            ), // Yeşil - WhatsApp/SMS
+                            onPressed: () => _showMessageOptions(context),
+                            tooltip: "Mesaj",
+                          ),
+                          _ActionButton(
+                            icon: Icons.phone_rounded,
+                            color: const Color(0xFF2563EB), // Mavi - Telefon
+                            onPressed: () => _showCallOptions(context),
+                            tooltip: "Ara",
+                          ),
+                          _ActionButton(
+                            icon: Icons.location_on_rounded,
+                            color: const Color(0xFF64748B), // Mavi gri - Konum
+                            onPressed: onLocation,
+                            tooltip: "Konum",
+                          ),
+                          _ActionButton(
+                            icon: Icons.edit_rounded,
+                            color: const Color(0xFF7C3AED), // Mor - Düzenleme
+                            onPressed: onEdit,
+                            tooltip: "Düzenle",
+                          ),
+                          _ActionButton(
+                            icon: Icons.delete_outline_rounded,
+                            color: const Color(0xFFEF4444), // Kırmızı - Silme
+                            onPressed: onDelete,
+                            tooltip: "Sil",
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -1076,6 +1440,99 @@ class _CustomerTile extends StatelessWidget {
         ).showSnackBar(SnackBar(content: Text("Hata: $e")));
       }
     }
+  }
+}
+
+class _AnimatedCustomerTile extends StatelessWidget {
+  const _AnimatedCustomerTile({
+    required this.customer,
+    required this.isSelectionMode,
+    required this.isSelected,
+    required this.scrollOffset,
+    required this.scrollVelocity,
+    required this.index,
+    required this.onTap,
+    required this.onDelete,
+    required this.onEdit,
+    required this.onLocation,
+  });
+
+  final Customer customer;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final double scrollOffset;
+  final double scrollVelocity;
+  final int index;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+  final VoidCallback onEdit;
+  final VoidCallback onLocation;
+
+  @override
+  Widget build(BuildContext context) {
+    // iOS bildirim animasyonu: scroll sırasında kartlar birbirine yaklaşır
+    // Kart yüksekliği + separator = yaklaşık 212px
+    final cardHeight = 212.0;
+    final cardPosition = index * cardHeight;
+
+    // Viewport içindeki kartlar için animasyon uygula
+    final viewportHeight = MediaQuery.of(context).size.height;
+    final cardTop = cardPosition - scrollOffset;
+    final cardBottom = cardTop + cardHeight;
+    final cardCenter = cardTop + cardHeight / 2;
+    final viewportCenter = viewportHeight / 2;
+
+    // Viewport dışındaki kartlar için animasyon uygulama
+    if (cardBottom < -50 || cardTop > viewportHeight + 50) {
+      return _CustomerTile(
+        customer: customer,
+        isSelectionMode: isSelectionMode,
+        isSelected: isSelected,
+        onTap: onTap,
+        onDelete: onDelete,
+        onEdit: onEdit,
+        onLocation: onLocation,
+      );
+    }
+
+    // Scroll hızına göre scale hesapla (birbirine yaklaşma efekti)
+    // Maksimum scroll hızı: 2000 pixels/second
+    final maxVelocity = 2000.0;
+    final normalizedVelocity = (scrollVelocity / maxVelocity).clamp(0.0, 1.0);
+
+    // Scroll hızına göre scale: hızlı scroll'da kartlar küçülür (birbirine yaklaşır)
+    // Minimum scale: 0.98 (kartlar %2 küçülür)
+    final scale = 1.0 - (normalizedVelocity * 0.02);
+
+    // Viewport merkezine göre hafif bir offset hesapla
+    final distanceFromCenter = (cardCenter - viewportCenter).abs();
+    final maxDistance = viewportHeight / 2;
+    final normalizedDistance = (distanceFromCenter / maxDistance).clamp(
+      0.0,
+      1.0,
+    );
+
+    // Merkeze yakın kartlar daha az, uzak kartlar daha fazla hareket eder
+    final offset =
+        (1.0 - normalizedDistance) *
+        1.5 *
+        (cardCenter < viewportCenter ? -1 : 1);
+
+    return Transform(
+      transform: Matrix4.identity()
+        ..translate(0.0, offset)
+        ..scale(scale),
+      alignment: Alignment.center,
+      child: _CustomerTile(
+        customer: customer,
+        isSelectionMode: isSelectionMode,
+        isSelected: isSelected,
+        onTap: onTap,
+        onDelete: onDelete,
+        onEdit: onEdit,
+        onLocation: onLocation,
+      ),
+    );
   }
 }
 

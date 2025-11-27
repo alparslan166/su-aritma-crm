@@ -4,8 +4,12 @@ import "package:geolocator/geolocator.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 
+import "../../../../features/auth/domain/auth_role.dart";
+import "../../../../core/session/session_provider.dart";
 import "../../application/customer_list_notifier.dart";
+import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
+import "../../data/models/personnel.dart";
 
 class AddCustomerSheet extends ConsumerStatefulWidget {
   const AddCustomerSheet({super.key});
@@ -30,11 +34,15 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
   DateTime? _nextDebtDate;
   DateTime? _installmentStartDate;
   bool _submitting = false;
+  List<Personnel> _selectedPersonnel = [];
 
   @override
   void initState() {
     super.initState();
     _createdAt = DateTime.now();
+    _jobTitleController.addListener(() {
+      setState(() {}); // Buton durumunu güncelle
+    });
   }
 
   @override
@@ -254,7 +262,9 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                 latitude: location?.latitude,
                 longitude: location?.longitude,
                 locationDescription: _addressController.text.trim(),
-                personnelIds: null, // Personel seçimi kaldırıldı
+                personnelIds: _selectedPersonnel.isNotEmpty
+                    ? _selectedPersonnel.map((p) => p.id).toList()
+                    : null,
               );
         } catch (e) {
           // Job creation failed, but customer was created successfully
@@ -294,8 +304,54 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
     }
   }
 
+  Future<void> _showPersonnelSelection() async {
+    final personnelState = ref.read(personnelListProvider);
+    List<Personnel> personnelList = [];
+
+    if (personnelState.hasValue) {
+      personnelList = personnelState.value!;
+    } else {
+      // Personel listesi yüklenmemişse, yükle
+      final asyncValue = await ref.read(personnelListProvider.future);
+      personnelList = asyncValue;
+    }
+
+    if (personnelList.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Personel bulunamadı"),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    final selected = await showModalBottomSheet<List<Personnel>>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _PersonnelSelectionSheet(
+        personnelList: personnelList,
+        initialSelection: _selectedPersonnel,
+      ),
+    );
+
+    if (selected != null && mounted) {
+      setState(() {
+        _selectedPersonnel = selected;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final session = ref.watch(authSessionProvider);
+    final isAdmin = session?.role == AuthRole.admin;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -379,13 +435,68 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                       ? "Adres girin"
                       : null,
                 ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: _getCurrentLocation,
-                  icon: const Icon(Icons.my_location, size: 18),
-                  label: const Text("Bulunduğum Konumu Seç"),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: Colors.grey.shade200, width: 1),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _getCurrentLocation,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 18,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF2563EB).withValues(alpha: 0.1),
+                                const Color(0xFF2563EB).withValues(alpha: 0.05),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF2563EB,
+                                  ).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.my_location,
+                                  color: Color(0xFF2563EB),
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                "Bulunduğum Konumu Seç",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade900,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -397,6 +508,110 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                   ),
                   maxLines: 3,
                 ),
+                if (isAdmin) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.grey.shade200, width: 1),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _jobTitleController.text.trim().isEmpty
+                              ? null
+                              : _showPersonnelSelection,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Opacity(
+                            opacity: _jobTitleController.text.trim().isEmpty
+                                ? 0.5
+                                : 1.0,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 18,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(
+                                      0xFF10B981,
+                                    ).withValues(alpha: 0.1),
+                                    const Color(
+                                      0xFF10B981,
+                                    ).withValues(alpha: 0.05),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(
+                                        0xFF10B981,
+                                      ).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.person_add,
+                                      color: Color(0xFF10B981),
+                                      size: 22,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    _selectedPersonnel.isEmpty
+                                        ? "Personel Ata"
+                                        : "${_selectedPersonnel.length} Personel Seçildi",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade900,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_selectedPersonnel.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _selectedPersonnel.map((personnel) {
+                        return Chip(
+                          label: Text(personnel.name),
+                          onDeleted: () {
+                            setState(() {
+                              _selectedPersonnel.remove(personnel);
+                            });
+                          },
+                          deleteIcon: const Icon(Icons.close, size: 18),
+                          backgroundColor: const Color(
+                            0xFF10B981,
+                          ).withValues(alpha: 0.1),
+                          labelStyle: const TextStyle(
+                            color: Color(0xFF10B981),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ],
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),
@@ -668,6 +883,151 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PersonnelSelectionSheet extends ConsumerStatefulWidget {
+  const _PersonnelSelectionSheet({
+    required this.personnelList,
+    required this.initialSelection,
+  });
+
+  final List<Personnel> personnelList;
+  final List<Personnel> initialSelection;
+
+  @override
+  ConsumerState<_PersonnelSelectionSheet> createState() =>
+      _PersonnelSelectionSheetState();
+}
+
+class _PersonnelSelectionSheetState
+    extends ConsumerState<_PersonnelSelectionSheet> {
+  late Set<String> _selectedIds;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIds = widget.initialSelection.map((p) => p.id).toSet();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag handle
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Personel Seç",
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              if (_selectedIds.isNotEmpty)
+                Text(
+                  "${_selectedIds.length} seçildi",
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: widget.personnelList.length,
+              itemBuilder: (context, index) {
+                final personnel = widget.personnelList[index];
+                final isSelected = _selectedIds.contains(personnel.id);
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: isSelected
+                          ? const Color(0xFF2563EB)
+                          : Colors.grey.shade200,
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: CheckboxListTile(
+                    value: isSelected,
+                    onChanged: (value) {
+                      setState(() {
+                        if (value == true) {
+                          _selectedIds.add(personnel.id);
+                        } else {
+                          _selectedIds.remove(personnel.id);
+                        }
+                      });
+                    },
+                    title: Text(
+                      personnel.name,
+                      style: TextStyle(
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    subtitle: Text(personnel.phone),
+                    secondary: CircleAvatar(
+                      backgroundColor: isSelected
+                          ? const Color(0xFF2563EB).withValues(alpha: 0.1)
+                          : Colors.grey.shade200,
+                      child: Text(
+                        personnel.name.isNotEmpty
+                            ? personnel.name[0].toUpperCase()
+                            : "P",
+                        style: TextStyle(
+                          color: isSelected
+                              ? const Color(0xFF2563EB)
+                              : Colors.grey.shade600,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () {
+                final selected = widget.personnelList
+                    .where((p) => _selectedIds.contains(p.id))
+                    .toList();
+                Navigator.of(context).pop(selected);
+              },
+              child: const Text("Tamam"),
+            ),
+          ),
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
+        ],
       ),
     );
   }

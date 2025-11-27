@@ -3,10 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
-
 
 enum AdminRole {
   ANA
@@ -29,6 +28,11 @@ enum PaymentStatus {
 enum PersonnelStatus {
   ACTIVE
   SUSPENDED
+  INACTIVE
+}
+
+enum CustomerStatus {
+  ACTIVE
   INACTIVE
 }
 
@@ -103,7 +107,7 @@ model Personnel {
   canShareLocation   Boolean            @default(true)
   lastLoginAt        DateTime?
   permissions        Json
-  locationLogs      LocationLog[]
+  locationLogs       LocationLog[]
   jobs               JobPersonnel[]
   jobStatusLogs      JobStatusHistory[] @relation("JobStatusHistoryPersonnel")
   jobNotes           JobNote[]          @relation("JobNotePersonnel")
@@ -127,26 +131,27 @@ model PersonnelLeave {
 }
 
 model Customer {
-  id                  String    @id @default(cuid())
-  admin               Admin     @relation(fields: [adminId], references: [id])
-  adminId             String
-  name                String
-  phone               String
-  email               String?
-  address             String
-  location            Json?
-  hasDebt             Boolean   @default(false)
-  debtAmount          Decimal?
-  hasInstallment      Boolean   @default(false)
-  installmentCount    Int?
-  nextDebtDate        DateTime?
-  installmentStartDate DateTime?
+  id                      String         @id @default(cuid())
+  admin                   Admin          @relation(fields: [adminId], references: [id])
+  adminId                 String
+  name                    String
+  phone                   String
+  email                   String?
+  address                 String
+  location                Json?
+  status                  CustomerStatus @default(ACTIVE)
+  hasDebt                 Boolean        @default(false)
+  debtAmount              Decimal?
+  hasInstallment          Boolean        @default(false)
+  installmentCount        Int?
+  nextDebtDate            DateTime?
+  installmentStartDate    DateTime?
   installmentIntervalDays Int?
-  remainingDebtAmount Decimal?
-  paidDebtAmount      Decimal?  @default(0)
-  jobs                Job[]
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  remainingDebtAmount     Decimal?
+  paidDebtAmount          Decimal?       @default(0)
+  jobs                    Job[]
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
 
   @@index([adminId])
 }
@@ -326,16 +331,16 @@ model InventoryTransaction {
 }
 
 model Operation {
-  id          String        @id @default(cuid())
-  admin       Admin         @relation(fields: [adminId], references: [id])
-  adminId     String
-  name        String
-  description String?
-  isActive    Boolean       @default(true)
-  jobs        Job[]
+  id            String         @id @default(cuid())
+  admin         Admin          @relation(fields: [adminId], references: [id])
+  adminId       String
+  name          String
+  description   String?
+  isActive      Boolean        @default(true)
+  jobs          Job[]
   jobOperations JobOperation[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@index([adminId])
 }
@@ -353,8 +358,8 @@ model JobOperation {
 }
 
 model Invoice {
-  id              String    @id @default(cuid())
-  admin           Admin     @relation(fields: [adminId], references: [id])
+  id              String   @id @default(cuid())
+  admin           Admin    @relation(fields: [adminId], references: [id])
   adminId         String
   job             Job?     @relation(fields: [jobId], references: [id])
   jobId           String?  @unique
@@ -365,13 +370,13 @@ model Invoice {
   customerEmail   String?
   jobTitle        String
   jobDate         DateTime
-  subtotal        Decimal   @db.Decimal(12, 2)
-  tax             Decimal?  @db.Decimal(12, 2)
-  total           Decimal   @db.Decimal(12, 2)
+  subtotal        Decimal  @db.Decimal(12, 2)
+  tax             Decimal? @db.Decimal(12, 2)
+  total           Decimal  @db.Decimal(12, 2)
   notes           String?
-  isDraft         Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  isDraft         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([adminId])
   @@index([jobId])
