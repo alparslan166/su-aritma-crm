@@ -125,46 +125,35 @@ export const updateProfileHandler = async (req: Request, res: Response, next: Ne
     const adminId = getAdminId(req);
     const payload = updateProfileSchema.parse(req.body);
 
-    const updateData: {
-      name?: string;
-      phone?: string;
-      email?: string;
-      companyName?: string | null;
-      companyAddress?: string | null;
-      companyPhone?: string | null;
-      companyEmail?: string | null;
-      taxOffice?: string | null;
-      taxNumber?: string | null;
-      logoUrl?: string | null;
-    } = {};
+    const updateData: any = {};
     
     if (payload.name !== undefined) updateData.name = payload.name;
     if (payload.phone !== undefined) updateData.phone = payload.phone;
     if (payload.email !== undefined) {
       // Empty string means remove email (set to null)
-      updateData.email = payload.email === "" ? null : payload.email;
+      updateData.email = payload.email === "" ? { set: null } : payload.email;
     }
     if (payload.companyName !== undefined) {
-      updateData.companyName = payload.companyName === "" ? null : payload.companyName;
+      updateData.companyName = payload.companyName === "" ? { set: null } : payload.companyName;
     }
     if (payload.companyAddress !== undefined) {
-      updateData.companyAddress = payload.companyAddress === "" ? null : payload.companyAddress;
+      updateData.companyAddress = payload.companyAddress === "" ? { set: null } : payload.companyAddress;
     }
     if (payload.companyPhone !== undefined) {
-      updateData.companyPhone = payload.companyPhone === "" ? null : payload.companyPhone;
+      updateData.companyPhone = payload.companyPhone === "" ? { set: null } : payload.companyPhone;
     }
     if (payload.companyEmail !== undefined) {
-      updateData.companyEmail = payload.companyEmail === "" ? null : payload.companyEmail;
+      updateData.companyEmail = payload.companyEmail === "" ? { set: null } : payload.companyEmail;
     }
     if (payload.taxOffice !== undefined) {
-      updateData.taxOffice = payload.taxOffice === "" ? null : payload.taxOffice;
+      updateData.taxOffice = payload.taxOffice === "" ? { set: null } : payload.taxOffice;
     }
     if (payload.taxNumber !== undefined) {
-      updateData.taxNumber = payload.taxNumber === "" ? null : payload.taxNumber;
+      updateData.taxNumber = payload.taxNumber === "" ? { set: null } : payload.taxNumber;
     }
     // Handle logoUrl: empty string means remove logo (set to null), undefined means keep existing
     if (payload.logoUrl !== undefined) {
-      updateData.logoUrl = payload.logoUrl === "" ? null : payload.logoUrl;
+      updateData.logoUrl = payload.logoUrl === "" ? { set: null } : payload.logoUrl;
     }
 
     const updated = await prisma.admin.update({
