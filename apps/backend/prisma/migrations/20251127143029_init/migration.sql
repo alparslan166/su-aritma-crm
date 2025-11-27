@@ -11,6 +11,9 @@ CREATE TYPE "PaymentStatus" AS ENUM ('NOT_PAID', 'PARTIAL', 'PAID');
 CREATE TYPE "PersonnelStatus" AS ENUM ('ACTIVE', 'SUSPENDED', 'INACTIVE');
 
 -- CreateEnum
+CREATE TYPE "CustomerStatus" AS ENUM ('ACTIVE', 'INACTIVE');
+
+-- CreateEnum
 CREATE TYPE "JobNoteAuthorType" AS ENUM ('ALT_ADMIN', 'PERSONNEL', 'SYSTEM');
 
 -- CreateEnum
@@ -30,6 +33,14 @@ CREATE TABLE "Admin" (
     "email" TEXT NOT NULL,
     "role" "AdminRole" NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'active',
+    "passwordHash" TEXT,
+    "companyName" TEXT,
+    "companyAddress" TEXT,
+    "companyPhone" TEXT,
+    "companyEmail" TEXT,
+    "taxOffice" TEXT,
+    "taxNumber" TEXT,
+    "logoUrl" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -40,9 +51,11 @@ CREATE TABLE "Admin" (
 CREATE TABLE "Personnel" (
     "id" TEXT NOT NULL,
     "adminId" TEXT NOT NULL,
+    "personnelId" TEXT,
     "name" TEXT NOT NULL,
     "phone" TEXT NOT NULL,
     "email" TEXT,
+    "photoUrl" TEXT,
     "loginCode" TEXT NOT NULL,
     "loginCodeUpdatedAt" TIMESTAMP(3),
     "hireDate" TIMESTAMP(3) NOT NULL,
@@ -57,6 +70,19 @@ CREATE TABLE "Personnel" (
 );
 
 -- CreateTable
+CREATE TABLE "PersonnelLeave" (
+    "id" TEXT NOT NULL,
+    "personnelId" TEXT NOT NULL,
+    "startDate" TIMESTAMP(3) NOT NULL,
+    "endDate" TIMESTAMP(3) NOT NULL,
+    "reason" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PersonnelLeave_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Customer" (
     "id" TEXT NOT NULL,
     "adminId" TEXT NOT NULL,
@@ -64,6 +90,17 @@ CREATE TABLE "Customer" (
     "phone" TEXT NOT NULL,
     "email" TEXT,
     "address" TEXT NOT NULL,
+    "location" JSONB,
+    "status" "CustomerStatus" NOT NULL DEFAULT 'ACTIVE',
+    "hasDebt" BOOLEAN NOT NULL DEFAULT false,
+    "debtAmount" DECIMAL(65,30),
+    "hasInstallment" BOOLEAN NOT NULL DEFAULT false,
+    "installmentCount" INTEGER,
+    "nextDebtDate" TIMESTAMP(3),
+    "installmentStartDate" TIMESTAMP(3),
+    "installmentIntervalDays" INTEGER,
+    "remainingDebtAmount" DECIMAL(65,30),
+    "paidDebtAmount" DECIMAL(65,30) DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -76,6 +113,7 @@ CREATE TABLE "Job" (
     "title" TEXT NOT NULL,
     "adminId" TEXT NOT NULL,
     "customerId" TEXT NOT NULL,
+    "operationId" TEXT,
     "status" "JobStatus" NOT NULL DEFAULT 'PENDING',
     "scheduledAt" TIMESTAMP(3),
     "location" JSONB NOT NULL,
@@ -86,6 +124,7 @@ CREATE TABLE "Job" (
     "price" DECIMAL(12,2),
     "invoiceId" TEXT,
     "paymentStatus" "PaymentStatus" NOT NULL DEFAULT 'NOT_PAID',
+    "hasInstallment" BOOLEAN NOT NULL DEFAULT false,
     "notes" TEXT,
     "maintenanceDueAt" TIMESTAMP(3),
     "priority" INTEGER,
@@ -239,14 +278,92 @@ CREATE TABLE "InventoryTransaction" (
     CONSTRAINT "InventoryTransaction_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Operation" (
+    "id" TEXT NOT NULL,
+    "adminId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Operation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "JobOperation" (
+    "jobId" TEXT NOT NULL,
+    "operationId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "JobOperation_pkey" PRIMARY KEY ("jobId","operationId")
+);
+
+-- CreateTable
+CREATE TABLE "Invoice" (
+    "id" TEXT NOT NULL,
+    "adminId" TEXT NOT NULL,
+    "jobId" TEXT,
+    "invoiceNumber" TEXT NOT NULL,
+    "customerName" TEXT NOT NULL,
+    "customerPhone" TEXT NOT NULL,
+    "customerAddress" TEXT NOT NULL,
+    "customerEmail" TEXT,
+    "jobTitle" TEXT NOT NULL,
+    "jobDate" TIMESTAMP(3) NOT NULL,
+    "subtotal" DECIMAL(12,2) NOT NULL,
+    "tax" DECIMAL(12,2),
+    "total" DECIMAL(12,2) NOT NULL,
+    "notes" TEXT,
+    "isDraft" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Invoice_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Personnel_personnelId_key" ON "Personnel"("personnelId");
+
+-- CreateIndex
+CREATE INDEX "PersonnelLeave_personnelId_idx" ON "PersonnelLeave"("personnelId");
+
+-- CreateIndex
+CREATE INDEX "PersonnelLeave_startDate_endDate_idx" ON "PersonnelLeave"("startDate", "endDate");
+
+-- CreateIndex
+CREATE INDEX "Customer_adminId_idx" ON "Customer"("adminId");
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Subscription_adminId_key" ON "Subscription"("adminId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "MaintenanceReminder_jobId_key" ON "MaintenanceReminder"("jobId");
 
+-- CreateIndex
+CREATE INDEX "Operation_adminId_idx" ON "Operation"("adminId");
+
+-- CreateIndex
+CREATE INDEX "JobOperation_jobId_idx" ON "JobOperation"("jobId");
+
+-- CreateIndex
+CREATE INDEX "JobOperation_operationId_idx" ON "JobOperation"("operationId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Invoice_jobId_key" ON "Invoice"("jobId");
+
+-- CreateIndex
+CREATE INDEX "Invoice_adminId_idx" ON "Invoice"("adminId");
+
+-- CreateIndex
+CREATE INDEX "Invoice_jobId_idx" ON "Invoice"("jobId");
+
 -- AddForeignKey
 ALTER TABLE "Personnel" ADD CONSTRAINT "Personnel_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "Admin"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PersonnelLeave" ADD CONSTRAINT "PersonnelLeave_personnelId_fkey" FOREIGN KEY ("personnelId") REFERENCES "Personnel"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Customer" ADD CONSTRAINT "Customer_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "Admin"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -256,6 +373,9 @@ ALTER TABLE "Job" ADD CONSTRAINT "Job_adminId_fkey" FOREIGN KEY ("adminId") REFE
 
 -- AddForeignKey
 ALTER TABLE "Job" ADD CONSTRAINT "Job_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Job" ADD CONSTRAINT "Job_operationId_fkey" FOREIGN KEY ("operationId") REFERENCES "Operation"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "JobPersonnel" ADD CONSTRAINT "JobPersonnel_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -313,3 +433,18 @@ ALTER TABLE "InventoryTransaction" ADD CONSTRAINT "InventoryTransaction_inventor
 
 -- AddForeignKey
 ALTER TABLE "InventoryTransaction" ADD CONSTRAINT "InventoryTransaction_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Operation" ADD CONSTRAINT "Operation_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "Admin"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "JobOperation" ADD CONSTRAINT "JobOperation_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "JobOperation" ADD CONSTRAINT "JobOperation_operationId_fkey" FOREIGN KEY ("operationId") REFERENCES "Operation"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "Admin"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job"("id") ON DELETE SET NULL ON UPDATE CASCADE;
