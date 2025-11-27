@@ -1,4 +1,5 @@
 import "package:dio/dio.dart";
+import "package:flutter/foundation.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:pretty_dio_logger/pretty_dio_logger.dart";
 
@@ -33,15 +34,18 @@ final apiClientProvider = Provider<Dio>((ref) {
     ),
   );
 
-  dio.interceptors.add(
-    PrettyDioLogger(
-      requestHeader: false,
-      requestBody: true,
-      responseHeader: false,
-      responseBody: true,
-      compact: true,
-    ),
-  );
+  // Logger sadece debug mode'da aktif
+  if (kDebugMode) {
+    dio.interceptors.add(
+      PrettyDioLogger(
+        requestHeader: false,
+        requestBody: true,
+        responseHeader: false,
+        responseBody: true,
+        compact: true,
+      ),
+    );
+  }
 
   return dio;
 });

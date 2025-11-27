@@ -5,9 +5,9 @@ import "package:path_provider/path_provider.dart";
 import "package:url_launcher/url_launcher.dart";
 
 // Conditional import for dart:io (not available on Web)
-// On Web, we import a stub file that doesn't export File
+// On Web, we import a stub file that provides a File class
 // On other platforms, dart:io is imported
-import "dart:io" if (dart.library.html) "dart:html" as io;
+import "dart:io" if (dart.library.html) "file_stub.dart" as io;
 
 import "../../../core/network/api_client.dart";
 import "models/customer.dart";
@@ -684,28 +684,31 @@ class AdminRepository {
     return response.data["data"] as Map<String, dynamic>;
   }
 
+  // Helper function to write bytes to file (only works on non-Web platforms)
+  Future<void> _writeBytesToFile(String filePath, List<int> bytes) async {
+    if (kIsWeb) {
+      throw UnsupportedError("File operations not supported on Web");
+    }
+    final file = io.File(filePath);
+    await file.writeAsBytes(bytes);
+  }
+
   Future<String> generateInvoicePdf(String jobId) async {
-    // On Web, open PDF directly in browser using window.open
+    // On Web, open PDF directly in browser
     if (kIsWeb) {
       final baseUrl = _client.options.baseUrl;
       final pdfUrl = "$baseUrl/invoices/job/$jobId/pdf";
-
-      // On Web, open PDF using url_launcher
       final uri = Uri.parse(pdfUrl);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
-        // Return a placeholder path for Web
         return "web_pdf_$jobId";
       }
       throw Exception("PDF açılamadı. Lütfen tekrar deneyin.");
     }
 
     // For mobile/desktop platforms, save PDF to file
-    // First, try to get directory (this will fail on Web)
     try {
       final directory = await getTemporaryDirectory();
-
-      // Get PDF from backend
       final response = await _client.get(
         "/invoices/job/$jobId/pdf",
         options: Options(
@@ -713,33 +716,13 @@ class AdminRepository {
           headers: {"Accept": "application/pdf"},
         ),
       );
-
-      // Write PDF to file (only on non-Web platforms)
       final filePath = "${directory.path}/fatura_$jobId.pdf";
-      final file = io.File(filePath);
-      await file.writeAsBytes(response.data as List<int>);
+      await _writeBytesToFile(filePath, response.data as List<int>);
       return filePath;
     } catch (e) {
-      // If temporary directory fails, check if we're on Web
-      if (kIsWeb) {
-        // On Web, open PDF directly from URL using window.open
-        final baseUrl = _client.options.baseUrl;
-        final pdfUrl = "$baseUrl/invoices/job/$jobId/pdf";
-
-        // On Web, open PDF using url_launcher
-        final uri = Uri.parse(pdfUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-          return "web_pdf_$jobId";
-        }
-        throw Exception("PDF açılamadı. Lütfen tekrar deneyin.");
-      }
-
-      // If not Web, try application documents directory
+      // If temporary directory fails, try application documents directory
       try {
         final directory = await getApplicationDocumentsDirectory();
-
-        // Get PDF from backend
         final response = await _client.get(
           "/invoices/job/$jobId/pdf",
           options: Options(
@@ -747,23 +730,18 @@ class AdminRepository {
             headers: {"Accept": "application/pdf"},
           ),
         );
-
-        // Write PDF to file
         final filePath = "${directory.path}/fatura_$jobId.pdf";
-        final file = io.File(filePath);
-        await file.writeAsBytes(response.data as List<int>);
+        await _writeBytesToFile(filePath, response.data as List<int>);
         return filePath;
       } catch (e2) {
         // If both fail, open PDF directly from URL
         final baseUrl = _client.options.baseUrl;
         final pdfUrl = "$baseUrl/invoices/job/$jobId/pdf";
         final uri = Uri.parse(pdfUrl);
-
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
           return "web_pdf_$jobId";
         }
-
         throw Exception("PDF açılamadı. Lütfen tekrar deneyin.");
       }
     }

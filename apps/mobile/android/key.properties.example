@@ -1,0 +1,9 @@
+# Production Signing Key Properties
+# Bu dosyayı kopyalayın: cp key.properties.example key.properties
+# key.properties dosyasını .gitignore'a ekleyin (güvenlik için)
+
+storePassword=your-keystore-password
+keyPassword=your-key-password
+keyAlias=upload
+storeFile=../upload-keystore.jks
+
