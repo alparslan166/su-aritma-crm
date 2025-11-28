@@ -1536,20 +1536,41 @@ class _PersonnelMapSectionState extends ConsumerState<_PersonnelMapSection> {
                         );
                         return Center(
                           child: Padding(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(24),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  Icons.location_off,
-                                  color: Colors.grey.shade400,
-                                  size: 48,
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.orange.shade50,
+                                  ),
+                                  child: Icon(
+                                    Icons.location_searching,
+                                    color: Colors.orange.shade300,
+                                    size: 56,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  "Konum Bilgisi Bulunamadı",
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey.shade700,
+                                      ),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  "Konum bilgisi bulunmuyor",
+                                  "Bu personelin henüz konum bilgisi kaydedilmemiş. Personel bir işe atandığında ve konum paylaşımı açık olduğunda konum bilgisi görüntülenecektir.",
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.grey.shade600),
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Colors.grey.shade600,
+                                        height: 1.4,
+                                      ),
                                 ),
                               ],
                             ),

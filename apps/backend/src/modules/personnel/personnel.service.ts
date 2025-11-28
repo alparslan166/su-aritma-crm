@@ -3,6 +3,7 @@ import { PersonnelStatus, Prisma } from "@prisma/client";
 import { generateLoginCode, generatePersonnelId } from "@/lib/generators";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/middleware/error-handler";
+import { mediaService } from "@/modules/media/media.service";
 
 // Telefon numarasını normalize et (boşlukları ve özel karakterleri temizle)
 function normalizePhoneNumber(phone: string): string {
@@ -75,7 +76,7 @@ class PersonnelService {
       } as Prisma.PersonnelInclude,
     });
 
-    return records.map((record: any) => {
+    const mappedRecords = records.map((record: any) => {
       const { locationLogs, leaves, ...rest } = record;
       return {
         ...rest,
@@ -83,10 +84,13 @@ class PersonnelService {
         leaves: leaves ?? [],
       };
     });
+
+    // Transform photoUrl to full URLs
+    return mediaService.transformPhotoUrls(mappedRecords);
   }
 
   async getById(adminId: string, id: string) {
-    return prisma.personnel.findFirst({
+    const record = await prisma.personnel.findFirst({
       where: { id, adminId },
       include: {
         locationLogs: {
@@ -104,12 +108,19 @@ class PersonnelService {
         },
       } as Prisma.PersonnelInclude,
     });
+
+    if (!record) {
+      return null;
+    }
+
+    // Transform photoUrl to full URL
+    return mediaService.transformPhotoUrl(record);
   }
 
   async create(adminId: string, payload: CreatePayload) {
     const loginCode = generateLoginCode();
     const personnelId = await generatePersonnelId();
-    return prisma.personnel.create({
+    const record = await prisma.personnel.create({
       data: {
         adminId,
         personnelId,
@@ -124,12 +135,15 @@ class PersonnelService {
         canShareLocation: payload.canShareLocation ?? true,
       },
     });
+
+    // Transform photoUrl to full URL
+    return mediaService.transformPhotoUrl(record);
   }
 
   async update(adminId: string, id: string, payload: UpdatePayload) {
     await this.ensureOwnership(adminId, id);
     const data: Prisma.PersonnelUpdateInput = {};
-    
+
     if (payload.name !== undefined) {
       data.name = payload.name;
     }
@@ -155,11 +169,14 @@ class PersonnelService {
     if (payload.canShareLocation !== undefined) {
       data.canShareLocation = payload.canShareLocation;
     }
-    
-    return prisma.personnel.update({
+
+    const record = await prisma.personnel.update({
       where: { id },
       data,
     });
+
+    // Transform photoUrl to full URL
+    return mediaService.transformPhotoUrl(record);
   }
 
   async delete(adminId: string, id: string) {
@@ -186,11 +203,15 @@ class PersonnelService {
     });
   }
 
-  async createLeave(adminId: string, personnelId: string, payload: {
-    startDate: Date;
-    endDate: Date;
-    reason?: string;
-  }) {
+  async createLeave(
+    adminId: string,
+    personnelId: string,
+    payload: {
+      startDate: Date;
+      endDate: Date;
+      reason?: string;
+    },
+  ) {
     await this.ensureOwnership(adminId, personnelId);
     if (payload.endDate < payload.startDate) {
       throw new AppError("End date must be after start date", 400);
@@ -220,4 +241,3 @@ class PersonnelService {
 }
 
 export const personnelService = new PersonnelService();
-

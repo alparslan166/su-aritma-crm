@@ -180,29 +180,29 @@ class PersonnelDashboardPage extends ConsumerWidget {
 
     try {
       debugPrint("🔴 Logout işlemi başlatılıyor...");
-      
+
       // Ref'i erken al (widget dispose edilmeden önce)
       final sessionNotifier = ref.read(authSessionProvider.notifier);
       final router = ref.read(appRouterProvider);
-      
+
       // Session'ı temizle
       await sessionNotifier.clearSession();
       debugPrint("✅ Session temizlendi");
-      
+
       // Router'ı invalidate et
       ref.invalidate(appRouterProvider);
       debugPrint("✅ Router invalidate edildi");
-      
+
       // Router'ın yeniden oluşturulmasını bekle
       await Future.delayed(const Duration(milliseconds: 150));
-      
+
       // Login sayfasına git
       router.go("/");
       debugPrint("✅ Navigation tamamlandı!");
     } catch (e, stackTrace) {
       debugPrint("❌ Logout hatası: $e");
       debugPrint("Stack: $stackTrace");
-      
+
       // Hata durumunda da login sayfasına git
       try {
         // Yeni router instance al

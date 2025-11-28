@@ -1079,28 +1079,57 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                       ),
                     )
                   : _error != null
-                  ? SingleChildScrollView(
+                  ? Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(24),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.error_outline,
-                              color: Colors.red,
-                              size: 48,
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.orange.shade50,
+                              ),
+                              child: Icon(
+                                Icons.location_searching,
+                                color: Colors.orange.shade300,
+                                size: 56,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "Konum Bulunamadı",
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade700,
+                                  ),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              _error!,
+                              _error!.contains("Adres bilgisi")
+                                  ? "Müşterinin adres bilgisi bulunmuyor. Adres bilgisi ekleyerek konumu görüntüleyebilirsiniz."
+                                  : "Müşterinin konum bilgisi yüklenemedi. Adres bilgisi doğru mu kontrol edin veya Google Maps'te açmak için adrese tıklayın.",
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.grey.shade600),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Colors.grey.shade600,
+                                    height: 1.4,
+                                  ),
                             ),
-                            const SizedBox(height: 8),
-                            TextButton.icon(
+                            const SizedBox(height: 16),
+                            OutlinedButton.icon(
                               onPressed: _loadLocation,
-                              icon: const Icon(Icons.refresh),
+                              icon: const Icon(Icons.refresh, size: 18),
                               label: const Text("Tekrar Dene"),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 12,
+                                ),
+                              ),
                             ),
                           ],
                         ),

@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 
 import "../../../../core/error/error_handler.dart";
@@ -107,9 +109,31 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
         ),
       );
 
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
+      Position position;
+      try {
+        position =
+            await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.high,
+            ).timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                throw TimeoutException(
+                  "Konum alınamadı",
+                  const Duration(seconds: 10),
+                );
+              },
+            );
+      } on TimeoutException catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Mevcut konum alınamadı. Lütfen tekrar deneyin."),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
 
       // Reverse geocoding ile adres bilgisini al
       List<Placemark> placemarks = await placemarkFromCoordinates(

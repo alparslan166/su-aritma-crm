@@ -88,13 +88,17 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
         final upcomingMaintenance = data.upcomingMaintenance;
         final maintenanceApproaching = data.maintenanceApproaching;
         final completedLastWeek = data.completedLastWeek;
+        final activeCustomers = data.activeCustomers;
+        final inactiveCustomers = data.inactiveCustomers;
 
-        // Total hesaplaması - tüm kategorileri içermeli
+        // Total hesaplaması - tüm kategorileri içermeli (pasif müşteriler dahil)
         final total =
             overduePayments +
             upcomingMaintenance +
             maintenanceApproaching +
-            completedLastWeek;
+            completedLastWeek +
+            activeCustomers +
+            inactiveCustomers;
 
         // Toplam müşteri sayısını al
         final totalCustomers = statsAsync.valueOrNull?.totalCustomers ?? total;
@@ -105,31 +109,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
             ? companyName
             : "Tüm Müşteriler";
 
-        if (total == 0) {
-          return Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Text(
-                    displayTitle,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Henüz veri yok",
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
+        // total == 0 olsa bile chart'ı göster, sadece boş olacak
         return Card(
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -177,24 +157,24 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                           opacity: _fadeInAnimation!.value,
                           child: ShaderMask(
                             shaderCallback: (bounds) => LinearGradient(
-                              colors: const [
-                                Color(0xFF6366F1), // İndigo
-                                Color(0xFF818CF8), // Parlak mor-mavi
-                                Color(0xFF60A5FA), // Açık mavi (parıltı)
-                                Color(0xFF34D399), // Turkuaz (parıltı)
-                                Color(0xFF22D3EE), // Cyan (parıltı)
-                                Color(0xFF3B82F6), // Orta mavi
-                                Color(0xFF6366F1), // İndigo'ya dönüş
+                              colors: [
+                                const Color(0xFF2563EB), // Ana mavi
+                                const Color(0xFF3B82F6), // Açık mavi
+                                const Color(0xFF60A5FA), // Daha açık mavi
+                                const Color(0xFF93C5FD), // Çok açık mavi
+                                const Color(0xFF60A5FA), // Geri dönüş
+                                const Color(0xFF3B82F6), // Orta mavi
+                                const Color(0xFF2563EB), // Ana mavi'ye dönüş
                               ],
-                              begin: Alignment(smoothOffset - 0.5, -1.0),
-                              end: Alignment(smoothOffset + 0.5, 1.0),
+                              begin: Alignment(smoothOffset - 0.4, -1.0),
+                              end: Alignment(smoothOffset + 0.4, 1.0),
                               stops: const [
                                 0.0,
-                                0.2,
-                                0.35,
+                                0.25,
+                                0.4,
                                 0.5,
-                                0.65,
-                                0.8,
+                                0.6,
+                                0.75,
                                 1.0,
                               ],
                             ).createShader(bounds),
@@ -209,8 +189,8 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                                   Shadow(
                                     color: const Color(
                                       0xFF2563EB,
-                                    ).withOpacity(0.5),
-                                    blurRadius: 8,
+                                    ).withOpacity(0.3),
+                                    blurRadius: 6,
                                     offset: const Offset(0, 2),
                                   ),
                                 ],
@@ -246,20 +226,50 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                               _animationController == null) {
                             return const SizedBox.shrink();
                           }
+
+                          final sections = _buildSections(
+                            overduePayments,
+                            upcomingMaintenance,
+                            maintenanceApproaching,
+                            completedLastWeek,
+                            activeCustomers,
+                            inactiveCustomers,
+                            total,
+                            _animationController!.value,
+                          );
+
+                          // Eğer hiç veri yoksa, boş bir daire göster
+                          if (sections.isEmpty) {
+                            return Container(
+                              width: 180,
+                              height: 180,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.grey.shade300,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Center(
+                                child: Container(
+                                  width: 110,
+                                  height: 110,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.grey.shade50,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
                           return Transform.rotate(
                             angle: _rotationController!.value * 2 * math.pi,
                             child: PieChart(
                               PieChartData(
                                 sectionsSpace: 2,
                                 centerSpaceRadius: 55,
-                                sections: _buildSections(
-                                  overduePayments,
-                                  upcomingMaintenance,
-                                  maintenanceApproaching,
-                                  completedLastWeek,
-                                  total,
-                                  _animationController!.value,
-                                ),
+                                sections: sections,
                                 pieTouchData: PieTouchData(enabled: false),
                               ),
                             ),
@@ -291,12 +301,29 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                   ),
                 ),
                 const SizedBox(height: 40),
-                _buildLegend(
-                  overduePayments,
-                  upcomingMaintenance,
-                  maintenanceApproaching,
-                  completedLastWeek,
-                ),
+                // Legend'ı sadece veri varsa göster
+                if (total > 0)
+                  _buildLegend(
+                    overduePayments,
+                    upcomingMaintenance,
+                    maintenanceApproaching,
+                    completedLastWeek,
+                    activeCustomers,
+                    inactiveCustomers,
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      "Henüz müşteri eklenmemiş  \n Müşteri eklendikçe grafik büyüyecektir",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade500,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -383,6 +410,8 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
     int upcomingMaintenance,
     int maintenanceApproaching,
     int completedLastWeek,
+    int activeCustomers,
+    int inactiveCustomers,
     int total,
     double animationValue,
   ) {
@@ -445,6 +474,30 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
       );
     }
 
+    // Aktif Müşteriler - Açık Yeşil
+    if (activeCustomers > 0) {
+      sections.add(
+        PieChartSectionData(
+          value: activeCustomers.toDouble(),
+          color: const Color(0xFF86EFAC), // Açık yeşil
+          radius: getAnimatedRadius(1.0),
+          showTitle: false,
+        ),
+      );
+    }
+
+    // Pasif Müşteriler - Gri
+    if (inactiveCustomers > 0) {
+      sections.add(
+        PieChartSectionData(
+          value: inactiveCustomers.toDouble(),
+          color: Colors.grey.shade400, // Gri
+          radius: getAnimatedRadius(1.25),
+          showTitle: false,
+        ),
+      );
+    }
+
     return sections;
   }
 
@@ -453,6 +506,8 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
     int upcomingMaintenance,
     int maintenanceApproaching,
     int completedLastWeek,
+    int activeCustomers,
+    int inactiveCustomers,
   ) {
     final items = <Widget>[];
 
@@ -468,7 +523,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
 
     if (upcomingMaintenance > 0) {
       if (items.isNotEmpty) {
-        items.add(const SizedBox(height: 12));
+        items.add(const SizedBox(height: 10));
       }
       items.add(
         _LegendItem(
@@ -481,7 +536,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
 
     if (maintenanceApproaching > 0) {
       if (items.isNotEmpty) {
-        items.add(const SizedBox(height: 12));
+        items.add(const SizedBox(height: 10));
       }
       items.add(
         _LegendItem(
@@ -494,7 +549,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
 
     if (completedLastWeek > 0) {
       if (items.isNotEmpty) {
-        items.add(const SizedBox(height: 12));
+        items.add(const SizedBox(height: 10));
       }
       items.add(
         _LegendItem(
@@ -505,15 +560,41 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
       );
     }
 
+    if (activeCustomers > 0) {
+      if (items.isNotEmpty) {
+        items.add(const SizedBox(height: 10));
+      }
+      items.add(
+        _LegendItem(
+          color: const Color(0xFF86EFAC), // Açık yeşil
+          label: "Aktif Müşteriler",
+          count: activeCustomers,
+        ),
+      );
+    }
+
+    if (inactiveCustomers > 0) {
+      if (items.isNotEmpty) {
+        items.add(const SizedBox(height: 10));
+      }
+      items.add(
+        _LegendItem(
+          color: Colors.grey.shade400, // Gri
+          label: "Pasif Müşteriler",
+          count: inactiveCustomers,
+        ),
+      );
+    }
+
     if (items.isEmpty) {
       return const SizedBox.shrink();
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -541,45 +622,45 @@ class _LegendItem extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 18,
-          height: 18,
+          width: 14,
+          height: 14,
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: color.withValues(alpha: 0.3),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+                color: color.withValues(alpha: 0.25),
+                blurRadius: 3,
+                offset: const Offset(0, 1.5),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Flexible(
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 15,
-              color: Colors.grey.shade800,
-              fontWeight: FontWeight.w600,
-              letterSpacing: -0.2,
+              fontSize: 13,
+              color: Colors.grey.shade700,
+              fontWeight: FontWeight.w500,
+              letterSpacing: -0.1,
             ),
             overflow: TextOverflow.ellipsis,
             maxLines: 1,
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
             "$count",
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
               color: color,
             ),

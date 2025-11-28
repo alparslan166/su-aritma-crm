@@ -6,6 +6,7 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "../../../../widgets/admin_app_bar.dart";
 import "../../admin/presentation/views/add_customer_sheet.dart";
 import "../../admin/presentation/views/assign_job_sheet.dart";
+import "../../admin/presentation/views/admin_profile_page.dart";
 import "../../admin/presentation/views/customer_detail_page.dart";
 import "../../admin/presentation/views/customers_view.dart";
 import "../../admin/presentation/views/job_detail_page.dart"
@@ -82,13 +83,13 @@ class HomePageTab extends ConsumerWidget {
   }
 }
 
-class _StatsGrid extends StatelessWidget {
+class _StatsGrid extends ConsumerWidget {
   const _StatsGrid({required this.stats});
 
   final DashboardStats stats;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -103,10 +104,18 @@ class _StatsGrid extends StatelessWidget {
           icon: Icons.people_outline,
           color: const Color(0xFF2563EB),
           onTap: () {
+            // Firma adını al
+            final profileAsync = ref.read(adminProfileProvider);
+            final companyName =
+                profileAsync.valueOrNull?["companyName"] as String?;
+            final displayTitle = (companyName != null && companyName.isNotEmpty)
+                ? companyName
+                : "Tüm Müşteriler";
+
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => Scaffold(
-                  appBar: AdminAppBar(title: const Text("Tüm Müşteriler")),
+                  appBar: AdminAppBar(title: Text(displayTitle)),
                   body: const CustomersView(filterType: CustomerFilterType.all),
                 ),
               ),

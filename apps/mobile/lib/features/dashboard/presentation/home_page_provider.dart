@@ -111,12 +111,16 @@ class CustomerCategoryData {
     required this.upcomingMaintenance,
     required this.maintenanceApproaching,
     required this.completedLastWeek,
+    required this.activeCustomers,
+    required this.inactiveCustomers,
   });
 
   final int overduePayments; // Ödemesi Gelenler
   final int upcomingMaintenance; // Bakımı Gelenler (30 gün içinde)
   final int maintenanceApproaching; // Bakımı Yaklaşanlar (7 gün içinde)
   final int completedLastWeek; // Son 1 Haftada Tamamlanan İşler
+  final int activeCustomers; // Aktif Müşteriler
+  final int inactiveCustomers; // Pasif Müşteriler
 }
 
 final customerCategoryDataProvider = FutureProvider<CustomerCategoryData>((
@@ -126,6 +130,8 @@ final customerCategoryDataProvider = FutureProvider<CustomerCategoryData>((
   int upcomingMaintenance = 0;
   int maintenanceApproaching = 0;
   int completedLastWeek = 0;
+  int activeCustomers = 0;
+  int inactiveCustomers = 0;
 
   try {
     final repository = ref.watch(adminRepositoryProvider);
@@ -136,11 +142,19 @@ final customerCategoryDataProvider = FutureProvider<CustomerCategoryData>((
     final todayStart = DateTime(now.year, now.month, now.day);
     final weekAgoStart = todayStart.subtract(const Duration(days: 7));
 
-    // Ödemesi gelen müşteriler
+    // Ödemesi gelen müşteriler, aktif ve pasif müşteriler
     for (final customer in customers) {
       try {
         if (customer.hasOverduePayment) {
           overduePayments++;
+        }
+        // Aktif müşteriler (status == "ACTIVE")
+        if (customer.status == "ACTIVE") {
+          activeCustomers++;
+        }
+        // Pasif müşteriler (status == "INACTIVE")
+        if (customer.status == "INACTIVE") {
+          inactiveCustomers++;
         }
       } catch (e) {
         // Müşteri verisi hatası, atla
@@ -214,6 +228,8 @@ final customerCategoryDataProvider = FutureProvider<CustomerCategoryData>((
       upcomingMaintenance: upcomingMaintenance,
       maintenanceApproaching: maintenanceApproaching,
       completedLastWeek: completedLastWeek,
+      activeCustomers: activeCustomers,
+      inactiveCustomers: inactiveCustomers,
     );
   } catch (e) {
     // Hata durumunda varsayılan değerler döndür
@@ -222,6 +238,8 @@ final customerCategoryDataProvider = FutureProvider<CustomerCategoryData>((
       upcomingMaintenance: 0,
       maintenanceApproaching: 0,
       completedLastWeek: 0,
+      activeCustomers: 0,
+      inactiveCustomers: 0,
     );
   }
 });
