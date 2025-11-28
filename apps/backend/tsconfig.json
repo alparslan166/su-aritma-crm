@@ -2,6 +2,7 @@
   "extends": "@tsconfig/node20/tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
+    "rootDir": "src",
     "module": "commonjs",
     "moduleResolution": "node",
     "esModuleInterop": true,
@@ -13,7 +14,7 @@
       "@/*": ["*"]
     }
   },
-  "include": ["src", "prisma", "prisma.config.ts"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }
 
