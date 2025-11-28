@@ -256,8 +256,8 @@ class _AssignJobSheetState extends ConsumerState<AssignJobSheet> {
                 TextFormField(
                   controller: _titleController,
                   decoration: const InputDecoration(
-                    labelText: "Yapılacak İşlem",
-                    hintText: "Örn: Su arıtma cihazı bakımı",
+                    labelText: "Yapılacak işlem bilgisi",
+                    hintText: "Yapılacak işlem hakkında not",
                   ),
                   maxLines: 3,
                   validator: (value) => value == null || value.trim().isEmpty

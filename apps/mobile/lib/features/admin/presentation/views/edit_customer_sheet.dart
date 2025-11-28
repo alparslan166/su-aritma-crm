@@ -1,6 +1,12 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
+import "package:geocoding/geocoding.dart";
+import "package:geolocator/geolocator.dart";
+import "package:flutter_map/flutter_map.dart";
+import "package:latlong2/latlong.dart";
 
 import "../../../../core/error/error_handler.dart";
 import "../../application/customer_list_notifier.dart";
@@ -33,6 +39,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
   DateTime? _nextDebtDate;
   DateTime? _installmentStartDate;
   bool _submitting = false;
+  LatLng? _currentLocation; // Konum bilgisi
 
   @override
   void initState() {
@@ -58,6 +65,23 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     _createdAt = customer.createdAt;
     _nextDebtDate = customer.nextDebtDate;
     _installmentStartDate = customer.installmentStartDate;
+
+    // Mevcut müşterinin konum bilgisini yükle
+    if (customer.location != null) {
+      _currentLocation = LatLng(
+        customer.location!.latitude,
+        customer.location!.longitude,
+      );
+    }
+
+    // Adres değiştiğinde haritayı güncelle
+    _addressController.addListener(() {
+      if (_addressController.text.trim().isEmpty) {
+        setState(() {
+          _currentLocation = null;
+        });
+      }
+    });
   }
 
   @override
@@ -185,6 +209,139 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     }
   }
 
+  Future<void> _getCurrentLocation() async {
+    try {
+      // Konum izni kontrolü
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Konum servisleri kapalı. Lütfen açın."),
+          ),
+        );
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Konum izni reddedildi.")),
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Konum izni kalıcı olarak reddedilmiş. Ayarlardan açın.",
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Mevcut konumu al
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Konum alınıyor..."),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      Position position;
+      try {
+        position =
+            await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.high,
+            ).timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                throw TimeoutException(
+                  "Konum alınamadı",
+                  const Duration(seconds: 10),
+                );
+              },
+            );
+      } on TimeoutException catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Mevcut konum alınamadı. Lütfen tekrar deneyin."),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // Reverse geocoding ile adres bilgisini al
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        final placemark = placemarks.first;
+        // Adres bilgisini formatla
+        final addressParts = <String>[];
+        if (placemark.street != null && placemark.street!.isNotEmpty) {
+          addressParts.add(placemark.street!);
+        }
+        if (placemark.subThoroughfare != null &&
+            placemark.subThoroughfare!.isNotEmpty) {
+          addressParts.add('No: ${placemark.subThoroughfare}');
+        }
+        if (placemark.subLocality != null &&
+            placemark.subLocality!.isNotEmpty) {
+          addressParts.add(placemark.subLocality!);
+        }
+        if (placemark.locality != null && placemark.locality!.isNotEmpty) {
+          addressParts.add(placemark.locality!);
+        }
+        if (placemark.administrativeArea != null &&
+            placemark.administrativeArea!.isNotEmpty) {
+          addressParts.add(placemark.administrativeArea!);
+        }
+        if (placemark.postalCode != null && placemark.postalCode!.isNotEmpty) {
+          addressParts.add(placemark.postalCode!);
+        }
+
+        final address = addressParts.join(', ');
+
+        if (mounted) {
+          setState(() {
+            _addressController.text = address;
+            _currentLocation = LatLng(position.latitude, position.longitude);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Adres otomatik olarak eklendi"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Adres bilgisi alınamadı")),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Konum alınamadı: $e")));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -274,6 +431,121 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       ? "Adres girin"
                       : null,
                 ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: Colors.grey.shade200, width: 1),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _getCurrentLocation,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 18,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF2563EB).withValues(alpha: 0.1),
+                                const Color(0xFF2563EB).withValues(alpha: 0.05),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF2563EB,
+                                  ).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.my_location,
+                                  color: Color(0xFF2563EB),
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                "Bulunduğum Konumu Seç",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade900,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Harita gösterimi - konum ve adres varsa
+                if (_currentLocation != null &&
+                    _addressController.text.trim().isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: Colors.grey.shade200, width: 1),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: SizedBox(
+                        height: 200,
+                        width: double.infinity,
+                        child: FlutterMap(
+                          options: MapOptions(
+                            initialCenter: _currentLocation!,
+                            initialZoom: 15.0,
+                            interactionOptions: const InteractionOptions(
+                              flags: InteractiveFlag.none,
+                            ),
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate:
+                                  "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                              userAgentPackageName: "com.suaritma.app",
+                              maxZoom: 19,
+                              minZoom: 3,
+                            ),
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: _currentLocation!,
+                                  width: 40,
+                                  height: 40,
+                                  child: const Icon(
+                                    Icons.location_on,
+                                    color: Color(0xFF2563EB),
+                                    size: 40,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),

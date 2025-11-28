@@ -14,6 +14,7 @@ import "../../application/customer_list_notifier.dart";
 import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/personnel.dart";
+import "../../data/models/inventory_item.dart";
 
 class AddCustomerSheet extends ConsumerStatefulWidget {
   const AddCustomerSheet({super.key});
@@ -39,6 +40,9 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
   DateTime? _installmentStartDate;
   bool _submitting = false;
   List<Personnel> _selectedPersonnel = [];
+  final Map<String, int> _selectedMaterials = {}; // Seçilen malzemeler
+  List<InventoryItem> _inventoryList =
+      []; // Stok listesi (malzeme isimleri için)
 
   @override
   void initState() {
@@ -280,6 +284,11 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
             // Geocoding failed, continue without location
           }
 
+          // Prepare material IDs from selected materials
+          final materialIds = _selectedMaterials.entries
+              .map((e) => {"inventoryItemId": e.key, "quantity": e.value})
+              .toList();
+
           await ref
               .read(adminRepositoryProvider)
               .createJobForCustomer(
@@ -291,6 +300,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                 personnelIds: _selectedPersonnel.isNotEmpty
                     ? _selectedPersonnel.map((p) => p.id).toList()
                     : null,
+                materialIds: materialIds.isNotEmpty ? materialIds : null,
               );
         } catch (e) {
           // Job creation failed, but customer was created successfully
@@ -325,6 +335,26 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
           _submitting = false;
         });
       }
+    }
+  }
+
+  Future<void> _selectMaterials() async {
+    final inventory = await ref.read(adminRepositoryProvider).fetchInventory();
+    if (!mounted) return;
+
+    final selected = await showDialog<Map<String, int>>(
+      context: context,
+      builder: (context) => _MaterialSelectionDialog(
+        inventory: inventory,
+        initialSelection: _selectedMaterials,
+      ),
+    );
+    if (selected != null) {
+      setState(() {
+        _selectedMaterials.clear();
+        _selectedMaterials.addAll(selected);
+        _inventoryList = inventory; // Malzeme isimleri için sakla
+      });
     }
   }
 
@@ -526,11 +556,78 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _selectMaterials,
+                    icon: const Icon(Icons.inventory_2),
+                    label: Text(
+                      _selectedMaterials.isEmpty
+                          ? "Yapılacak İşlem - Malzeme Seç"
+                          : "${_selectedMaterials.length} malzeme seçildi",
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 18,
+                      ),
+                      side: BorderSide(
+                        color: _selectedMaterials.isEmpty
+                            ? Colors.grey.shade300
+                            : const Color(0xFF2563EB),
+                        width: _selectedMaterials.isEmpty ? 1 : 2,
+                      ),
+                    ),
+                  ),
+                ),
+                if (_selectedMaterials.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _selectedMaterials.entries.map((entry) {
+                      // Get inventory item name from stored list
+                      final item = _inventoryList.firstWhere(
+                        (item) => item.id == entry.key,
+                        orElse: () => InventoryItem(
+                          id: entry.key,
+                          name: "Bilinmeyen",
+                          category: "",
+                          sku: "",
+                          unit: "adet",
+                          unitPrice: 0,
+                          stockQty: 0,
+                          criticalThreshold: 0,
+                          isActive: true,
+                        ),
+                      );
+                      return Chip(
+                        label: Text(
+                          "${item.name} (${entry.value} ${item.unit})",
+                        ),
+                        onDeleted: () {
+                          setState(() {
+                            _selectedMaterials.remove(entry.key);
+                          });
+                        },
+                        deleteIcon: const Icon(Icons.close, size: 18),
+                        backgroundColor: const Color(
+                          0xFF2563EB,
+                        ).withValues(alpha: 0.1),
+                        labelStyle: const TextStyle(
+                          color: Color(0xFF2563EB),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _jobTitleController,
                   decoration: const InputDecoration(
-                    labelText: "Yapılacak İşlem (Opsiyonel)",
-                    hintText: "Örn: Su arıtma cihazı bakımı",
+                    labelText: "Yapılacak işlem bilgisi (Opsiyonel)",
+                    hintText: "Yapılacak işlem hakkında not",
                   ),
                   maxLines: 3,
                 ),
@@ -1055,6 +1152,121 @@ class _PersonnelSelectionSheetState
           SizedBox(height: MediaQuery.of(context).padding.bottom),
         ],
       ),
+    );
+  }
+}
+
+class _MaterialSelectionDialog extends StatefulWidget {
+  const _MaterialSelectionDialog({
+    required this.inventory,
+    required this.initialSelection,
+  });
+
+  final List<InventoryItem> inventory;
+  final Map<String, int> initialSelection;
+
+  @override
+  State<_MaterialSelectionDialog> createState() =>
+      _MaterialSelectionDialogState();
+}
+
+class _MaterialSelectionDialogState extends State<_MaterialSelectionDialog> {
+  final Map<String, int> _selection = {};
+  final Map<String, TextEditingController> _controllers = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _selection.addAll(widget.initialSelection);
+    for (final item in widget.inventory) {
+      _controllers[item.id] = TextEditingController(
+        text: widget.initialSelection[item.id]?.toString() ?? "",
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Malzeme Seç"),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: widget.inventory.isEmpty
+            ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: Text("Stokta ürün bulunmuyor"),
+                ),
+              )
+            : ListView.builder(
+                shrinkWrap: true,
+                itemCount: widget.inventory.length,
+                itemBuilder: (context, index) {
+                  final item = widget.inventory[index];
+                  final controller = _controllers[item.id]!;
+                  final quantity = int.tryParse(controller.text) ?? 0;
+                  return ListTile(
+                    leading: Checkbox(
+                      value: quantity > 0,
+                      onChanged: (checked) {
+                        if (checked == true) {
+                          controller.text = "1";
+                          _selection[item.id] = 1;
+                        } else {
+                          controller.text = "";
+                          _selection.remove(item.id);
+                        }
+                        setState(() {});
+                      },
+                    ),
+                    title: Text(item.name),
+                    subtitle: Text("Stok: ${item.stockQty} ${item.unit}"),
+                    trailing: SizedBox(
+                      width: 80,
+                      child: TextField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: "Miktar",
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
+                          ),
+                        ),
+                        onChanged: (value) {
+                          final qty = int.tryParse(value) ?? 0;
+                          if (qty > 0) {
+                            _selection[item.id] = qty;
+                          } else {
+                            _selection.remove(item.id);
+                          }
+                          setState(() {});
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text("İptal"),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_selection),
+          child: const Text("Tamam"),
+        ),
+      ],
     );
   }
 }
