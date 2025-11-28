@@ -394,6 +394,7 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             ),
                             enabled: _isEditing,
                             readOnly: !_isEditing,
+                            textCapitalization: TextCapitalization.words,
                             validator: (value) =>
                                 _isEditing &&
                                     (value == null || value.trim().isEmpty)
@@ -478,6 +479,7 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                               border: OutlineInputBorder(),
                             ),
                             maxLines: 3,
+                            textCapitalization: TextCapitalization.sentences,
                             enabled: _isEditing,
                             readOnly: !_isEditing,
                           ),

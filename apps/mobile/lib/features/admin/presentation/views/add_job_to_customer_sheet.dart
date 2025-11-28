@@ -221,6 +221,7 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                         labelText: "İş Başlığı",
                         border: OutlineInputBorder(),
                       ),
+                      textCapitalization: TextCapitalization.sentences,
                       validator: (value) =>
                           value == null || value.trim().length < 2
                           ? "İş başlığı girin"

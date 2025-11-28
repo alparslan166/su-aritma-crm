@@ -138,6 +138,7 @@ class RegisterPage extends HookConsumerWidget {
                           prefixIcon: Icon(Icons.person_outline),
                         ),
                         textInputAction: TextInputAction.next,
+                        textCapitalization: TextCapitalization.words,
                         onChanged: (value) {
                           controller.updateName(value);
                         },

@@ -94,7 +94,7 @@ class AdminRepository {
     final data = <String, dynamic>{
       "name": name,
       "phone": phone,
-      "hireDate": hireDate.toIso8601String(),
+      "hireDate": hireDate.toUtc().toIso8601String(),
       "status": status,
     };
     if (email != null) data["email"] = email;
@@ -133,8 +133,8 @@ class AdminRepository {
     final response = await _client.post(
       "/personnel/$personnelId/leaves",
       data: {
-        "startDate": startDate.toIso8601String(),
-        "endDate": endDate.toIso8601String(),
+        "startDate": startDate.toUtc().toIso8601String(),
+        "endDate": endDate.toUtc().toIso8601String(),
         if (reason != null && reason.isNotEmpty) "reason": reason,
       },
     );
@@ -277,7 +277,7 @@ class AdminRepository {
     final data = <String, dynamic>{
       "name": name,
       "phone": phone,
-      "hireDate": hireDate.toIso8601String(),
+      "hireDate": hireDate.toUtc().toIso8601String(),
       "permissions": const <String, dynamic>{},
       "canShareLocation": canShareLocation,
     };
@@ -330,7 +330,7 @@ class AdminRepository {
 
     // Only include optional fields if they have values
     if (scheduledAt != null) {
-      requestData["scheduledAt"] = scheduledAt.toIso8601String();
+      requestData["scheduledAt"] = scheduledAt.toUtc().toIso8601String();
     }
     if (notes != null && notes.trim().isNotEmpty) {
       requestData["notes"] = notes.trim();
@@ -370,7 +370,7 @@ class AdminRepository {
       }
     }
     if (scheduledAt != null) {
-      data["scheduledAt"] = scheduledAt.toIso8601String();
+      data["scheduledAt"] = scheduledAt.toUtc().toIso8601String();
     }
     if (notes != null) data["notes"] = notes;
     if (price != null) data["price"] = price;
@@ -401,10 +401,10 @@ class AdminRepository {
       queryParams["phoneSearch"] = phoneSearch;
     }
     if (createdAtFrom != null) {
-      queryParams["createdAtFrom"] = createdAtFrom.toIso8601String();
+      queryParams["createdAtFrom"] = createdAtFrom.toUtc().toIso8601String();
     }
     if (createdAtTo != null) {
-      queryParams["createdAtTo"] = createdAtTo.toIso8601String();
+      queryParams["createdAtTo"] = createdAtTo.toUtc().toIso8601String();
     }
     if (hasOverduePayment == true) {
       queryParams["hasOverduePayment"] = "true";
@@ -451,14 +451,14 @@ class AdminRepository {
       "address": address,
       if (email != null && email.isNotEmpty) "email": email,
       if (location != null) "location": location,
-      if (createdAt != null) "createdAt": createdAt.toIso8601String(),
+      if (createdAt != null) "createdAt": createdAt.toUtc().toIso8601String(),
       if (hasDebt != null) "hasDebt": hasDebt,
       if (debtAmount != null) "debtAmount": debtAmount,
       if (hasInstallment != null) "hasInstallment": hasInstallment,
       if (installmentCount != null) "installmentCount": installmentCount,
-      if (nextDebtDate != null) "nextDebtDate": nextDebtDate.toIso8601String(),
+      if (nextDebtDate != null) "nextDebtDate": nextDebtDate.toUtc().toIso8601String(),
       if (installmentStartDate != null)
-        "installmentStartDate": installmentStartDate.toIso8601String(),
+        "installmentStartDate": installmentStartDate.toUtc().toIso8601String(),
       if (installmentIntervalDays != null)
         "installmentIntervalDays": installmentIntervalDays,
     };
@@ -491,16 +491,16 @@ class AdminRepository {
     if (status != null) data["status"] = status;
     if (email != null) data["email"] = email;
     if (location != null) data["location"] = location;
-    if (createdAt != null) data["createdAt"] = createdAt.toIso8601String();
+    if (createdAt != null) data["createdAt"] = createdAt.toUtc().toIso8601String();
     if (hasDebt != null) data["hasDebt"] = hasDebt;
     if (debtAmount != null) data["debtAmount"] = debtAmount;
     if (hasInstallment != null) data["hasInstallment"] = hasInstallment;
     if (installmentCount != null) data["installmentCount"] = installmentCount;
     if (nextDebtDate != null) {
-      data["nextDebtDate"] = nextDebtDate.toIso8601String();
+      data["nextDebtDate"] = nextDebtDate.toUtc().toIso8601String();
     }
     if (installmentStartDate != null) {
-      data["installmentStartDate"] = installmentStartDate.toIso8601String();
+      data["installmentStartDate"] = installmentStartDate.toUtc().toIso8601String();
     }
     if (installmentIntervalDays != null) {
       data["installmentIntervalDays"] = installmentIntervalDays;
@@ -563,7 +563,7 @@ class AdminRepository {
     };
 
     if (scheduledAt != null) {
-      requestData["scheduledAt"] = scheduledAt.toIso8601String();
+      requestData["scheduledAt"] = scheduledAt.toUtc().toIso8601String();
     }
     if (notes != null && notes.trim().isNotEmpty) {
       requestData["notes"] = notes.trim();
@@ -623,7 +623,7 @@ class AdminRepository {
         if (customerAddress != null) "customerAddress": customerAddress,
         if (customerEmail != null) "customerEmail": customerEmail,
         if (jobTitle != null) "jobTitle": jobTitle,
-        if (jobDate != null) "jobDate": jobDate.toIso8601String(),
+        if (jobDate != null) "jobDate": jobDate.toUtc().toIso8601String(),
         if (subtotal != null) "subtotal": subtotal,
         if (tax != null) "tax": tax,
         if (total != null) "total": total,

@@ -775,6 +775,7 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: "İsim"),
+                textCapitalization: TextCapitalization.words,
                 validator: (value) => value == null || value.trim().length < 2
                     ? "İsim girin"
                     : null,

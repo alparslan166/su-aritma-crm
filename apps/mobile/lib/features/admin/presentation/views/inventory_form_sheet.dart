@@ -77,6 +77,7 @@ class _InventoryFormSheetState extends ConsumerState<InventoryFormSheet> {
                 key: const Key("inventory-name-field"),
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: "İsim"),
+                textCapitalization: TextCapitalization.words,
                 validator: (value) => value == null || value.trim().length < 2
                     ? "İsim girin"
                     : null,

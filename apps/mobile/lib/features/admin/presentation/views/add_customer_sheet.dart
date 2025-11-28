@@ -402,6 +402,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(labelText: "İsim"),
+                  textCapitalization: TextCapitalization.words,
                   validator: (value) => value == null || value.trim().length < 2
                       ? "İsim girin"
                       : null,
@@ -431,6 +432,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                     hintText: "Şehir, ilçe, mahalle, sokak, bina no",
                   ),
                   maxLines: 2,
+                  textCapitalization: TextCapitalization.sentences,
                   validator: (value) => value == null || value.trim().length < 3
                       ? "Adres girin"
                       : null,

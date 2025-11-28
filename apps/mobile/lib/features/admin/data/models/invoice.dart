@@ -59,7 +59,7 @@ class Invoice {
       "customerAddress": customerAddress,
       "customerEmail": customerEmail,
       "jobTitle": jobTitle,
-      "jobDate": jobDate.toIso8601String(),
+      "jobDate": jobDate.toUtc().toIso8601String(),
       "subtotal": subtotal,
       "tax": tax,
       "total": total,

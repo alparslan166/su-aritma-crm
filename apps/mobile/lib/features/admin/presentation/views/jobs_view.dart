@@ -381,6 +381,7 @@ class _JobFormSheetState extends ConsumerState<_JobFormSheet> {
                 key: const Key("job-title-field"),
                 controller: _titleController,
                 decoration: const InputDecoration(labelText: "Başlık"),
+                textCapitalization: TextCapitalization.sentences,
                 validator: (value) => value == null || value.trim().length < 2
                     ? "Başlık girin"
                     : null,
@@ -390,6 +391,7 @@ class _JobFormSheetState extends ConsumerState<_JobFormSheet> {
                 key: const Key("customer-name-field"),
                 controller: _customerNameController,
                 decoration: const InputDecoration(labelText: "Müşteri adı"),
+                textCapitalization: TextCapitalization.words,
                 validator: (value) => value == null || value.trim().length < 2
                     ? "Müşteri adı zorunlu"
                     : null,
