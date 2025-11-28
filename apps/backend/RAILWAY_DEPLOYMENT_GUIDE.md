@@ -82,9 +82,14 @@ Backend servisine gidin → **"Variables"** sekmesi → Aşağıdaki variables'l
 ```env
 NODE_ENV=production
 PORT=4000
+NODE_VERSION=22.12.0
 DATABASE_URL=postgresql://postgres:password@host:port/railway
 DIRECT_URL=postgresql://postgres:password@host:port/railway
 ```
+
+**ÖNEMLİ**: 
+- `NODE_VERSION=22.12.0` ekleyin (Prisma 7.0.1 için gerekli - 22.12+)
+- Railway bu environment variable'ı kullanarak doğru Node.js versiyonunu kurar
 
 **ÖNEMLİ**: 
 - `DATABASE_URL` ve `DIRECT_URL` **aynı değer** olmalı (Railway PostgreSQL için)
