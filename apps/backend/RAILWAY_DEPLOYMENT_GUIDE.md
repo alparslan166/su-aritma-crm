@@ -62,8 +62,14 @@ Deploy etmeden önce aşağıdakilerin hazır olduğundan emin olun:
 
 1. PostgreSQL servisine tıklayın
 2. **"Variables"** sekmesine gidin
-3. `DATABASE_URL` ve `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` değişkenlerini göreceksiniz
-4. `DATABASE_URL` değerini kopyalayın
+3. `DATABASE_URL` değişkenini bulun
+4. **ÖNEMLİ**: 
+   - **Private/Internal URL** kullanın (backend aynı projede olduğu için)
+   - Railway genellikle sadece bir URL gösterir, bu private URL'dir
+   - Eğer hem "Private" hem "Public" URL görüyorsanız, **Private URL**'i kullanın
+   - Private URL formatı: `postgresql://postgres:password@switchback.proxy.rlwy.net:port/railway`
+   - Public URL formatı: `postgresql://postgres:password@containers-us-west-xxx.railway.app:port/railway`
+5. `DATABASE_URL` değerini kopyalayın
 
 ## 🔐 Adım 4: Environment Variables Ayarlama
 
@@ -82,8 +88,10 @@ DIRECT_URL=postgresql://postgres:password@host:port/railway
 
 **ÖNEMLİ**: 
 - `DATABASE_URL` ve `DIRECT_URL` **aynı değer** olmalı (Railway PostgreSQL için)
-- Railway PostgreSQL servisinden `DATABASE_URL`'i kopyalayın
+- Railway PostgreSQL servisinden **Private/Internal URL**'i kopyalayın (Public URL değil!)
+- Backend servisi aynı Railway projesinde olduğu için private URL kullanılır
 - `DIRECT_URL` için aynı değeri kullanın
+- Private URL genellikle `switchback.proxy.rlwy.net` içerir
 
 #### AWS S3 Variables (Medya yükleme için)
 
@@ -155,8 +163,8 @@ railway variables set DATABASE_URL="postgresql://..."
 
 Railway şu adımları otomatik olarak yapacak:
 
-1. **Setup**: Node.js 20 ve npm 10 kurulumu
-2. **Install**: `npm install` (dependencies kurulumu)
+1. **Setup**: Node.js 24 ve npm 10 kurulumu (Prisma 7.0.1 uyumluluğu için)
+2. **Install**: `npm ci` (dependencies kurulumu)
 3. **Build**: `npm run build` (TypeScript derleme)
 4. **Prisma Generate**: `npx prisma generate` (Prisma client oluşturma)
 5. **Deploy**: Migration'ları çalıştır ve uygulamayı başlat
@@ -245,8 +253,10 @@ Beklenen yanıt:
 
 **Çözüm**:
 1. `DATABASE_URL`'in doğru olduğundan emin olun
-2. PostgreSQL servisinin çalıştığından emin olun
-3. Database'in public erişime açık olduğundan emin olun
+2. **Private/Internal URL kullandığınızdan emin olun** (Public URL değil!)
+3. PostgreSQL servisinin çalıştığından emin olun
+4. Backend servisi aynı Railway projesinde olduğu için private URL kullanılmalı
+5. Eğer public URL kullanıyorsanız, private URL'e geçin
 
 ### 8.5 Environment Variable Hataları
 
