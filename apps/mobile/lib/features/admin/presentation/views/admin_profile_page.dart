@@ -7,7 +7,6 @@ import "package:image_picker/image_picker.dart";
 
 import "../../../../core/constants/app_config.dart";
 import "../../../../core/network/api_client.dart" show apiClientProvider;
-import "../../../../widgets/admin_app_bar.dart";
 import "../../data/admin_repository.dart";
 
 final adminProfileProvider = FutureProvider<Map<String, dynamic>>((ref) {
@@ -39,6 +38,7 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
   String? _originalLogoUrl; // Başlangıçtaki logo URL'ini sakla
   bool _logoRemoved = false;
   bool _isLoading = false;
+  bool _isEditing = false;
 
   @override
   void dispose() {
@@ -183,7 +183,9 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("Profil güncellendi")));
-        Navigator.of(context).pop();
+        setState(() {
+          _isEditing = false;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -205,7 +207,38 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
     final profileAsync = ref.watch(adminProfileProvider);
 
     return Scaffold(
-      appBar: const AdminAppBar(title: Text("Profil")),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text("Profil"),
+        actions: [
+          if (!_isEditing)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () {
+                setState(() {
+                  _isEditing = true;
+                });
+              },
+              tooltip: "Düzenle",
+            )
+          else
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _isEditing = false;
+                  // Reset to original values
+                  _loadProfile();
+                  _selectedLogoBytes = null;
+                  _logoRemoved = false;
+                });
+              },
+              child: const Text("İptal"),
+            ),
+        ],
+      ),
       body: profileAsync.when(
         data: (profile) {
           // Load data once
@@ -237,7 +270,7 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                           ),
                           const SizedBox(height: 16),
                           GestureDetector(
-                            onTap: _pickLogo,
+                            onTap: _isEditing ? _pickLogo : null,
                             child: Container(
                               width: 150,
                               height: 150,
@@ -302,36 +335,37 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              TextButton.icon(
-                                onPressed: _pickLogo,
-                                icon: const Icon(Icons.upload),
-                                label: const Text("Logo Yükle"),
-                              ),
-                              if ((_currentLogoUrl != null &&
-                                      _currentLogoUrl!.isNotEmpty) ||
-                                  _selectedLogoBytes != null)
+                          if (_isEditing)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
                                 TextButton.icon(
-                                  onPressed: () {
-                                    setState(() {
-                                      _selectedLogoBytes = null;
-                                      _currentLogoUrl = null;
-                                      _logoRemoved = true;
-                                    });
-                                  },
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  label: const Text(
-                                    "Kaldır",
-                                    style: TextStyle(color: Colors.red),
-                                  ),
+                                  onPressed: _pickLogo,
+                                  icon: const Icon(Icons.upload),
+                                  label: const Text("Logo Yükle"),
                                 ),
-                            ],
-                          ),
+                                if ((_currentLogoUrl != null &&
+                                        _currentLogoUrl!.isNotEmpty) ||
+                                    _selectedLogoBytes != null)
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedLogoBytes = null;
+                                        _currentLogoUrl = null;
+                                        _logoRemoved = true;
+                                      });
+                                    },
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                    ),
+                                    label: const Text(
+                                      "Kaldır",
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                              ],
+                            ),
                         ],
                       ),
                     ),
@@ -358,8 +392,11 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                               labelText: "Ad Soyad",
                               border: OutlineInputBorder(),
                             ),
+                            enabled: _isEditing,
+                            readOnly: !_isEditing,
                             validator: (value) =>
-                                value == null || value.trim().isEmpty
+                                _isEditing &&
+                                    (value == null || value.trim().isEmpty)
                                 ? "Ad soyad gerekli"
                                 : null,
                           ),
@@ -371,8 +408,11 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.phone,
+                            enabled: _isEditing,
+                            readOnly: !_isEditing,
                             validator: (value) =>
-                                value == null || value.trim().length < 6
+                                _isEditing &&
+                                    (value == null || value.trim().length < 6)
                                 ? "Geçerli telefon numarası girin"
                                 : null,
                           ),
@@ -383,13 +423,18 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                               labelText: "E-posta",
                               border: OutlineInputBorder(),
                             ),
-                            keyboardType: TextInputType.emailAddress,
+                            keyboardType: TextInputType.text,
+                            enabled: _isEditing,
+                            readOnly: !_isEditing,
+                            autocorrect: false,
+                            enableSuggestions: false,
                             validator: (value) =>
-                                value == null || value.trim().isEmpty
+                                _isEditing &&
+                                    (value == null || value.trim().isEmpty)
                                 ? "E-posta gerekli"
-                                : value.contains("@")
-                                ? null
-                                : "Geçerli e-posta adresi girin",
+                                : _isEditing && !value!.contains("@")
+                                ? "Geçerli e-posta adresi girin"
+                                : null,
                           ),
                         ],
                       ),
@@ -422,6 +467,8 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             textCapitalization: TextCapitalization.none,
                             enableSuggestions: true,
                             autocorrect: false,
+                            enabled: _isEditing,
+                            readOnly: !_isEditing,
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
@@ -431,6 +478,8 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                               border: OutlineInputBorder(),
                             ),
                             maxLines: 3,
+                            enabled: _isEditing,
+                            readOnly: !_isEditing,
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
@@ -440,6 +489,8 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.phone,
+                            enabled: _isEditing,
+                            readOnly: !_isEditing,
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
@@ -448,7 +499,11 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                               labelText: "Firma E-postası",
                               border: OutlineInputBorder(),
                             ),
-                            keyboardType: TextInputType.emailAddress,
+                            keyboardType: TextInputType.text,
+                            enabled: _isEditing,
+                            readOnly: !_isEditing,
+                            autocorrect: false,
+                            enableSuggestions: false,
                           ),
                         ],
                       ),
@@ -476,6 +531,8 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                               labelText: "Vergi Dairesi",
                               border: OutlineInputBorder(),
                             ),
+                            enabled: _isEditing,
+                            readOnly: !_isEditing,
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
@@ -484,25 +541,29 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                               labelText: "Vergi Numarası",
                               border: OutlineInputBorder(),
                             ),
+                            enabled: _isEditing,
+                            readOnly: !_isEditing,
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: _isLoading ? null : _saveProfile,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                  if (_isEditing) ...[
+                    const SizedBox(height: 24),
+                    FilledButton(
+                      onPressed: _isLoading ? null : _saveProfile,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text("Kaydet"),
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text("Kaydet"),
-                  ),
+                  ],
                 ],
               ),
             ),

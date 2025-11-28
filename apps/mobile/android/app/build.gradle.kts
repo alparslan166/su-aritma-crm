@@ -45,7 +45,8 @@ android {
                 keystoreProperties.load(FileInputStream(keystorePropertiesFile))
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
+                val keystorePath = keystoreProperties["storeFile"] as String
+                storeFile = rootProject.file(keystorePath)
                 storePassword = keystoreProperties["storePassword"] as String
             }
         }

@@ -1,4 +1,6 @@
 import "package:flutter/material.dart";
+
+import "../../../../core/error/error_handler.dart";
 import "package:geocoding/geocoding.dart";
 import "package:geolocator/geolocator.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
@@ -292,9 +294,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Müşteri eklenemedi: $error")));
+      ErrorHandler.showError(context, error);
     } finally {
       if (mounted) {
         setState(() {

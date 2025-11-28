@@ -3,6 +3,7 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 import "package:open_file/open_file.dart";
 
+import "../../../../core/error/error_handler.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/job.dart";
 
@@ -102,7 +103,11 @@ class JobCard extends ConsumerWidget {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Icon(Icons.person_outline, size: 16, color: Colors.grey.shade600),
+                  Icon(
+                    Icons.person_outline,
+                    size: 16,
+                    color: Colors.grey.shade600,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -116,7 +121,10 @@ class JobCard extends ConsumerWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(8),
@@ -124,7 +132,11 @@ class JobCard extends ConsumerWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.calendar_today, size: 12, color: Colors.grey.shade600),
+                        Icon(
+                          Icons.calendar_today,
+                          size: 12,
+                          color: Colors.grey.shade600,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           scheduled,
@@ -144,7 +156,11 @@ class JobCard extends ConsumerWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.location_on_outlined, size: 16, color: Colors.grey.shade600),
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 16,
+                      color: Colors.grey.shade600,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -169,14 +185,20 @@ class JobCard extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFF2563EB).withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: const Color(0xFF2563EB).withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.inventory_2, size: 16, color: Color(0xFF2563EB)),
+                          const Icon(
+                            Icons.inventory_2,
+                            size: 16,
+                            color: Color(0xFF2563EB),
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             "Kullanılan Malzemeler",
@@ -221,21 +243,29 @@ class JobCard extends ConsumerWidget {
                   ),
                 ),
               ],
-              if (job.price != null || job.collectedAmount != null || job.paymentStatus != null) ...[
+              if (job.price != null ||
+                  job.collectedAmount != null ||
+                  job.paymentStatus != null) ...[
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: const Color(0xFF10B981).withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.payments, size: 16, color: Color(0xFF10B981)),
+                          const Icon(
+                            Icons.payments,
+                            size: 16,
+                            color: Color(0xFF10B981),
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             "Ödeme Bilgileri",
@@ -310,9 +340,14 @@ class JobCard extends ConsumerWidget {
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: _getPaymentStatusColor(job.paymentStatus!),
+                                  color: _getPaymentStatusColor(
+                                    job.paymentStatus!,
+                                  ),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
@@ -344,10 +379,14 @@ class JobCard extends ConsumerWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                            color: const Color(
+                              0xFF2563EB,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: const Color(0xFF2563EB).withValues(alpha: 0.2),
+                              color: const Color(
+                                0xFF2563EB,
+                              ).withValues(alpha: 0.2),
                             ),
                           ),
                           child: Row(
@@ -379,11 +418,17 @@ class JobCard extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFFF59E0B).withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, size: 16, color: Color(0xFFF59E0B)),
+                      const Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Color(0xFFF59E0B),
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         "Henüz personel atanmamış",
@@ -406,7 +451,10 @@ class JobCard extends ConsumerWidget {
                     label: const Text("Fatura Oluştur"),
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF10B981),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 24,
+                      ),
                     ),
                   ),
                 ),
@@ -418,14 +466,16 @@ class JobCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _createInvoice(BuildContext context, WidgetRef ref, String jobId) async {
+  Future<void> _createInvoice(
+    BuildContext context,
+    WidgetRef ref,
+    String jobId,
+  ) async {
     // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
@@ -450,9 +500,7 @@ class JobCard extends ConsumerWidget {
       // Close loading dialog
       if (context.mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Fatura oluşturulamadı: $error")),
-        );
+        ErrorHandler.showError(context, error);
       }
     }
   }
@@ -546,10 +594,7 @@ class _MaintenanceInfo extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

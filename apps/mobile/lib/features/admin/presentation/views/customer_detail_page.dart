@@ -12,6 +12,7 @@ import "package:open_file/open_file.dart";
 import "package:url_launcher/url_launcher.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 
+import "../../../../core/error/error_handler.dart";
 import "../../application/customer_list_notifier.dart";
 import "../../application/job_list_notifier.dart";
 import "../../data/admin_repository.dart";
@@ -281,9 +282,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
       }
     } catch (error) {
       if (context.mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text("Durum güncellenemedi: $error")),
-        );
+        ErrorHandler.showError(context, error);
       }
     }
   }
@@ -576,9 +575,7 @@ class _PayDebtFormState extends ConsumerState<_PayDebtForm> {
       setState(() {
         _submitting = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Hata: $error")));
+      ErrorHandler.showError(context, error);
     }
   }
 
@@ -906,9 +903,7 @@ class _JobCard extends ConsumerWidget {
       // Close loading dialog
       if (context.mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Fatura oluşturulamadı: $error")),
-        );
+        ErrorHandler.showError(context, error);
       }
     }
   }

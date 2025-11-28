@@ -4,6 +4,7 @@ import "package:intl/intl.dart";
 import "package:open_file/open_file.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 
+import "../../../../core/error/error_handler.dart";
 import "../../application/job_list_notifier.dart";
 import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
@@ -113,10 +114,9 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                ...job.materials!.map((m) => _Row(
-                  m.inventoryItemName,
-                  "${m.quantity} adet",
-                )),
+                ...job.materials!.map(
+                  (m) => _Row(m.inventoryItemName, "${m.quantity} adet"),
+                ),
               ],
             ],
           ),
@@ -278,9 +278,7 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
       // Close loading dialog
       if (context.mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Fatura oluşturulamadı: $error")),
-        );
+        ErrorHandler.showError(context, error);
       }
     }
   }
@@ -569,7 +567,7 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
       navigator.pop();
       messenger.showSnackBar(SnackBar(content: Text("${job.title} silindi")));
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text("Silinemedi: $error")));
+      ErrorHandler.showError(context, error);
     }
   }
 }
@@ -788,9 +786,7 @@ class _PersonnelAssignmentSheet extends ConsumerWidget {
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Atama başarısız: $error")));
+        ErrorHandler.showError(context, error);
       }
     }
   }

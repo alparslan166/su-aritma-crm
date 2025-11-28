@@ -1,4 +1,3 @@
-import "package:flutter/foundation.dart";
 import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
@@ -20,25 +19,18 @@ import "../features/personnel/presentation/views/job_detail_page.dart";
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   // Session state'ini dinle - bu router'ı yeniden oluşturur
-  final session = ref.watch(authSessionProvider);
-
-  // Session değişikliklerini dinlemek için ValueNotifier kullan
-  final sessionNotifier = ValueNotifier<AuthSession?>(session);
-
-  // Session değiştiğinde ValueNotifier'ı güncelle
-  // ref.watch zaten router'ı yeniden oluşturur, bu yeterli
+  ref.watch(authSessionProvider);
 
   return GoRouter(
-    refreshListenable: sessionNotifier,
     redirect: (context, state) {
-      final session = ref.read(authSessionProvider);
+      final currentSession = ref.read(authSessionProvider);
       final isLogin = state.matchedLocation == "/";
       final isRegister = state.matchedLocation == "/register";
 
-      if (session == null && !isLogin && !isRegister) return "/";
+      if (currentSession == null && !isLogin && !isRegister) return "/";
 
-      if (session != null && (isLogin || isRegister)) {
-        return session.role == AuthRole.admin
+      if (currentSession != null && (isLogin || isRegister)) {
+        return currentSession.role == AuthRole.admin
             ? "/dashboard/admin"
             : "/dashboard/personnel";
       }

@@ -14,6 +14,7 @@ import "package:url_launcher/url_launcher.dart";
 import "full_screen_map_page.dart";
 
 import "../../../../core/constants/app_config.dart";
+import "../../../../core/error/error_handler.dart";
 import "../../../../core/network/api_client.dart" show apiClientProvider;
 import "../../application/job_list_notifier.dart";
 import "../../application/personnel_detail_provider.dart";
@@ -117,9 +118,7 @@ class _AdminPersonnelDetailPageState
       }
     } catch (error) {
       if (context.mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text("Kod sıfırlanamadı: $error")),
-        );
+        ErrorHandler.showError(context, error);
       }
     }
   }
@@ -151,7 +150,7 @@ class _AdminPersonnelDetailPageState
       navigator.pop();
       messenger.showSnackBar(SnackBar(content: Text("$name silindi")));
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text("Silinemedi: $error")));
+      ErrorHandler.showError(context, error);
     }
   }
 
@@ -222,7 +221,7 @@ class _AdminPersonnelDetailPageState
         SnackBar(content: Text("${job.title} işine atandı")),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text("İş atanamadı: $error")));
+      ErrorHandler.showError(context, error);
     }
   }
 
@@ -665,9 +664,7 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
       ).showSnackBar(const SnackBar(content: Text("Personel güncellendi")));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Güncelleme başarısız: $error")));
+      ErrorHandler.showError(context, error);
     } finally {
       if (mounted) {
         setState(() {
@@ -1011,9 +1008,8 @@ class _LeavesManagementSheetState
       ).showSnackBar(const SnackBar(content: Text("İzin eklendi")));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("İzin eklenemedi: $error")));
+      ScaffoldMessenger.of(context);
+      ErrorHandler.showError(context, error);
     }
   }
 
@@ -1053,9 +1049,8 @@ class _LeavesManagementSheetState
       ).showSnackBar(const SnackBar(content: Text("İzin silindi")));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("İzin silinemedi: $error")));
+      ScaffoldMessenger.of(context);
+      ErrorHandler.showError(context, error);
     }
   }
 

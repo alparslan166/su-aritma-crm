@@ -142,8 +142,13 @@ class PersonnelDashboardPage extends ConsumerWidget {
       // Oturumu sil
       ref.read(authSessionProvider.notifier).state = null;
 
-      // Login'e git (redirect mekanizması otomatik çalışacak)
-      ref.read(appRouterProvider).go("/");
+      // Router'ı yeniden oluştur ve login'e yönlendir
+      // redirect mekanizması otomatik çalışacak
+      Future.microtask(() {
+        if (context.mounted) {
+          ref.read(appRouterProvider).go("/");
+        }
+      });
     }
   }
 }

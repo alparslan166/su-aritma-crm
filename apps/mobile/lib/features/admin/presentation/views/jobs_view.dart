@@ -4,6 +4,7 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 import "package:mobile/widgets/empty_state.dart";
 
+import "../../../../core/error/error_handler.dart";
 import "../../application/job_list_notifier.dart";
 import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
@@ -51,10 +52,8 @@ class JobsView extends ConsumerWidget {
               return RepaintBoundary(
                 child: JobCard(
                   job: job,
-                  onTap: () => context.push(
-                    "/admin/jobs/${job.id}",
-                    extra: job,
-                  ),
+                  onTap: () =>
+                      context.push("/admin/jobs/${job.id}", extra: job),
                 ),
               );
             },
@@ -102,9 +101,9 @@ class JobsView extends ConsumerWidget {
     final jobState = ref.read(jobListProvider);
     final jobs = jobState.value ?? [];
     if (jobs.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Atanabilir iş bulunamadı")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Atanabilir iş bulunamadı")));
       return;
     }
     showDialog(
@@ -133,20 +132,18 @@ class JobsView extends ConsumerWidget {
     );
   }
 
-  void _openAssignPersonnelSheet(
-    BuildContext context,
-    WidgetRef ref,
-    Job job,
-  ) {
+  void _openAssignPersonnelSheet(BuildContext context, WidgetRef ref, Job job) {
     final personnelState = ref.read(personnelListProvider);
     final personnelList = personnelState.value ?? [];
     if (personnelList.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Personel bulunamadı")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Personel bulunamadı")));
       return;
     }
-    final selectedIds = <String>{...job.assignments.map((a) => a.personnelId).whereType<String>()};
+    final selectedIds = <String>{
+      ...job.assignments.map((a) => a.personnelId).whereType<String>(),
+    };
     showModalBottomSheet(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -188,7 +185,9 @@ class JobsView extends ConsumerWidget {
                 FilledButton(
                   onPressed: () async {
                     try {
-                      await ref.read(adminRepositoryProvider).assignPersonnelToJob(
+                      await ref
+                          .read(adminRepositoryProvider)
+                          .assignPersonnelToJob(
                             jobId: job.id,
                             personnelIds: selectedIds.toList(),
                           );
@@ -352,9 +351,7 @@ class _JobFormSheetState extends ConsumerState<_JobFormSheet> {
         context,
       ).showSnackBar(const SnackBar(content: Text("Yeni iş oluşturuldu")));
     } catch (error) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("İş eklenemedi: $error")));
+      ErrorHandler.showError(context, error);
     } finally {
       if (mounted) {
         setState(() {
@@ -429,33 +426,37 @@ class _JobFormSheetState extends ConsumerState<_JobFormSheet> {
                     ? "Adres girin"
                     : null,
               ),
-                  if (_latitudeController.text.isNotEmpty ||
-                      _longitudeController.text.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green.shade200),
+              if (_latitudeController.text.isNotEmpty ||
+                  _longitudeController.text.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.green.shade700,
+                        size: 20,
                       ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              "Konum bulundu: ${_latitudeController.text}, ${_longitudeController.text}",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.green.shade700,
-                              ),
-                            ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Konum bulundu: ${_latitudeController.text}, ${_longitudeController.text}",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.green.shade700,
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -541,9 +542,9 @@ class _JobFormSheetState extends ConsumerState<_JobFormSheet> {
     final personnelState = ref.read(personnelListProvider);
     final personnelList = personnelState.value ?? [];
     if (personnelList.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Personel bulunamadı")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Personel bulunamadı")));
       return;
     }
     final tempSelectedIds = <String>{..._selectedPersonnelIds};

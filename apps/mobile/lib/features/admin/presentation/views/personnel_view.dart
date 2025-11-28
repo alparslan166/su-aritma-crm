@@ -12,6 +12,7 @@ import "package:mobile/widgets/admin_app_bar.dart";
 import "package:mobile/widgets/empty_state.dart";
 
 import "../../../../core/constants/app_config.dart";
+import "../../../../core/error/error_handler.dart";
 import "../../../../core/network/api_client.dart" show apiClientProvider;
 import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
@@ -890,9 +891,7 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
         context,
       ).showSnackBar(const SnackBar(content: Text("Yeni personel eklendi")));
     } catch (error) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Personel eklenemedi: $error")));
+      ErrorHandler.showError(context, error);
     } finally {
       if (mounted) {
         setState(() {

@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 
+import "../../../../core/error/error_handler.dart";
 import "../../application/inventory_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/inventory_item.dart";
@@ -256,7 +257,7 @@ class _AdminInventoryDetailPageState
       navigator.pop();
       messenger.showSnackBar(SnackBar(content: Text("${item.name} silindi")));
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text("Silinemedi: $error")));
+      ErrorHandler.showError(context, error);
     }
   }
 }

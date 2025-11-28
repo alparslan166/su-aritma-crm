@@ -8,6 +8,7 @@ import "package:intl/intl.dart";
 import "package:url_launcher/url_launcher.dart";
 import "package:mobile/widgets/empty_state.dart";
 
+import "../../../../core/error/error_handler.dart";
 import "../../application/customer_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
@@ -660,7 +661,7 @@ class CustomersView extends HookConsumerWidget {
       }
     } catch (error) {
       if (context.mounted) {
-        messenger.showSnackBar(SnackBar(content: Text("Silinemedi: $error")));
+        ErrorHandler.showError(context, error);
       }
     }
   }

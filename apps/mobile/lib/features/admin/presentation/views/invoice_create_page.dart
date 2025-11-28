@@ -3,14 +3,12 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 
+import "../../../../core/error/error_handler.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/job.dart";
 
 class InvoiceCreatePage extends ConsumerStatefulWidget {
-  const InvoiceCreatePage({
-    super.key,
-    required this.job,
-  });
+  const InvoiceCreatePage({super.key, required this.job});
 
   final Job job;
 
@@ -38,10 +36,15 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
     final job = widget.job;
     _customerNameController = TextEditingController(text: job.customer.name);
     _customerPhoneController = TextEditingController(text: job.customer.phone);
-    _customerAddressController = TextEditingController(text: job.customer.address);
-    _customerEmailController = TextEditingController(text: job.customer.email ?? "");
+    _customerAddressController = TextEditingController(
+      text: job.customer.address,
+    );
+    _customerEmailController = TextEditingController(
+      text: job.customer.email ?? "",
+    );
     _jobTitleController = TextEditingController(text: job.title);
-    _jobDate = job.deliveredAt ?? job.scheduledAt ?? job.createdAt ?? DateTime.now();
+    _jobDate =
+        job.deliveredAt ?? job.scheduledAt ?? job.createdAt ?? DateTime.now();
     _subtotalController = TextEditingController(
       text: job.price != null ? job.price!.toStringAsFixed(2) : "",
     );
@@ -89,7 +92,9 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
         subtotal: double.tryParse(_subtotalController.text),
         tax: double.tryParse(_taxController.text),
         total: double.tryParse(_totalController.text),
-        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
       );
 
       // Update invoice with editable fields
@@ -106,7 +111,9 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
         subtotal: double.tryParse(_subtotalController.text),
         tax: double.tryParse(_taxController.text),
         total: double.tryParse(_totalController.text),
-        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
       );
 
       if (mounted) {
@@ -117,9 +124,7 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Fatura oluşturulamadı: $error")),
-        );
+        ErrorHandler.showError(context, error);
       }
     } finally {
       if (mounted) {
@@ -146,8 +151,8 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                     Text(
                       "Müşteri Bilgileri",
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -157,7 +162,9 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) =>
-                          value == null || value.trim().isEmpty ? "Müşteri adı gerekli" : null,
+                          value == null || value.trim().isEmpty
+                          ? "Müşteri adı gerekli"
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -168,7 +175,9 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                       ),
                       keyboardType: TextInputType.phone,
                       validator: (value) =>
-                          value == null || value.trim().isEmpty ? "Telefon gerekli" : null,
+                          value == null || value.trim().isEmpty
+                          ? "Telefon gerekli"
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -179,7 +188,9 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                       ),
                       maxLines: 2,
                       validator: (value) =>
-                          value == null || value.trim().isEmpty ? "Adres gerekli" : null,
+                          value == null || value.trim().isEmpty
+                          ? "Adres gerekli"
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -204,8 +215,8 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                     Text(
                       "İş Bilgileri",
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -215,7 +226,9 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) =>
-                          value == null || value.trim().isEmpty ? "İş başlığı gerekli" : null,
+                          value == null || value.trim().isEmpty
+                          ? "İş başlığı gerekli"
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     InkWell(
@@ -252,8 +265,8 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                     Text(
                       "Fatura Tutarları",
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -262,7 +275,9 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                         labelText: "Ara Toplam (₺) *",
                         border: OutlineInputBorder(),
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return "Ara toplam gerekli";
@@ -281,7 +296,9 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                         labelText: "KDV (₺)",
                         border: OutlineInputBorder(),
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: (value) {
                         if (value != null && value.trim().isNotEmpty) {
                           final num = double.tryParse(value);
@@ -299,7 +316,9 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                         labelText: "Toplam (₺) *",
                         border: OutlineInputBorder(),
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       readOnly: true,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
@@ -320,8 +339,8 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                     Text(
                       "Notlar (opsiyonel)",
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -356,4 +375,3 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
     );
   }
 }
-

@@ -23,6 +23,7 @@ Bu dokümantasyon, backend'in Google Play Store yayını için production'a haz�
 
 ## 📋 Production Environment Variables
 
+,3
 Railway veya deployment platformunuzda aşağıdaki environment variable'ları ayarlayın:
 
 ```env

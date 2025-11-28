@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 
+import "../../../../core/error/error_handler.dart";
 import "../../application/customer_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
@@ -174,9 +175,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       ).showSnackBar(const SnackBar(content: Text("Müşteri güncellendi")));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Müşteri güncellenemedi: $error")));
+      ErrorHandler.showError(context, error);
     } finally {
       if (mounted) {
         setState(() {

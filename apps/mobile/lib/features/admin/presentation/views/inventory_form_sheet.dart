@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
+import "../../../../core/error/error_handler.dart";
 import "../../application/inventory_list_notifier.dart";
 import "../../data/admin_repository.dart";
 
@@ -49,9 +50,7 @@ class _InventoryFormSheetState extends ConsumerState<InventoryFormSheet> {
         context,
       ).showSnackBar(const SnackBar(content: Text("Yeni ürün eklendi")));
     } catch (error) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Ürün eklenemedi: $error")));
+      ErrorHandler.showError(context, error);
     } finally {
       if (mounted) {
         setState(() {
