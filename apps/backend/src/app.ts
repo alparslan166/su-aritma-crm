@@ -1,9 +1,7 @@
 import cors from "cors";
 import express from "express";
-import fs from "fs";
 import helmet from "helmet";
 import morgan from "morgan";
-import path from "path";
 
 import { config } from "@/config/env";
 import { errorHandler, notFoundHandler } from "@/middleware/error-handler";
@@ -15,16 +13,6 @@ export const createApp = () => {
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: "cross-origin" },
-      // APK indirme için gerekli ayarlar
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"], // index.html için inline styles
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", "data:", "https:"],
-          download: ["'self'"], // APK indirme için
-        },
-      },
     }),
   );
   app.use(
@@ -37,70 +25,39 @@ export const createApp = () => {
   );
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true }));
-  
+
   // Morgan logger: production'da sadece hata logları, development'ta detaylı
   if (config.nodeEnv === "production") {
-    app.use(morgan("combined", {
-      skip: (req, res) => res.statusCode < 400, // Sadece 4xx ve 5xx logları
-    }));
+    app.use(
+      morgan("combined", {
+        skip: (req, res) => res.statusCode < 400, // Sadece 4xx ve 5xx logları
+      }),
+    );
   } else {
     app.use(morgan("dev"));
   }
 
-  // Static files (APK downloads)
-  // Use process.cwd() to get project root in both dev and production
-  const publicPath = path.join(process.cwd(), "public");
-  
-  // APK download endpoint - özel headers ile
-  app.get("/download/apk/app-release.apk", (req, res) => {
-    const apkPath = path.join(publicPath, "apk", "app-release.apk");
-    
-    if (!fs.existsSync(apkPath)) {
-      return res.status(404).json({
-        success: false,
-        message: "APK dosyası bulunamadı. Lütfen daha sonra tekrar deneyin.",
-      });
-    }
-
-    // APK için doğru MIME type ve download headers
-    res.setHeader("Content-Type", "application/vnd.android.package-archive");
-    res.setHeader("Content-Disposition", 'attachment; filename="app-release.apk"');
-    res.setHeader("Cache-Control", "public, max-age=3600"); // 1 saat cache
-    
-    // Dosyayı gönder
-    res.sendFile(apkPath);
-  });
-
-  // Diğer static dosyalar için genel static serving
-  app.use("/download", express.static(publicPath, {
-    setHeaders: (res, filePath) => {
-      // APK dosyaları için özel header'lar
-      if (filePath.endsWith(".apk")) {
-        res.setHeader("Content-Type", "application/vnd.android.package-archive");
-        res.setHeader("Content-Disposition", "attachment");
-      }
-    },
-  }));
-
-  // Serve index.html at root
+  // Root endpoint - API bilgileri
   app.get("/", (req, res) => {
-    const indexPath = path.join(publicPath, "index.html");
-    // Check if file exists, otherwise return API info
-    if (fs.existsSync(indexPath)) {
-      res.sendFile(indexPath);
-    } else {
-      res.json({
-        success: true,
-        message: "Su Arıtma API",
-        version: "1.0.0",
-        endpoints: {
-          health: "/api/health",
-          auth: "/api/auth",
-          customers: "/api/customers",
-          download: "/download/apk/app-release.apk",
-        },
-      });
-    }
+    res.json({
+      success: true,
+      message: "Su Arıtma API",
+      version: "1.0.0",
+      endpoints: {
+        health: "/api/health",
+        auth: "/api/auth",
+        customers: "/api/customers",
+        inventory: "/api/inventory",
+        invoices: "/api/invoices",
+        jobs: "/api/jobs",
+        media: "/api/media",
+        notifications: "/api/notifications",
+        maintenance: "/api/maintenance",
+        personnel: "/api/personnel",
+        "personnel-jobs": "/api/personnel/jobs",
+      },
+      documentation: "This API serves the Su Arıtma CRM mobile application",
+    });
   });
 
   app.use("/api", apiRouter);
