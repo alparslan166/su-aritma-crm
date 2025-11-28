@@ -13,8 +13,16 @@ export class AppError extends Error {
 }
 
 export const notFoundHandler = (req: Request, res: Response, next: NextFunction) => {
+  // APK indirme istekleri için özel mesaj
+  if (req.originalUrl.includes("/download/apk")) {
+    return res.status(404).json({
+      success: false,
+      message: "APK dosyası bulunamadı. Lütfen daha sonra tekrar deneyin.",
+    });
+  }
+  
   // Statik dosya istekleri için daha nazik bir yanıt
-  if (req.originalUrl.match(/\.(html|css|js|png|jpg|jpeg|gif|ico|svg)$/i)) {
+  if (req.originalUrl.match(/\.(html|css|js|png|jpg|jpeg|gif|ico|svg|apk)$/i)) {
     return res.status(404).json({
       success: false,
       message: "Static file not found. This is an API server. Use /api/* endpoints.",

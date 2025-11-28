@@ -15,6 +15,16 @@ export const createApp = () => {
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: "cross-origin" },
+      // APK indirme için gerekli ayarlar
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"], // index.html için inline styles
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", "data:", "https:"],
+          download: ["'self'"], // APK indirme için
+        },
+      },
     }),
   );
   app.use(
@@ -40,7 +50,37 @@ export const createApp = () => {
   // Static files (APK downloads)
   // Use process.cwd() to get project root in both dev and production
   const publicPath = path.join(process.cwd(), "public");
-  app.use("/download", express.static(publicPath));
+  
+  // APK download endpoint - özel headers ile
+  app.get("/download/apk/app-release.apk", (req, res) => {
+    const apkPath = path.join(publicPath, "apk", "app-release.apk");
+    
+    if (!fs.existsSync(apkPath)) {
+      return res.status(404).json({
+        success: false,
+        message: "APK dosyası bulunamadı. Lütfen daha sonra tekrar deneyin.",
+      });
+    }
+
+    // APK için doğru MIME type ve download headers
+    res.setHeader("Content-Type", "application/vnd.android.package-archive");
+    res.setHeader("Content-Disposition", 'attachment; filename="app-release.apk"');
+    res.setHeader("Cache-Control", "public, max-age=3600"); // 1 saat cache
+    
+    // Dosyayı gönder
+    res.sendFile(apkPath);
+  });
+
+  // Diğer static dosyalar için genel static serving
+  app.use("/download", express.static(publicPath, {
+    setHeaders: (res, filePath) => {
+      // APK dosyaları için özel header'lar
+      if (filePath.endsWith(".apk")) {
+        res.setHeader("Content-Type", "application/vnd.android.package-archive");
+        res.setHeader("Content-Disposition", "attachment");
+      }
+    },
+  }));
 
   // Serve index.html at root
   app.get("/", (req, res) => {
