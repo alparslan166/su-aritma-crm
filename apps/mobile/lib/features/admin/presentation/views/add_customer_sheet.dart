@@ -7,6 +7,8 @@ import "package:geocoding/geocoding.dart";
 import "package:geolocator/geolocator.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
+import "package:flutter_map/flutter_map.dart";
+import "package:latlong2/latlong.dart";
 
 import "../../../../features/auth/domain/auth_role.dart";
 import "../../../../core/session/session_provider.dart";
@@ -43,6 +45,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
   final Map<String, int> _selectedMaterials = {}; // Seçilen malzemeler
   List<InventoryItem> _inventoryList =
       []; // Stok listesi (malzeme isimleri için)
+  LatLng? _currentLocation; // Konum bilgisi
 
   @override
   void initState() {
@@ -176,6 +179,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
         if (mounted) {
           setState(() {
             _addressController.text = address;
+            _currentLocation = LatLng(position.latitude, position.longitude);
           });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -555,6 +559,57 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                     ),
                   ),
                 ),
+                // Harita gösterimi - konum ve adres varsa
+                if (_currentLocation != null &&
+                    _addressController.text.trim().isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: Colors.grey.shade200, width: 1),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: SizedBox(
+                        height: 200,
+                        width: double.infinity,
+                        child: FlutterMap(
+                          options: MapOptions(
+                            initialCenter: _currentLocation!,
+                            initialZoom: 15.0,
+                            interactionOptions: const InteractionOptions(
+                              flags: InteractiveFlag.none,
+                            ),
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate:
+                                  "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                              userAgentPackageName: "com.suaritma.app",
+                              maxZoom: 19,
+                              minZoom: 3,
+                            ),
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: _currentLocation!,
+                                  width: 40,
+                                  height: 40,
+                                  child: const Icon(
+                                    Icons.location_on,
+                                    color: Color(0xFF2563EB),
+                                    size: 40,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
