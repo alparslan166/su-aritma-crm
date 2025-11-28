@@ -295,15 +295,18 @@ class _AdminDrawer extends ConsumerWidget {
 
     if (confirm == true && context.mounted) {
       // Oturumu sil
-      ref.read(authSessionProvider.notifier).state = null;
+      await ref.read(authSessionProvider.notifier).clearSession();
 
       // Router'ı yeniden oluştur ve login'e yönlendir
-      // redirect mekanizması otomatik çalışacak
-      Future.microtask(() {
-        if (context.mounted) {
-          ref.read(appRouterProvider).go("/");
-        }
-      });
+      // Session değişikliği router'ı otomatik yeniden oluşturacak
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      if (context.mounted) {
+        // Router'ı invalidate et ki yeniden oluşturulsun
+        ref.invalidate(appRouterProvider);
+        // Login sayfasına git
+        ref.read(appRouterProvider).go("/");
+      }
     }
   }
 

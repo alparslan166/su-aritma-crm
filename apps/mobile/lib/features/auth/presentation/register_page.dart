@@ -36,11 +36,18 @@ class RegisterPage extends HookConsumerWidget {
       if (transitionedFromLoading) {
         final result = nextStatus.value;
         if (result != null) {
-          ref.read(authSessionProvider.notifier).state = AuthSession(
-            role: result.role,
-            identifier: result.identifier,
-          );
-          ref.read(appRouterProvider).goNamed(AdminDashboardPage.routeName);
+          // Async işlemi Future olarak başlat
+          ref
+              .read(authSessionProvider.notifier)
+              .setSession(
+                AuthSession(role: result.role, identifier: result.identifier),
+                remember: true, // Register sonrası otomatik hatırla
+              )
+              .then((_) {
+                ref
+                    .read(appRouterProvider)
+                    .goNamed(AdminDashboardPage.routeName);
+              });
           return;
         }
       }

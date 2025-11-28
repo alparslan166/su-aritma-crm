@@ -43,14 +43,20 @@ class LoginPage extends HookConsumerWidget {
       if (transitionedFromLoading) {
         final result = nextStatus.value;
         if (result != null) {
-          ref.read(authSessionProvider.notifier).state = AuthSession(
-            role: result.role,
-            identifier: result.identifier,
-          );
-          final target = result.role == AuthRole.admin
-              ? AdminDashboardPage.routeName
-              : PersonnelDashboardPage.routeName;
-          ref.read(appRouterProvider).goNamed(target);
+          final remember = next.rememberDevice;
+          // Async işlemi Future olarak başlat
+          ref
+              .read(authSessionProvider.notifier)
+              .setSession(
+                AuthSession(role: result.role, identifier: result.identifier),
+                remember: remember,
+              )
+              .then((_) {
+                final target = result.role == AuthRole.admin
+                    ? AdminDashboardPage.routeName
+                    : PersonnelDashboardPage.routeName;
+                ref.read(appRouterProvider).goNamed(target);
+              });
           return;
         }
       }
@@ -203,7 +209,9 @@ class LoginPage extends HookConsumerWidget {
                                 : Icons.person_outline,
                           ),
                         ),
-                        keyboardType: TextInputType.text,
+                        keyboardType: loginState.role == AuthRole.admin
+                            ? TextInputType.emailAddress
+                            : TextInputType.text,
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
                         enableSuggestions: false,
