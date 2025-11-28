@@ -5,7 +5,13 @@ nixPkgs = ["nodejs_20", "npm-10_x", "openssl"]
 cmds = ["npm ci --cache /tmp/.npm || true", "npm ci"]
 
 [phases.build]
-cmds = ["npm run build", "npx prisma generate"]
+cmds = [
+  "npm run build",
+  "npx prisma generate",
+  "ls -la dist/ || (echo 'ERROR: dist directory not found' && exit 1)",
+  "test -f dist/index.js || (echo 'ERROR: dist/index.js not found' && exit 1)",
+  "echo '✅ Build completed successfully'"
+]
 
 [start]
 cmd = "npm start"
