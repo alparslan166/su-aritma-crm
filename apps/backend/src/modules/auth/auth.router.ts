@@ -1,9 +1,10 @@
 import { Router } from "express";
 
-import { getProfileHandler, loginHandler, updateProfileHandler } from "./auth.controller";
+import { getProfileHandler, loginHandler, registerHandler, updateProfileHandler } from "./auth.controller";
 
 const router = Router();
 
+router.post("/register", registerHandler);
 router.post("/login", loginHandler);
 
 // Profile routes (require authentication - getAdminId is called inside handlers)

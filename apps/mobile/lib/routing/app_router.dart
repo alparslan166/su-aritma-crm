@@ -13,6 +13,7 @@ import "../features/admin/presentation/views/job_detail_page.dart";
 import "../features/admin/presentation/views/personnel_detail_page.dart";
 import "../features/auth/domain/auth_role.dart";
 import "../features/auth/presentation/login_page.dart";
+import "../features/auth/presentation/register_page.dart";
 import "../features/dashboard/presentation/admin_dashboard_page.dart";
 import "../features/dashboard/presentation/personnel_dashboard_page.dart";
 import "../features/personnel/presentation/views/job_detail_page.dart";
@@ -32,10 +33,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final session = ref.read(authSessionProvider);
       final isLogin = state.matchedLocation == "/";
+      final isRegister = state.matchedLocation == "/register";
 
-      if (session == null && !isLogin) return "/";
+      if (session == null && !isLogin && !isRegister) return "/";
 
-      if (session != null && isLogin) {
+      if (session != null && (isLogin || isRegister)) {
         return session.role == AuthRole.admin
             ? "/dashboard/admin"
             : "/dashboard/personnel";
@@ -48,6 +50,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: "/",
         name: LoginPage.routeName,
         builder: (context, state) => const LoginPage(),
+      ),
+      GoRoute(
+        path: "/register",
+        name: RegisterPage.routeName,
+        builder: (context, state) => const RegisterPage(),
       ),
       GoRoute(
         path: "/dashboard/admin",

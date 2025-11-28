@@ -18,8 +18,9 @@ export const loginHandler = async (req: Request, res: Response, next: NextFuncti
     const role = payload.role || "admin"; // Default to admin for backward compatibility
 
     if (role === "admin") {
+      // Admin login with email and password
       const admin = await prisma.admin.findUnique({
-        where: { id: payload.identifier },
+        where: { email: payload.identifier },
       });
 
       if (!admin || !admin.passwordHash) {
@@ -120,6 +121,56 @@ export const getProfileHandler = async (req: Request, res: Response, next: NextF
   }
 };
 
+const registerSchema = z.object({
+  name: z.string().min(2, "İsim en az 2 karakter olmalıdır"),
+  email: z.string().email("Geçerli bir e-posta adresi giriniz"),
+  password: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
+  phone: z.string().min(6, "Telefon numarası en az 6 karakter olmalıdır"),
+  role: z.enum(["ANA", "ALT"]).default("ALT"),
+});
+
+export const registerHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const payload = registerSchema.parse(req.body);
+
+    // Check if email already exists
+    const existingAdmin = await prisma.admin.findUnique({
+      where: { email: payload.email },
+    });
+
+    if (existingAdmin) {
+      throw new AppError("Bu e-posta adresi zaten kullanılıyor", 409);
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(payload.password, 10);
+
+    // Create admin
+    const admin = await prisma.admin.create({
+      data: {
+        name: payload.name,
+        email: payload.email,
+        phone: payload.phone,
+        role: payload.role,
+        passwordHash,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: admin.id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+      },
+      message: "Kayıt başarıyla oluşturuldu",
+    });
+  } catch (error) {
+    next(error as Error);
+  }
+};
+
 export const updateProfileHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
@@ -130,8 +181,17 @@ export const updateProfileHandler = async (req: Request, res: Response, next: Ne
     if (payload.name !== undefined) updateData.name = payload.name;
     if (payload.phone !== undefined) updateData.phone = payload.phone;
     if (payload.email !== undefined) {
-      // Empty string means remove email (set to null)
-      updateData.email = payload.email === "" ? { set: null } : payload.email;
+      // Check if email is being changed and if it's already taken
+      const currentAdmin = await prisma.admin.findUnique({ where: { id: adminId } });
+      if (payload.email !== currentAdmin?.email) {
+        const existingAdmin = await prisma.admin.findUnique({
+          where: { email: payload.email },
+        });
+        if (existingAdmin) {
+          throw new AppError("Bu e-posta adresi zaten kullanılıyor", 409);
+        }
+      }
+      updateData.email = payload.email;
     }
     if (payload.companyName !== undefined) {
       updateData.companyName = payload.companyName === "" ? { set: null } : payload.companyName;

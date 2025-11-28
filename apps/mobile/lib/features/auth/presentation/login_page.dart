@@ -10,6 +10,7 @@ import "../../dashboard/presentation/personnel_dashboard_page.dart";
 import "../application/auth_service.dart";
 import "../application/login_controller.dart";
 import "../domain/auth_role.dart";
+import "register_page.dart";
 
 class LoginPage extends HookConsumerWidget {
   const LoginPage({super.key});
@@ -178,12 +179,21 @@ class LoginPage extends HookConsumerWidget {
                       TextField(
                         controller: identifierController,
                         decoration: InputDecoration(
-                          labelText: loginState.role.identifierLabel,
+                          labelText: loginState.role == AuthRole.admin
+                              ? "E-posta"
+                              : loginState.role.identifierLabel,
                           hintText: loginState.role == AuthRole.admin
-                              ? "ör. ALT-ADM-01"
+                              ? "ör. admin@example.com"
                               : "ör. PRS-2025-11",
-                          prefixIcon: const Icon(Icons.person_outline),
+                          prefixIcon: Icon(
+                            loginState.role == AuthRole.admin
+                                ? Icons.email_outlined
+                                : Icons.person_outline,
+                          ),
                         ),
+                        keyboardType: loginState.role == AuthRole.admin
+                            ? TextInputType.emailAddress
+                            : TextInputType.text,
                         textInputAction: TextInputAction.next,
                         onChanged: controller.updateIdentifier,
                       ),
@@ -195,6 +205,9 @@ class LoginPage extends HookConsumerWidget {
                           prefixIcon: const Icon(Icons.lock_outline),
                         ),
                         obscureText: true,
+                        keyboardType: loginState.role == AuthRole.admin
+                            ? TextInputType.visiblePassword
+                            : TextInputType.number,
                         onChanged: controller.updateSecret,
                         onSubmitted: (_) => controller.submit(),
                       ),
@@ -221,6 +234,13 @@ class LoginPage extends HookConsumerWidget {
                         onPressed: () => controller.submit(),
                         isLoading: isLoading,
                       ),
+                      if (loginState.role == AuthRole.admin) ...[
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () => ref.read(appRouterProvider).goNamed(RegisterPage.routeName),
+                          child: const Text("Hesabınız yok mu? Kayıt olun"),
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -235,7 +255,9 @@ class LoginPage extends HookConsumerWidget {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                "Adminler ana admin tarafından verilen şifreyi, personeller ise 6 haneli kodu kullanır.",
+                                loginState.role == AuthRole.admin
+                                    ? "Adminler e-posta ve şifre ile giriş yapar. Hesabınız yoksa kayıt olabilirsiniz."
+                                    : "Personeller 6 haneli kodu kullanır.",
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.blue.shade900,

@@ -7,7 +7,7 @@ extension AuthRoleX on AuthRole {
   };
 
   String get identifierLabel => switch (this) {
-    AuthRole.admin => "Admin ID",
+    AuthRole.admin => "E-posta",
     AuthRole.personnel => "Personel ID",
   };
 
