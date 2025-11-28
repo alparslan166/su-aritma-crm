@@ -101,13 +101,32 @@ class PersonnelDashboardPage extends ConsumerWidget {
               },
             ),
             const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text("Çıkış Yap"),
+            InkWell(
               onTap: () {
-                Navigator.of(context).pop();
-                _handleLogout(context, ref);
+                debugPrint("🔴 ÇIKIŞ YAP BUTONU TIKLANDI!");
+                _performLogout(context, ref);
               },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                color: Colors.red.withOpacity(0.1),
+                child: const Row(
+                  children: [
+                    Icon(Icons.logout, color: Colors.red, size: 24),
+                    SizedBox(width: 16),
+                    Text(
+                      "Çıkış Yap",
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
             SizedBox(height: MediaQuery.of(context).padding.bottom),
           ],
@@ -116,69 +135,49 @@ class PersonnelDashboardPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text("Çıkış Yap"),
-        content: const Text("Çıkış yapmak istediğinize emin misiniz?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text("İptal"),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("Çıkış Yap"),
-          ),
-        ],
-      ),
-    );
+  void _performLogout(BuildContext context, WidgetRef ref) {
+    debugPrint("🔴 LOGOUT BUTONU TIKLANDI!");
 
-    if (confirm != true || !context.mounted) {
-      return;
-    }
+    // Bottom sheet'i hemen kapat
+    Navigator.of(context).pop();
 
-    try {
-      debugPrint("🔴 Logout başlatılıyor...");
+    // Kısa bir delay sonra logout işlemini başlat
+    Future.delayed(const Duration(milliseconds: 100), () async {
+      try {
+        debugPrint("🔴 Logout işlemi başlatılıyor...");
 
-      // 1. Önce session'ı temizle
-      await ref.read(authSessionProvider.notifier).clearSession();
-      debugPrint("✅ Session temizlendi");
+        // Session'ı temizle
+        await ref.read(authSessionProvider.notifier).clearSession();
+        debugPrint("✅ Session temizlendi");
 
-      // 2. Router'ı invalidate et ki yeniden oluşturulsun
-      ref.invalidate(appRouterProvider);
-      debugPrint("✅ Router invalidate edildi");
+        // Router'ı invalidate et
+        ref.invalidate(appRouterProvider);
+        debugPrint("✅ Router invalidate edildi");
 
-      // 3. Router'ın yeniden oluşturulması için kısa bir süre bekle
-      await Future.delayed(const Duration(milliseconds: 100));
-      debugPrint("✅ Bekleme tamamlandı");
+        // Router'ın yeniden oluşturulmasını bekle
+        await Future.delayed(const Duration(milliseconds: 150));
 
-      // 4. Yeni router instance'ını al ve login sayfasına git
-      if (context.mounted) {
-        final router = ref.read(appRouterProvider);
-        debugPrint(
-          "✅ Router instance alındı, login sayfasına yönlendiriliyor...",
-        );
-        router.go("/");
-        debugPrint("✅ Navigation tamamlandı");
-      } else {
-        debugPrint("⚠️ Context mounted değil");
-      }
-    } catch (e, stackTrace) {
-      debugPrint("❌ Logout error: $e");
-      debugPrint("Stack trace: $stackTrace");
-      // Hata durumunda da login sayfasına git
-      if (context.mounted) {
-        try {
+        // Login sayfasına git
+        if (context.mounted) {
           final router = ref.read(appRouterProvider);
+          debugPrint("✅ Router alındı, login sayfasına gidiliyor...");
           router.go("/");
-          debugPrint("✅ Hata durumunda navigation yapıldı");
-        } catch (e2) {
-          debugPrint("❌ Navigation hatası: $e2");
+          debugPrint("✅ Navigation tamamlandı!");
+        }
+      } catch (e, stackTrace) {
+        debugPrint("❌ Logout hatası: $e");
+        debugPrint("Stack: $stackTrace");
+
+        // Hata durumunda da login sayfasına git
+        if (context.mounted) {
+          try {
+            final router = ref.read(appRouterProvider);
+            router.go("/");
+          } catch (e2) {
+            debugPrint("❌ Navigation hatası: $e2");
+          }
         }
       }
-    }
+    });
   }
 }
