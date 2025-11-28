@@ -293,19 +293,48 @@ class _AdminDrawer extends ConsumerWidget {
       ),
     );
 
-    if (confirm == true && context.mounted) {
-      // Oturumu sil
+    if (confirm != true || !context.mounted) {
+      return;
+    }
+
+    try {
+      debugPrint("🔴 Logout başlatılıyor...");
+
+      // 1. Önce session'ı temizle
       await ref.read(authSessionProvider.notifier).clearSession();
+      debugPrint("✅ Session temizlendi");
 
-      // Router'ı yeniden oluştur ve login'e yönlendir
-      // Session değişikliği router'ı otomatik yeniden oluşturacak
+      // 2. Router'ı invalidate et ki yeniden oluşturulsun
+      ref.invalidate(appRouterProvider);
+      debugPrint("✅ Router invalidate edildi");
+
+      // 3. Router'ın yeniden oluşturulması için kısa bir süre bekle
       await Future.delayed(const Duration(milliseconds: 100));
+      debugPrint("✅ Bekleme tamamlandı");
 
+      // 4. Yeni router instance'ını al ve login sayfasına git
       if (context.mounted) {
-        // Router'ı invalidate et ki yeniden oluşturulsun
-        ref.invalidate(appRouterProvider);
-        // Login sayfasına git
-        ref.read(appRouterProvider).go("/");
+        final router = ref.read(appRouterProvider);
+        debugPrint(
+          "✅ Router instance alındı, login sayfasına yönlendiriliyor...",
+        );
+        router.go("/");
+        debugPrint("✅ Navigation tamamlandı");
+      } else {
+        debugPrint("⚠️ Context mounted değil");
+      }
+    } catch (e, stackTrace) {
+      debugPrint("❌ Logout error: $e");
+      debugPrint("Stack trace: $stackTrace");
+      // Hata durumunda da login sayfasına git
+      if (context.mounted) {
+        try {
+          final router = ref.read(appRouterProvider);
+          router.go("/");
+          debugPrint("✅ Hata durumunda navigation yapıldı");
+        } catch (e2) {
+          debugPrint("❌ Navigation hatası: $e2");
+        }
       }
     }
   }
