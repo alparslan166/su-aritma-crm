@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { z } from "zod";
 
 import { config } from "@/config/env";
 import { logger } from "@/lib/logger";
@@ -18,7 +19,7 @@ export const notFoundHandler = (req: Request, res: Response, next: NextFunction)
     const error = new AppError(`API route ${req.originalUrl} not found`, 404);
     return next(error);
   }
-  
+
   // Diğer istekler için genel mesaj
   const error = new AppError(
     `Route ${req.originalUrl} not found. This is an API server. Use /api/* endpoints.`,
@@ -34,14 +35,14 @@ export const errorHandler = (
   _next: NextFunction,
 ) => {
   const isDevelopment = config.nodeEnv === "development";
-  
+
   // Production'da sadece temel hata bilgileri, development'ta detaylı
   logger.error("🛑 ERROR HANDLER:");
   logger.error("Error type:", error?.constructor?.name);
   logger.error("Error message:", error?.message);
   logger.error("Request URL:", req.originalUrl);
   logger.error("Request method:", req.method);
-  
+
   // Hassas bilgiler sadece development'ta loglanır
   if (isDevelopment) {
     logger.error("Request body:", JSON.stringify(req.body, null, 2));
@@ -52,6 +53,24 @@ export const errorHandler = (
     if (error?.stack) {
       logger.error("Stack:", error.stack);
     }
+  }
+
+  // Handle Zod validation errors
+  if (error instanceof z.ZodError) {
+    const firstIssue = error.issues[0];
+    const message = firstIssue?.message || "Geçersiz veri";
+    const statusCode = 400;
+
+    return res.status(statusCode).json({
+      success: false,
+      message: message,
+      ...(isDevelopment && {
+        issues: error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
+      }),
+    });
   }
 
   const statusCode = error instanceof AppError ? error.statusCode : 500;
@@ -69,4 +88,3 @@ export const errorHandler = (
   };
   res.status(statusCode).json(response);
 };
-
