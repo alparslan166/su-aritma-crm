@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 
+import { config } from "@/config/env";
 import { logger } from "@/lib/logger";
 
 export class AppError extends Error {
@@ -40,14 +41,26 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction,
 ) => {
+  const isDevelopment = config.nodeEnv === "development";
+  
+  // Production'da sadece temel hata bilgileri, development'ta detaylı
   logger.error("🛑 ERROR HANDLER:");
   logger.error("Error type:", error?.constructor?.name);
   logger.error("Error message:", error?.message);
   logger.error("Request URL:", req.originalUrl);
   logger.error("Request method:", req.method);
-  logger.error("Request body:", JSON.stringify(req.body, null, 2));
-  logger.error("Request headers:", JSON.stringify(req.headers, null, 2));
-  logger.error("Stack:", error?.stack);
+  
+  // Hassas bilgiler sadece development'ta loglanır
+  if (isDevelopment) {
+    logger.error("Request body:", JSON.stringify(req.body, null, 2));
+    logger.error("Request headers:", JSON.stringify(req.headers, null, 2));
+    logger.error("Stack:", error?.stack);
+  } else {
+    // Production'da sadece stack trace (hassas bilgi içermeyen)
+    if (error?.stack) {
+      logger.error("Stack:", error.stack);
+    }
+  }
 
   const statusCode = error instanceof AppError ? error.statusCode : 500;
   const response = {

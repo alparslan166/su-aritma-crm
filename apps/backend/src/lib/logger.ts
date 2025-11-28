@@ -9,14 +9,15 @@ export const logger = {
     }
   },
   error: (...args: unknown[]) => {
+    // Error logları her zaman gösterilir (production'da da)
     console.error(...args);
   },
   warn: (...args: unknown[]) => {
-    if (isDevelopment) {
-      console.warn(...args);
-    }
+    // Warn logları production'da da gösterilir (önemli uyarılar için)
+    console.warn(...args);
   },
   debug: (...args: unknown[]) => {
+    // Debug logları sadece development'ta
     if (isDevelopment) {
       console.log(...args);
     }

@@ -8,6 +8,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   DATABASE_URL: z
     .string()
+    .min(1, "DATABASE_URL is required")
     .default("postgresql://postgres:postgres@localhost:5432/su_aritma?schema=public"),
   AWS_REGION: z.string().default("eu-central-1"),
   AWS_ACCESS_KEY_ID: z.string().default("local"),
@@ -16,6 +17,8 @@ const envSchema = z.object({
   FCM_SERVER_KEY: z.string().default("local"),
   REDIS_URL: z.string().optional(),
   MAINTENANCE_CRON: z.string().optional(),
+  // CORS origin - production'da belirli domain'ler, development'ta *
+  ALLOWED_ORIGINS: z.string().optional(),
 });
 
 const env = envSchema.parse({
@@ -29,7 +32,15 @@ const env = envSchema.parse({
   FCM_SERVER_KEY: process.env.FCM_SERVER_KEY,
   REDIS_URL: process.env.REDIS_URL,
   MAINTENANCE_CRON: process.env.MAINTENANCE_CRON,
+  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
 });
+
+// Production'da DATABASE_URL kontrolü
+if (env.NODE_ENV === "production" && env.DATABASE_URL.includes("localhost")) {
+  throw new Error(
+    "DATABASE_URL cannot point to localhost in production. Please set a valid production database URL.",
+  );
+}
 
 export const config = {
   nodeEnv: env.NODE_ENV,
@@ -50,5 +61,8 @@ export const config = {
   maintenance: {
     cron: env.MAINTENANCE_CRON ?? "0 * * * *",
   },
+  cors: {
+    // Production'da ALLOWED_ORIGINS varsa kullan, yoksa * (mobile app için gerekli)
+    origin: env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(",") : "*",
+  },
 };
-
