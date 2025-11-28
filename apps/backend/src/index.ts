@@ -14,23 +14,39 @@ realtimeGateway.initialize(server);
 
 const start = async () => {
   try {
+    logger.info("🔄 Starting server...");
+    logger.info(`📊 Environment: ${config.nodeEnv}`);
+    logger.info(`🔌 Port: ${config.port}`);
+    
     await prisma.$connect();
     logger.info("✅ Database connected");
-    
-    // Register maintenance queue (non-blocking, Redis optional)
-    registerMaintenanceQueue().catch((error) => {
-      logger.error("Failed to initialize maintenance queue (non-critical):", error);
-      // Don't exit - maintenance queue is optional
-    });
     
     server.listen(config.port, "0.0.0.0", () => {
       logger.info(`✅ API listening on port ${config.port}`);
       logger.info(`✅ Server started successfully`);
     });
     
+    // Register maintenance queue (non-blocking, Redis optional)
+    registerMaintenanceQueue().catch((error) => {
+      logger.error("⚠️ Failed to initialize maintenance queue (non-critical):", error);
+      // Don't exit - maintenance queue is optional
+    });
+    
     // Handle server errors
     server.on("error", (error) => {
-      logger.error("Server error:", error);
+      logger.error("❌ Server error:", error);
+      process.exit(1);
+    });
+    
+    // Handle uncaught exceptions
+    process.on("uncaughtException", (error) => {
+      logger.error("❌ Uncaught Exception:", error);
+      process.exit(1);
+    });
+    
+    // Handle unhandled promise rejections
+    process.on("unhandledRejection", (reason, promise) => {
+      logger.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
       process.exit(1);
     });
   } catch (error) {
