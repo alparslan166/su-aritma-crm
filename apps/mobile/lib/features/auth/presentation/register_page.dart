@@ -1,4 +1,6 @@
+import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
+import "package:flutter/services.dart";
 import "package:flutter_hooks/flutter_hooks.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
@@ -46,9 +48,9 @@ class RegisterPage extends HookConsumerWidget {
       final errored = nextStatus is AsyncError;
       if (errored && prevStatus?.isLoading == true) {
         final errorMessage = nextStatus.error.toString();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     });
 
@@ -104,7 +106,8 @@ class RegisterPage extends HookConsumerWidget {
                       Text(
                         "Admin Kayıt",
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                        style: Theme.of(context).textTheme.headlineLarge
+                            ?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF1F2937),
                               letterSpacing: -1,
@@ -115,69 +118,7 @@ class RegisterPage extends HookConsumerWidget {
                         "Yeni admin hesabı oluşturun",
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Colors.grey.shade600,
-                            ),
-                      ),
-                      const SizedBox(height: 32),
-                      // Role Selection
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: SegmentedButton<String>(
-                          segments: const [
-                            ButtonSegment<String>(
-                              value: "ALT",
-                              label: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16),
-                                child: Text(
-                                  "Alt Admin",
-                                  style: TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            ),
-                            ButtonSegment<String>(
-                              value: "ANA",
-                              label: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16),
-                                child: Text(
-                                  "Ana Admin",
-                                  style: TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            ),
-                          ],
-                          selected: {registerState.role},
-                          onSelectionChanged: (selection) {
-                            controller.updateRole(selection.first);
-                          },
-                          style: ButtonStyle(
-                            backgroundColor: WidgetStateProperty.resolveWith((states) {
-                              if (states.contains(WidgetState.selected)) {
-                                return Colors.white;
-                              }
-                              return Colors.transparent;
-                            }),
-                            foregroundColor: WidgetStateProperty.resolveWith((states) {
-                              if (states.contains(WidgetState.selected)) {
-                                return const Color(0xFF2563EB);
-                              }
-                              return Colors.grey.shade600;
-                            }),
-                            shape: WidgetStateProperty.all(
-                              RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            elevation: WidgetStateProperty.resolveWith((states) {
-                              if (states.contains(WidgetState.selected)) {
-                                return 2;
-                              }
-                              return 0;
-                            }),
-                          ),
+                          color: Colors.grey.shade600,
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -190,7 +131,9 @@ class RegisterPage extends HookConsumerWidget {
                           prefixIcon: Icon(Icons.person_outline),
                         ),
                         textInputAction: TextInputAction.next,
-                        onChanged: controller.updateName,
+                        onChanged: (value) {
+                          controller.updateName(value);
+                        },
                       ),
                       const SizedBox(height: 16),
                       TextField(
@@ -200,9 +143,13 @@ class RegisterPage extends HookConsumerWidget {
                           hintText: "ör. admin@example.com",
                           prefixIcon: Icon(Icons.email_outlined),
                         ),
-                        keyboardType: TextInputType.emailAddress,
+                        keyboardType: TextInputType.text,
                         textInputAction: TextInputAction.next,
-                        onChanged: controller.updateEmail,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        onChanged: (value) {
+                          controller.updateEmail(value);
+                        },
                       ),
                       const SizedBox(height: 16),
                       TextField(
@@ -214,7 +161,9 @@ class RegisterPage extends HookConsumerWidget {
                         ),
                         keyboardType: TextInputType.phone,
                         textInputAction: TextInputAction.next,
-                        onChanged: controller.updatePhone,
+                        onChanged: (value) {
+                          controller.updatePhone(value);
+                        },
                       ),
                       const SizedBox(height: 16),
                       TextField(
@@ -236,7 +185,9 @@ class RegisterPage extends HookConsumerWidget {
                         ),
                         obscureText: !passwordVisible.value,
                         textInputAction: TextInputAction.next,
-                        onChanged: controller.updatePassword,
+                        onChanged: (value) {
+                          controller.updatePassword(value);
+                        },
                       ),
                       const SizedBox(height: 16),
                       TextField(
@@ -259,19 +210,56 @@ class RegisterPage extends HookConsumerWidget {
                         ),
                         obscureText: !confirmPasswordVisible.value,
                         textInputAction: TextInputAction.done,
-                        onChanged: controller.updateConfirmPassword,
-                        onSubmitted: (_) => controller.submit(),
+                        onChanged: (value) {
+                          controller.updateConfirmPassword(value);
+                        },
+                        onSubmitted: (_) {
+                          // Update state from controllers before submit
+                          controller.updateName(nameController.text);
+                          controller.updateEmail(emailController.text);
+                          controller.updatePhone(phoneController.text);
+                          controller.updatePassword(passwordController.text);
+                          controller.updateConfirmPassword(
+                            confirmPasswordController.text,
+                          );
+                          controller.submit();
+                        },
                       ),
                       const SizedBox(height: 24),
                       PrimaryButton(
                         label: "Kayıt Ol",
-                        onPressed: () => controller.submit(),
+                        onPressed: () {
+                          // Update state from controllers before submit
+                          controller.updateName(nameController.text);
+                          controller.updateEmail(emailController.text);
+                          controller.updatePhone(phoneController.text);
+                          controller.updatePassword(passwordController.text);
+                          controller.updateConfirmPassword(
+                            confirmPasswordController.text,
+                          );
+
+                          debugPrint("Register button pressed");
+                          debugPrint("State isValid: ${registerState.isValid}");
+                          debugPrint("Name: ${registerState.name}");
+                          debugPrint("Email: ${registerState.email}");
+                          debugPrint(
+                            "Password: ${registerState.password.length}",
+                          );
+                          debugPrint(
+                            "ConfirmPassword: ${registerState.confirmPassword.length}",
+                          );
+                          debugPrint("Phone: ${registerState.phone}");
+
+                          controller.submit();
+                        },
                         isLoading: isLoading,
                       ),
                       const SizedBox(height: 16),
                       TextButton(
                         onPressed: () => ref.read(appRouterProvider).go("/"),
-                        child: const Text("Zaten hesabınız var mı? Giriş yapın"),
+                        child: const Text(
+                          "Zaten hesabınız var mı? Giriş yapın",
+                        ),
                       ),
                     ],
                   ),
@@ -284,4 +272,3 @@ class RegisterPage extends HookConsumerWidget {
     );
   }
 }
-

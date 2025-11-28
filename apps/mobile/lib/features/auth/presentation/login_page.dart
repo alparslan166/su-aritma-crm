@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:flutter/services.dart";
 import "package:flutter_hooks/flutter_hooks.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
@@ -106,7 +107,8 @@ class LoginPage extends HookConsumerWidget {
                       Text(
                         "Su Arıtma Platformu",
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                        style: Theme.of(context).textTheme.headlineLarge
+                            ?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF1F2937),
                               letterSpacing: -1,
@@ -117,8 +119,8 @@ class LoginPage extends HookConsumerWidget {
                         "Rolünü seç ve güvenli giriş yap",
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Colors.grey.shade600,
-                            ),
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                       const SizedBox(height: 32),
                       // Role Selection
@@ -134,10 +136,14 @@ class LoginPage extends HookConsumerWidget {
                                 (role) => ButtonSegment<AuthRole>(
                                   value: role,
                                   label: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
                                     child: Text(
                                       role.label,
-                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -148,13 +154,17 @@ class LoginPage extends HookConsumerWidget {
                             controller.updateRole(selection.first);
                           },
                           style: ButtonStyle(
-                            backgroundColor: WidgetStateProperty.resolveWith((states) {
+                            backgroundColor: WidgetStateProperty.resolveWith((
+                              states,
+                            ) {
                               if (states.contains(WidgetState.selected)) {
                                 return Colors.white;
                               }
                               return Colors.transparent;
                             }),
-                            foregroundColor: WidgetStateProperty.resolveWith((states) {
+                            foregroundColor: WidgetStateProperty.resolveWith((
+                              states,
+                            ) {
                               if (states.contains(WidgetState.selected)) {
                                 return const Color(0xFF2563EB);
                               }
@@ -165,7 +175,9 @@ class LoginPage extends HookConsumerWidget {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            elevation: WidgetStateProperty.resolveWith((states) {
+                            elevation: WidgetStateProperty.resolveWith((
+                              states,
+                            ) {
                               if (states.contains(WidgetState.selected)) {
                                 return 2;
                               }
@@ -191,10 +203,10 @@ class LoginPage extends HookConsumerWidget {
                                 : Icons.person_outline,
                           ),
                         ),
-                        keyboardType: loginState.role == AuthRole.admin
-                            ? TextInputType.emailAddress
-                            : TextInputType.text,
+                        keyboardType: TextInputType.text,
                         textInputAction: TextInputAction.next,
+                        autocorrect: false,
+                        enableSuggestions: false,
                         onChanged: controller.updateIdentifier,
                       ),
                       const SizedBox(height: 16),
@@ -219,7 +231,10 @@ class LoginPage extends HookConsumerWidget {
                         ),
                         subtitle: Text(
                           "Yetkili cihazlarda otomatik giriş",
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
                         value: loginState.rememberDevice,
                         onChanged: controller.toggleRemember,
@@ -237,7 +252,9 @@ class LoginPage extends HookConsumerWidget {
                       if (loginState.role == AuthRole.admin) ...[
                         const SizedBox(height: 16),
                         TextButton(
-                          onPressed: () => ref.read(appRouterProvider).goNamed(RegisterPage.routeName),
+                          onPressed: () => ref
+                              .read(appRouterProvider)
+                              .goNamed(RegisterPage.routeName),
                           child: const Text("Hesabınız yok mu? Kayıt olun"),
                         ),
                       ],
@@ -251,7 +268,11 @@ class LoginPage extends HookConsumerWidget {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                            Icon(
+                              Icons.info_outline,
+                              color: Colors.blue.shade700,
+                              size: 20,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(

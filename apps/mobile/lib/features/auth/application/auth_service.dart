@@ -54,8 +54,33 @@ class ApiAuthService implements AuthService {
       debugPrint("Signed in as $role (${data["id"]})");
       return AuthResult(role: role, identifier: data["id"] as String);
     } on DioException catch (error) {
-      final message =
-          error.response?.data?["message"]?.toString() ?? "Giriş başarısız";
+      // Parse error message from backend
+      String message = "Giriş başarısız";
+
+      if (error.response?.data != null) {
+        final errorData = error.response!.data;
+
+        // Check for Zod validation errors
+        if (errorData is Map<String, dynamic>) {
+          // Check for issues array (Zod validation errors)
+          if (errorData.containsKey("issues") && errorData["issues"] is List) {
+            final issues = errorData["issues"] as List;
+            if (issues.isNotEmpty) {
+              final firstIssue = issues[0] as Map<String, dynamic>;
+              message = firstIssue["message"]?.toString() ?? message;
+            }
+          }
+          // Check for direct message
+          else if (errorData.containsKey("message")) {
+            message = errorData["message"].toString();
+          }
+          // Check for error field
+          else if (errorData.containsKey("error")) {
+            message = errorData["error"].toString();
+          }
+        }
+      }
+
       throw AuthException(message: message);
     }
   }
@@ -88,8 +113,33 @@ class ApiAuthService implements AuthService {
         secret: password,
       );
     } on DioException catch (error) {
-      final message =
-          error.response?.data?["message"]?.toString() ?? "Kayıt başarısız";
+      // Parse error message from backend
+      String message = "Kayıt başarısız";
+
+      if (error.response?.data != null) {
+        final errorData = error.response!.data;
+
+        // Check for Zod validation errors
+        if (errorData is Map<String, dynamic>) {
+          // Check for issues array (Zod validation errors)
+          if (errorData.containsKey("issues") && errorData["issues"] is List) {
+            final issues = errorData["issues"] as List;
+            if (issues.isNotEmpty) {
+              final firstIssue = issues[0] as Map<String, dynamic>;
+              message = firstIssue["message"]?.toString() ?? message;
+            }
+          }
+          // Check for direct message
+          else if (errorData.containsKey("message")) {
+            message = errorData["message"].toString();
+          }
+          // Check for error field
+          else if (errorData.containsKey("error")) {
+            message = errorData["error"].toString();
+          }
+        }
+      }
+
       throw AuthException(message: message);
     }
   }
