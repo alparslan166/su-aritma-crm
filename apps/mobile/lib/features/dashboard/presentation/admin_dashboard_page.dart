@@ -273,50 +273,84 @@ class _AssignJobTab extends StatelessWidget {
 class _AdminDrawer extends ConsumerWidget {
   const _AdminDrawer();
 
-  void _performLogout(BuildContext context, WidgetRef ref) {
+  Future<void> _performLogout(BuildContext context, WidgetRef ref) async {
     debugPrint("🔴 LOGOUT BUTONU TIKLANDI!");
 
-    // Drawer'ı hemen kapat
-    Navigator.of(context).pop();
+    // Önce dialog'u göster (drawer açıkken)
+    final confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Çıkış Yap"),
+        content: const Text("Çıkış yapmak istediğinize emin misiniz?"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              debugPrint("❌ İptal butonuna tıklandı");
+              Navigator.of(dialogContext).pop(false);
+            },
+            child: const Text("İptal"),
+          ),
+          FilledButton(
+            onPressed: () {
+              debugPrint("✅ Çıkış Yap butonuna tıklandı");
+              Navigator.of(dialogContext).pop(true);
+            },
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Çıkış Yap"),
+          ),
+        ],
+      ),
+    );
 
-    // Kısa bir delay sonra logout işlemini başlat
-    Future.delayed(const Duration(milliseconds: 100), () async {
+    // Dialog kapandıktan sonra drawer'ı kapat
+    if (context.mounted) {
+      Navigator.of(context).pop(); // Drawer'ı kapat
+    }
+
+    debugPrint("🔍 Dialog sonucu: $confirm (type: ${confirm.runtimeType})");
+
+    // Onaylanmadıysa işlemi durdur
+    if (confirm != true) {
+      debugPrint("⚠️ Logout iptal edildi (confirm: $confirm)");
+      return;
+    }
+
+    try {
+      debugPrint("🔴 Logout işlemi başlatılıyor...");
+      
+      // Ref'i erken al (widget dispose edilmeden önce)
+      final sessionNotifier = ref.read(authSessionProvider.notifier);
+      final router = ref.read(appRouterProvider);
+      
+      // Session'ı temizle
+      await sessionNotifier.clearSession();
+      debugPrint("✅ Session temizlendi");
+      
+      // Router'ı invalidate et
+      ref.invalidate(appRouterProvider);
+      debugPrint("✅ Router invalidate edildi");
+      
+      // Router'ın yeniden oluşturulmasını bekle
+      await Future.delayed(const Duration(milliseconds: 150));
+      
+      // Login sayfasına git
+      router.go("/");
+      debugPrint("✅ Navigation tamamlandı!");
+    } catch (e, stackTrace) {
+      debugPrint("❌ Logout hatası: $e");
+      debugPrint("Stack: $stackTrace");
+      
+      // Hata durumunda da login sayfasına git
       try {
-        debugPrint("🔴 Logout işlemi başlatılıyor...");
-
-        // Session'ı temizle
-        await ref.read(authSessionProvider.notifier).clearSession();
-        debugPrint("✅ Session temizlendi");
-
-        // Router'ı invalidate et
-        ref.invalidate(appRouterProvider);
-        debugPrint("✅ Router invalidate edildi");
-
-        // Router'ın yeniden oluşturulmasını bekle
-        await Future.delayed(const Duration(milliseconds: 150));
-
-        // Login sayfasına git
-        if (context.mounted) {
-          final router = ref.read(appRouterProvider);
-          debugPrint("✅ Router alındı, login sayfasına gidiliyor...");
-          router.go("/");
-          debugPrint("✅ Navigation tamamlandı!");
-        }
-      } catch (e, stackTrace) {
-        debugPrint("❌ Logout hatası: $e");
-        debugPrint("Stack: $stackTrace");
-
-        // Hata durumunda da login sayfasına git
-        if (context.mounted) {
-          try {
-            final router = ref.read(appRouterProvider);
-            router.go("/");
-          } catch (e2) {
-            debugPrint("❌ Navigation hatası: $e2");
-          }
-        }
+        // Yeni router instance al
+        final newRouter = ref.read(appRouterProvider);
+        newRouter.go("/");
+        debugPrint("✅ Hata durumunda navigation yapıldı");
+      } catch (e2) {
+        debugPrint("❌ Navigation hatası: $e2");
       }
-    });
+    }
   }
 
   @override

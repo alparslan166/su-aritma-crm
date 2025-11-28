@@ -41,6 +41,8 @@ flutter build apk --split-per-abi --release \
   --dart-define=API_BASE_URL=https://su-aritma-crm-production-5d49.up.railway.app/api
 ```
 
+
+
 Her mimari için ayrı APK oluşturur:
 - `app-armeabi-v7a-release.apk` (32-bit)
 - `app-arm64-v8a-release.apk` (64-bit)
