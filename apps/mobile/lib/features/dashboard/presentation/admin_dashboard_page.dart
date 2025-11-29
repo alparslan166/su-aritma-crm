@@ -24,19 +24,81 @@ class AdminDashboardPage extends StatefulWidget {
 }
 
 class _AdminDashboardPageState extends State<AdminDashboardPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _tabController;
+  late AnimationController _homeIconAnimationController;
+  late Animation<double> _homeIconBounceAnimation;
+  int _previousTabIndex = -1; // Önceki tab index'ini takip et
 
   @override
   void initState() {
     super.initState();
     // Ana Sayfa tab'ı index 2'de, ilk girişte ana sayfadan başla
     _tabController = TabController(length: 5, vsync: this, initialIndex: 2);
+    _previousTabIndex = 2; // İlk index'i kaydet
+
+    // Home icon bounce animasyonu için controller
+    _homeIconAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    // Yukarı-aşağı hareket animasyonu (0 -> -8 -> 0)
+    _homeIconBounceAnimation = Tween<double>(begin: 0.0, end: -8.0).animate(
+      CurvedAnimation(
+        parent: _homeIconAnimationController,
+        curve: Curves.easeOut,
+      ),
+    );
+
+    // Tab değişikliğini dinle (tüm controller'lar initialize edildikten sonra)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _tabController.addListener(_onTabChanged);
+
+        // İlk yüklemede animasyonu çalıştır (eğer ana sayfa seçiliyse)
+        if (_tabController.index == 2) {
+          _triggerHomeIconAnimation();
+        }
+      }
+    });
+  }
+
+  void _onTabChanged() {
+    // Widget dispose edilmişse işlem yapma
+    if (!mounted) return;
+
+    final currentIndex = _tabController.index;
+
+    // Sadece farklı bir tab'dan Ana Sayfa'ya (index 2) geçildiğinde animasyonu tetikle
+    // Aynı tab'a tekrar basıldığında animasyon çalışmasın
+    if (currentIndex == 2 && _previousTabIndex != 2) {
+      _triggerHomeIconAnimation();
+    }
+
+    // Önceki index'i güncelle
+    _previousTabIndex = currentIndex;
+  }
+
+  void _triggerHomeIconAnimation() {
+    // Widget dispose edilmişse işlem yapma
+    if (!mounted) return;
+
+    // Animasyonu sıfırla ve başlat
+    _homeIconAnimationController.reset();
+    _homeIconAnimationController.forward().then((_) {
+      // Widget hala mounted ise reverse yap
+      if (mounted) {
+        _homeIconAnimationController.reverse();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
+    _homeIconAnimationController.dispose();
     super.dispose();
   }
 
@@ -142,25 +204,27 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
               ),
             ),
             Tab(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "Ana",
-                    style: TextStyle(fontSize: responsiveFontSize),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    "Sayfa",
-                    style: TextStyle(fontSize: responsiveFontSize),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              child: AnimatedBuilder(
+                animation: Listenable.merge([
+                  _tabController,
+                  _homeIconBounceAnimation,
+                ]),
+                builder: (context, child) {
+                  final isSelected = _tabController.index == 2;
+                  return Transform.translate(
+                    offset: Offset(
+                      0,
+                      isSelected ? _homeIconBounceAnimation.value : 0,
+                    ),
+                    child: Icon(
+                      Icons.home,
+                      color: isSelected
+                          ? const Color(0xFF2563EB)
+                          : Colors.grey.shade600,
+                      size: 40,
+                    ),
+                  );
+                },
               ),
             ),
             Tab(

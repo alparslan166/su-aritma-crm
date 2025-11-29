@@ -6,6 +6,7 @@ import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 import "package:url_launcher/url_launcher.dart";
+import "package:geocoding/geocoding.dart";
 import "package:mobile/widgets/empty_state.dart";
 
 import "../../../../core/error/error_handler.dart";
@@ -14,7 +15,7 @@ import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
 import "add_customer_sheet.dart";
 import "edit_customer_sheet.dart";
-import "full_screen_map_page.dart";
+import "job_map_view.dart";
 import "package:latlong2/latlong.dart";
 
 class CustomersView extends HookConsumerWidget {
@@ -601,26 +602,138 @@ class CustomersView extends HookConsumerWidget {
     });
   }
 
-  void _openLocationMap(BuildContext context, Customer customer) {
-    if (customer.location == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Bu müşterinin konum bilgisi bulunmuyor")),
+  Future<void> _openLocationMap(BuildContext context, Customer customer) async {
+    LatLng? location;
+
+    // Önce müşterinin location bilgisini kontrol et
+    if (customer.location != null) {
+      location = LatLng(
+        customer.location!.latitude,
+        customer.location!.longitude,
       );
-      return;
+    } else {
+      // Location yoksa adresten geocoding yap
+      if (customer.address.isEmpty) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Adres bilgisi bulunamadı")),
+        );
+        return;
+      }
+
+      // Loading göster
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Konum alınıyor..."),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      try {
+        // Timeout ile geocoding yap (10 saniye)
+        final locations = await locationFromAddress(customer.address).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            throw TimeoutException("Geocoding timeout");
+          },
+        );
+        if (!context.mounted) return;
+        if (locations.isNotEmpty) {
+          final loc = locations.first;
+          location = LatLng(loc.latitude, loc.longitude);
+        } else {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Adres için konum bulunamadı"),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+      } catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Konum yüklenemedi: ${e.toString()}"),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => FullScreenMapPage(
-          location: LatLng(
-            customer.location!.latitude,
-            customer.location!.longitude,
-          ),
-          title: customer.name,
-          address: customer.address,
+    // Konum bulundu, seçenekleri göster
+    if (!context.mounted) return;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Text(
+                "Konum Seçenekleri",
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.map, color: Color(0xFF2563EB)),
+              title: const Text("Haritada Aç"),
+              subtitle: const Text("Uygulama içi harita görünümü"),
+              onTap: () => Navigator.of(context).pop("map"),
+            ),
+            ListTile(
+              leading: const Icon(Icons.place, color: Color(0xFF10B981)),
+              title: const Text("Google Maps ile Aç"),
+              subtitle: const Text("Google Maps uygulamasında aç"),
+              onTap: () => Navigator.of(context).pop("google"),
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
+
+    if (!context.mounted || choice == null) return;
+
+    if (choice == "map") {
+      // Haritada Aç
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => JobMapView(
+            initialCustomerLocation: location!,
+            initialCustomerId: customer.id,
+          ),
+        ),
+      );
+    } else if (choice == "google") {
+      // Google Maps ile Aç
+      final encodedAddress = Uri.encodeComponent(customer.address);
+      final googleMapsUrl =
+          "https://www.google.com/maps/search/?api=1&query=$encodedAddress";
+      final uri = Uri.parse(googleMapsUrl);
+      // ignore: unawaited_futures
+      launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   Future<void> _deleteCustomer(
