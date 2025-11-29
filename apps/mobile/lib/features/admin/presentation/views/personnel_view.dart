@@ -294,7 +294,7 @@ class PersonnelView extends HookConsumerWidget {
                     return _buildPersonnelList(context, items, notifier);
                   },
                   error: (error, _) => _ErrorState(
-                    message: error.toString(),
+                    message: ErrorHandler.getUserFriendlyMessage(error),
                     onRetry: () =>
                         ref.read(personnelListProvider.notifier).refresh(),
                   ),
@@ -739,6 +739,7 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
+  final _loginCodeController = TextEditingController();
   final _imagePicker = ImagePicker();
   DateTime _hireDate = DateTime.now();
   bool _canShareLocation = true;
@@ -751,6 +752,7 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    _loginCodeController.dispose();
     super.dispose();
   }
 
@@ -843,16 +845,9 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
       return photoKey;
     } catch (e) {
       if (mounted) {
-        final errorMessage =
-            e.toString().contains("connection error") ||
-                e.toString().contains("XMLHttpRequest")
-            ? "Fotoğraf yüklenemedi: Ağ bağlantı hatası. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin."
-            : "Fotoğraf yüklenemedi: ${e.toString()}";
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            duration: const Duration(seconds: 5),
-          ),
+        ErrorHandler.showError(
+          context,
+          "Fotoğraf yüklenemedi. ${ErrorHandler.getUserFriendlyMessage(e)}",
         );
       }
       return null;
@@ -883,6 +878,9 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
             hireDate: _hireDate,
             canShareLocation: _canShareLocation,
             photoUrl: photoUrl,
+            loginCode: _loginCodeController.text.trim().isEmpty
+                ? null
+                : _loginCodeController.text.trim(),
           );
       await ref.read(personnelListProvider.notifier).refresh();
       if (!mounted) return;
@@ -1017,6 +1015,17 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
                   labelText: "E-posta (opsiyonel)",
                 ),
                 keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                key: const Key("personnel-logincode-field"),
+                controller: _loginCodeController,
+                decoration: const InputDecoration(
+                  labelText: "Giriş Kodu (opsiyonel - boş bırakılırsa otomatik oluşturulur)",
+                  helperText: "Personel girişi için kullanılacak kod",
+                ),
+                maxLength: 20,
+                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
               ),
               const SizedBox(height: 12),
               Row(

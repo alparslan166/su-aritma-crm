@@ -4,6 +4,7 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 import "package:mobile/widgets/empty_state.dart";
 
+import "../../../../core/error/error_handler.dart";
 import "../../application/job_list_notifier.dart";
 import "../../data/models/job.dart";
 import "../widgets/job_card.dart";
@@ -64,8 +65,10 @@ class PastJobsView extends ConsumerWidget {
           ),
         );
       },
-      error: (error, _) =>
-          _JobsError(message: error.toString(), onRetry: notifier.refresh),
+      error: (error, _) => _JobsError(
+        message: ErrorHandler.getUserFriendlyMessage(error),
+        onRetry: notifier.refresh,
+      ),
       loading: () => const Center(child: CircularProgressIndicator()),
       ),
     );

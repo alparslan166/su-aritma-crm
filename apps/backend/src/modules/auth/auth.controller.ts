@@ -41,9 +41,12 @@ export const loginHandler = async (req: Request, res: Response, next: NextFuncti
         },
       });
     } else if (role === "personnel") {
-      // Personnel login with loginCode
-      const personnel = await prisma.personnel.findUnique({
-        where: { id: payload.identifier },
+      // Personnel login with personnelId and loginCode
+      // personnelId is now admin-specific, so we need to find by personnelId
+      const personnel = await prisma.personnel.findFirst({
+        where: { 
+          personnelId: payload.identifier,
+        },
       });
 
       if (!personnel) {
@@ -54,7 +57,7 @@ export const loginHandler = async (req: Request, res: Response, next: NextFuncti
         throw new AppError("Personel hesabı aktif değil", 403);
       }
 
-      // Compare loginCode (6-digit code)
+      // Compare loginCode
       if (personnel.loginCode !== payload.password) {
         throw new AppError("Geçersiz giriş kodu", 401);
       }

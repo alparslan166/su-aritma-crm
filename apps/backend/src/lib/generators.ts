@@ -10,7 +10,7 @@ export const generateLoginCode = (length = 6) => {
   return code;
 };
 
-export const generatePersonnelId = async (length = 6): Promise<string> => {
+export const generatePersonnelId = async (adminId: string, length = 6): Promise<string> => {
   const { prisma } = await import("@/lib/prisma");
   let attempts = 0;
   const maxAttempts = 100;
@@ -22,9 +22,12 @@ export const generatePersonnelId = async (length = 6): Promise<string> => {
       id += PERSONNEL_ID_ALPHABET[index];
     }
 
-    // Check if this ID already exists
+    // Check if this ID already exists for this admin
     const existing = await prisma.personnel.findFirst({
-      where: { personnelId: id },
+      where: {
+        adminId,
+        personnelId: id,
+      },
     });
 
     if (!existing) {
@@ -36,4 +39,3 @@ export const generatePersonnelId = async (length = 6): Promise<string> => {
 
   throw new Error("Failed to generate unique personnel ID after multiple attempts");
 };
-

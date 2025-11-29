@@ -90,6 +90,7 @@ class AdminRepository {
     required String status,
     bool? canShareLocation,
     String? photoUrl,
+    String? loginCode,
   }) async {
     final data = <String, dynamic>{
       "name": name,
@@ -103,6 +104,7 @@ class AdminRepository {
     if (photoUrl != null) {
       data["photoUrl"] = photoUrl;
     }
+    if (loginCode != null && loginCode.isNotEmpty) data["loginCode"] = loginCode;
     final response = await _client.put("/personnel/$id", data: data);
     return Personnel.fromJson(response.data["data"] as Map<String, dynamic>);
   }
@@ -273,6 +275,7 @@ class AdminRepository {
     required DateTime hireDate,
     bool canShareLocation = true,
     String? photoUrl,
+    String? loginCode,
   }) async {
     final data = <String, dynamic>{
       "name": name,
@@ -283,6 +286,7 @@ class AdminRepository {
     };
     if (email != null) data["email"] = email;
     if (photoUrl != null) data["photoUrl"] = photoUrl;
+    if (loginCode != null && loginCode.isNotEmpty) data["loginCode"] = loginCode;
     await _client.post("/personnel", data: data);
   }
 

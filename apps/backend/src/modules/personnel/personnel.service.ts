@@ -9,7 +9,7 @@ import { mediaService } from "@/modules/media/media.service";
 function normalizePhoneNumber(phone: string): string {
   // Tüm boşlukları, tireleri, parantezleri ve diğer özel karakterleri temizle
   // Sadece rakamları ve başta + işaretini tut
-  return phone.replace(/[\s\-\(\)]/g, "");
+  return phone.replace(/[\s\-()]/g, "");
 }
 
 type ListFilters = {
@@ -25,10 +25,12 @@ type CreatePayload = {
   hireDate: Date;
   permissions: Record<string, unknown>;
   canShareLocation?: boolean;
+  loginCode?: string;
 };
 
-type UpdatePayload = Partial<CreatePayload> & {
+type UpdatePayload = Partial<Omit<CreatePayload, "photoUrl">> & {
   status?: PersonnelStatus;
+  photoUrl?: string | null;
 };
 
 class PersonnelService {
@@ -76,7 +78,7 @@ class PersonnelService {
       } as Prisma.PersonnelInclude,
     });
 
-    const mappedRecords = records.map((record: any) => {
+    const mappedRecords = records.map((record) => {
       const { locationLogs, leaves, ...rest } = record;
       return {
         ...rest,
@@ -118,8 +120,8 @@ class PersonnelService {
   }
 
   async create(adminId: string, payload: CreatePayload) {
-    const loginCode = generateLoginCode();
-    const personnelId = await generatePersonnelId();
+    const loginCode = payload.loginCode || generateLoginCode();
+    const personnelId = await generatePersonnelId(adminId);
     const record = await prisma.personnel.create({
       data: {
         adminId,
@@ -169,6 +171,10 @@ class PersonnelService {
     if (payload.canShareLocation !== undefined) {
       data.canShareLocation = payload.canShareLocation;
     }
+    if (payload.loginCode !== undefined) {
+      data.loginCode = payload.loginCode;
+      data.loginCodeUpdatedAt = new Date();
+    }
 
     const record = await prisma.personnel.update({
       where: { id },
@@ -197,7 +203,7 @@ class PersonnelService {
 
   async listLeaves(adminId: string, personnelId: string) {
     await this.ensureOwnership(adminId, personnelId);
-    return (prisma as any).personnelLeave.findMany({
+    return prisma.personnelLeave.findMany({
       where: { personnelId },
       orderBy: { startDate: "desc" },
     });
@@ -216,7 +222,7 @@ class PersonnelService {
     if (payload.endDate < payload.startDate) {
       throw new AppError("End date must be after start date", 400);
     }
-    return (prisma as any).personnelLeave.create({
+    return prisma.personnelLeave.create({
       data: {
         personnelId,
         startDate: payload.startDate,
@@ -228,13 +234,13 @@ class PersonnelService {
 
   async deleteLeave(adminId: string, personnelId: string, leaveId: string) {
     await this.ensureOwnership(adminId, personnelId);
-    const leave = await (prisma as any).personnelLeave.findFirst({
+    const leave = await prisma.personnelLeave.findFirst({
       where: { id: leaveId, personnelId },
     });
     if (!leave) {
       throw new AppError("Leave not found", 404);
     }
-    await (prisma as any).personnelLeave.delete({
+    await prisma.personnelLeave.delete({
       where: { id: leaveId },
     });
   }

@@ -4,6 +4,7 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 import "package:mobile/widgets/empty_state.dart";
 
+import "../../../../core/error/error_handler.dart";
 import "../../application/inventory_list_notifier.dart";
 import "../../data/models/inventory_item.dart";
 import "inventory_form_sheet.dart" show InventoryFormSheet;
@@ -57,7 +58,7 @@ class InventoryView extends ConsumerWidget {
         );
       },
       error: (error, _) => _InventoryError(
-        message: error.toString(),
+        message: ErrorHandler.getUserFriendlyMessage(error),
         onRetry: () => ref.read(inventoryListProvider.notifier).refresh(),
       ),
       loading: () => const Center(child: CircularProgressIndicator()),

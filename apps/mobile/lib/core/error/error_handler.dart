@@ -12,15 +12,81 @@ class ErrorHandler {
     }
 
     if (error is String) {
-      // If it's already a user-friendly message, return as is
-      if (!error.contains("Exception") &&
-          !error.contains("Error:") &&
-          !error.contains("status code")) {
-        return error;
+      // Filter out all technical details
+      if (_isTechnicalMessage(error)) {
+        return _extractUserFriendlyMessage(error);
       }
+      return error;
+    }
+
+    // If error is an Exception or Error object, convert to string and filter
+    if (error is Exception || error is Error) {
+      final errorString = error.toString();
+      if (_isTechnicalMessage(errorString)) {
+        return _extractUserFriendlyMessage(errorString);
+      }
+      return errorString;
     }
 
     // Default message for unknown errors
+    return "Bir hata oluştu. Lütfen tekrar deneyin.";
+  }
+
+  /// Checks if a message contains technical details that should be filtered
+  static bool _isTechnicalMessage(String message) {
+    final technicalKeywords = [
+      "Exception",
+      "Error:",
+      "status code",
+      "DioException",
+      "bad response",
+      "RequestOptions",
+      "validateStatus",
+      "Client error",
+      "Server error",
+      "Stack trace",
+      "at ",
+      "TypeError",
+      "FormatException",
+      "NoSuchMethodError",
+      "AssertionError",
+      "RangeError",
+      "StateError",
+      "UnimplementedError",
+      "UnsupportedError",
+      "ArgumentError",
+      "ConcurrentModificationError",
+      "CyclicInitializationError",
+      "FallThroughError",
+      "NoSuchMethodError",
+      "OutOfMemoryError",
+      "StackOverflowError",
+      "UnsupportedOperationError",
+    ];
+
+    return technicalKeywords.any((keyword) => 
+      message.toLowerCase().contains(keyword.toLowerCase())
+    );
+  }
+
+  /// Extracts user-friendly message from technical error
+  static String _extractUserFriendlyMessage(String technicalMessage) {
+    // Try to extract meaningful parts before technical details
+    final lines = technicalMessage.split('\n');
+    for (final line in lines) {
+      if (!_isTechnicalMessage(line) && line.trim().isNotEmpty) {
+        // Clean up the line
+        String cleaned = line.trim();
+        // Remove common prefixes
+        cleaned = cleaned.replaceAll(RegExp(r'^[A-Za-z]+Exception:\s*'), '');
+        cleaned = cleaned.replaceAll(RegExp(r'^Error:\s*'), '');
+        if (cleaned.isNotEmpty && !_isTechnicalMessage(cleaned)) {
+          return cleaned;
+        }
+      }
+    }
+
+    // If we can't extract anything, return generic message
     return "Bir hata oluştu. Lütfen tekrar deneyin.";
   }
 
@@ -46,9 +112,7 @@ class ErrorHandler {
         if (errorData.containsKey("message")) {
           final message = errorData["message"].toString();
           // Filter out technical details
-          if (!message.contains("Exception") &&
-              !message.contains("status code") &&
-              !message.contains("DioException")) {
+          if (!_isTechnicalMessage(message)) {
             return message;
           }
         }
@@ -56,8 +120,7 @@ class ErrorHandler {
         // Check for error field
         if (errorData.containsKey("error")) {
           final errorMsg = errorData["error"].toString();
-          if (!errorMsg.contains("Exception") &&
-              !errorMsg.contains("status code")) {
+          if (!_isTechnicalMessage(errorMsg)) {
             return errorMsg;
           }
         }

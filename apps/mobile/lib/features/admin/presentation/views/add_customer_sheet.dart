@@ -310,11 +310,9 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
           // Job creation failed, but customer was created successfully
           // Show warning but don't fail the whole operation
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("Müşteri eklendi ancak iş oluşturulamadı: $e"),
-                backgroundColor: Colors.orange,
-              ),
+            ErrorHandler.showWarning(
+              context,
+              "Müşteri eklendi ancak iş oluşturulamadı. ${ErrorHandler.getUserFriendlyMessage(e)}",
             );
           }
         }

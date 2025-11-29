@@ -61,7 +61,7 @@ class JobsView extends ConsumerWidget {
         );
       },
       error: (error, _) => _JobsError(
-        message: error.toString(),
+        message: ErrorHandler.getUserFriendlyMessage(error),
         onRetry: () => ref.read(jobListProvider.notifier).refresh(),
       ),
       loading: () => const Center(child: CircularProgressIndicator()),

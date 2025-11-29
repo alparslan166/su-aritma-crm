@@ -2,10 +2,9 @@ import { PersonnelStatus } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-import { getAdminId, getPersonnelId } from "@/lib/tenant";
-import { prisma } from "@/lib/prisma";
-
 import { personnelService } from "./personnel.service";
+import { prisma } from "@/lib/prisma";
+import { getAdminId, getPersonnelId } from "@/lib/tenant";
 
 const listQuerySchema = z.object({
   search: z.string().optional(),
@@ -23,6 +22,7 @@ const upsertSchema = z.object({
   permissions: z.record(z.string(), z.any()).default({}),
   canShareLocation: z.boolean().optional(),
   status: z.nativeEnum(PersonnelStatus).optional(),
+  loginCode: z.string().min(4).max(20).optional(),
 });
 
 export const listPersonnelHandler = async (req: Request, res: Response, next: NextFunction) => {
@@ -41,14 +41,14 @@ export const getPersonnelHandler = async (req: Request, res: Response, next: Nex
     // Check if request is from personnel (has x-personnel-id header)
     const personnelIdHeader = req.header("x-personnel-id");
     const adminIdHeader = req.header("x-admin-id");
-    
+
     if (personnelIdHeader && !adminIdHeader) {
       // Request from personnel - they can only view their own profile
       const personnelId = getPersonnelId(req);
       if (personnelId !== req.params.id) {
-        return res.status(403).json({ 
-          success: false, 
-          message: "You can only view your own profile" 
+        return res.status(403).json({
+          success: false,
+          message: "You can only view your own profile",
         });
       }
       // Get personnel's adminId from database
@@ -96,15 +96,20 @@ export const createPersonnelHandler = async (req: Request, res: Response, next: 
 export const updatePersonnelHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
-    const payload = upsertSchema.partial({ name: true, phone: true, hireDate: true }).parse(req.body);
-    const updatePayload: any = {
+    const payload = upsertSchema
+      .partial({ name: true, phone: true, hireDate: true })
+      .parse(req.body);
+    // Handle photoUrl: empty string means remove photo (set to null), undefined means keep existing
+    const updatePayload: Parameters<typeof personnelService.update>[2] = {
       ...payload,
       hireDate: payload.hireDate ? new Date(payload.hireDate) : undefined,
-    };
-    // Handle photoUrl: empty string means remove photo (set to null), undefined means keep existing
-    if (payload.photoUrl !== undefined) {
-      updatePayload.photoUrl = payload.photoUrl === "" ? null : payload.photoUrl;
-    }
+      photoUrl:
+        payload.photoUrl !== undefined
+          ? payload.photoUrl === ""
+            ? null
+            : payload.photoUrl
+          : undefined,
+    } as Parameters<typeof personnelService.update>[2];
     const updated = await personnelService.update(adminId, req.params.id, updatePayload);
     res.json({ success: true, data: updated });
   } catch (error) {
@@ -192,4 +197,3 @@ export const deletePersonnelLeaveHandler = async (
     next(error as Error);
   }
 };
-

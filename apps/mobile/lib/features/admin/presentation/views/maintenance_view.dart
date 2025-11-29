@@ -3,6 +3,7 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 import "package:mobile/widgets/empty_state.dart";
 
+import "../../../../core/error/error_handler.dart";
 import "../../application/maintenance_reminder_notifier.dart";
 import "../../data/models/maintenance_reminder.dart";
 
@@ -50,7 +51,7 @@ class MaintenanceView extends ConsumerWidget {
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => _ErrorState(
-        message: error.toString(),
+        message: ErrorHandler.getUserFriendlyMessage(error),
         onRetry: () =>
             ref.read(maintenanceRemindersProvider.notifier).refresh(),
       ),

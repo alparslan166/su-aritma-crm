@@ -97,7 +97,7 @@ model Personnel {
   id                 String             @id @default(cuid())
   admin              Admin              @relation(fields: [adminId], references: [id])
   adminId            String
-  personnelId        String?            @unique
+  personnelId        String?
   name               String
   phone              String
   email              String?
@@ -116,6 +116,9 @@ model Personnel {
   leaves             PersonnelLeave[]
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
+
+  @@unique([adminId, personnelId])
+  @@index([adminId])
 }
 
 model PersonnelLeave {

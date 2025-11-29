@@ -61,7 +61,9 @@ class _AdminPersonnelDetailPageState
       ),
       error: (error, _) => Scaffold(
         appBar: const AdminAppBar(title: Text("Personel Detayı")),
-        body: Center(child: Text(error.toString())),
+        body: Center(
+          child: Text(ErrorHandler.getUserFriendlyMessage(error)),
+        ),
       ),
     );
   }
@@ -485,6 +487,7 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
+  late final TextEditingController _loginCodeController;
   late DateTime _hireDate;
   late String _status;
   bool _submitting = false;
@@ -500,6 +503,9 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
     _emailController = TextEditingController(
       text: widget.personnel.email ?? "",
     );
+    _loginCodeController = TextEditingController(
+      text: widget.personnel.loginCode,
+    );
     _hireDate = widget.personnel.hireDate;
     _status = widget.personnel.status;
   }
@@ -509,6 +515,7 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    _loginCodeController.dispose();
     super.dispose();
   }
 
@@ -601,16 +608,9 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
       return photoKey;
     } catch (e) {
       if (mounted) {
-        final errorMessage =
-            e.toString().contains("connection error") ||
-                e.toString().contains("XMLHttpRequest")
-            ? "Fotoğraf yüklenemedi: Ağ bağlantı hatası. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin."
-            : "Fotoğraf yüklenemedi: ${e.toString()}";
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            duration: const Duration(seconds: 5),
-          ),
+        ErrorHandler.showError(
+          context,
+          "Fotoğraf yüklenemedi. ${ErrorHandler.getUserFriendlyMessage(e)}",
         );
       }
       return null;
@@ -654,6 +654,9 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
             hireDate: _hireDate,
             status: _status,
             photoUrl: shouldUpdatePhoto ? photoUrl : null,
+            loginCode: _loginCodeController.text.trim().isEmpty
+                ? null
+                : _loginCodeController.text.trim(),
           );
       ref.invalidate(personnelDetailProvider(widget.personnelId));
       ref.invalidate(personnelListProvider);
@@ -796,6 +799,16 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
                   labelText: "E-posta (opsiyonel)",
                 ),
                 keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _loginCodeController,
+                decoration: const InputDecoration(
+                  labelText: "Giriş Kodu",
+                  helperText: "Personel girişi için kullanılacak kod",
+                ),
+                maxLength: 20,
+                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
               ),
               const SizedBox(height: 12),
               Row(
@@ -1247,7 +1260,7 @@ class _PastJobsSection extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    snapshot.error.toString(),
+                    ErrorHandler.getUserFriendlyMessage(snapshot.error),
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey.shade600),
                   ),
