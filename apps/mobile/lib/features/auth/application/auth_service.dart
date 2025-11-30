@@ -34,6 +34,8 @@ abstract class AuthService {
   Future<AuthResult> verifyEmail(String email, String code);
   Future<void> forgotPassword(String email);
   Future<void> resetPassword(String email, String code, String newPassword);
+  Future<void> requestAccountDeletion();
+  Future<void> confirmAccountDeletion(String code);
 }
 
 class SignUpResult {
@@ -201,6 +203,28 @@ class ApiAuthService implements AuthService {
     }
   }
 
+  @override
+  Future<void> requestAccountDeletion() async {
+    try {
+      await _client.post("/auth/request-account-deletion");
+    } on DioException catch (error) {
+      throw AuthException(
+        message: _parseErrorMessage(error, "İşlem başarısız"),
+      );
+    }
+  }
+
+  @override
+  Future<void> confirmAccountDeletion(String code) async {
+    try {
+      await _client.post("/auth/confirm-account-deletion", data: {"code": code});
+    } on DioException catch (error) {
+      throw AuthException(
+        message: _parseErrorMessage(error, "Hesap silinemedi"),
+      );
+    }
+  }
+
   String _parseErrorMessage(DioException error, String defaultMessage) {
     if (error.response?.data != null) {
       final errorData = error.response!.data;
@@ -301,6 +325,21 @@ class MockAuthService implements AuthService {
       throw AuthException(message: "Geçersiz kod");
     }
     debugPrint("Mock: Password reset for $email");
+  }
+
+  @override
+  Future<void> requestAccountDeletion() async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    debugPrint("Mock: Account deletion code sent");
+  }
+
+  @override
+  Future<void> confirmAccountDeletion(String code) async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (code != "123456") {
+      throw AuthException(message: "Geçersiz kod");
+    }
+    debugPrint("Mock: Account deleted");
   }
 }
 

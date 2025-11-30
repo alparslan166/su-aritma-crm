@@ -1,3 +1,4 @@
+import "dart:async";
 import "dart:typed_data";
 
 import "package:dio/dio.dart";
@@ -8,6 +9,9 @@ import "package:image_picker/image_picker.dart";
 
 import "../../../../core/constants/app_config.dart";
 import "../../../../core/network/api_client.dart" show apiClientProvider;
+import "../../../../core/session/session_provider.dart";
+import "../../../../routing/app_router.dart";
+import "../../../auth/application/auth_service.dart";
 import "../../data/admin_repository.dart";
 
 final adminProfileProvider = FutureProvider<Map<String, dynamic>>((ref) {
@@ -682,6 +686,59 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                           : const Text("Kaydet"),
                     ),
                   ],
+                  const SizedBox(height: 48),
+                  // Delete Account Section
+                  Card(
+                    color: Colors.red.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.red.shade700,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Tehlikeli Bölge",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red.shade900,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            "Hesabınızı sildiğinizde tüm verileriniz (personeller, müşteriler, işler, faturalar) kalıcı olarak silinecektir. Bu işlem geri alınamaz.",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.red.shade800,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showDeleteAccountDialog(context),
+                              icon: const Icon(Icons.delete_forever),
+                              label: const Text("Hesabı Sil"),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red.shade700,
+                                side: BorderSide(color: Colors.red.shade300),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -689,6 +746,226 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(child: Text("Hata: $error")),
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red.shade700),
+            const SizedBox(width: 8),
+            const Text("Hesabı Sil"),
+          ],
+        ),
+        content: const Text(
+          "Hesabınızı silmek istediğinize emin misiniz?\n\n"
+          "Bu işlem geri alınamaz ve tüm verileriniz silinecektir:\n"
+          "• Tüm personeller\n"
+          "• Tüm müşteriler\n"
+          "• Tüm işler ve faturalar\n"
+          "• Tüm envanter kayıtları",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("İptal"),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _requestDeleteCode();
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text("Devam Et"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _requestDeleteCode() async {
+    try {
+      await ref.read(authServiceProvider).requestAccountDeletion();
+      if (!mounted) return;
+      _showVerificationCodeDialog();
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  void _showVerificationCodeDialog() {
+    final codeController = TextEditingController();
+    final isLoading = ValueNotifier(false);
+    Timer? resendTimer;
+    final resendCountdown = ValueNotifier(60);
+
+    void startResendTimer() {
+      resendCountdown.value = 60;
+      resendTimer?.cancel();
+      resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (resendCountdown.value > 0) {
+          resendCountdown.value--;
+        } else {
+          timer.cancel();
+        }
+      });
+    }
+
+    startResendTimer();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.email, color: Colors.red.shade700),
+              const SizedBox(width: 8),
+              const Text("Doğrulama Kodu"),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "E-posta adresinize gönderilen 6 haneli kodu girin:",
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: codeController,
+                decoration: const InputDecoration(
+                  labelText: "Doğrulama Kodu",
+                  hintText: "6 haneli kod",
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 24,
+                  letterSpacing: 8,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLength: 6,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
+              ),
+              const SizedBox(height: 8),
+              ValueListenableBuilder<int>(
+                valueListenable: resendCountdown,
+                builder: (context, countdown, _) {
+                  if (countdown > 0) {
+                    return Text(
+                      "Tekrar gönder ($countdown s)",
+                      style: TextStyle(color: Colors.grey.shade600),
+                    );
+                  }
+                  return TextButton(
+                    onPressed: () async {
+                      try {
+                        await ref.read(authServiceProvider).requestAccountDeletion();
+                        startResendTimer();
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Kod tekrar gönderildi"),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } on AuthException catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+                        );
+                      }
+                    },
+                    child: const Text("Kodu tekrar gönder"),
+                  );
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                resendTimer?.cancel();
+                Navigator.of(context).pop();
+              },
+              child: const Text("İptal"),
+            ),
+            ValueListenableBuilder<bool>(
+              valueListenable: isLoading,
+              builder: (context, loading, _) => FilledButton(
+                onPressed: loading
+                    ? null
+                    : () async {
+                        if (codeController.text.length != 6) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Lütfen 6 haneli kodu girin"),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                          return;
+                        }
+
+                        isLoading.value = true;
+                        try {
+                          await ref
+                              .read(authServiceProvider)
+                              .confirmAccountDeletion(codeController.text);
+                          resendTimer?.cancel();
+                          if (!mounted) return;
+                          Navigator.of(context).pop();
+
+                          // Clear session and redirect to login
+                          await ref.read(authSessionProvider.notifier).clearSession();
+                          if (!mounted) return;
+                          ref.read(appRouterProvider).go("/");
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Hesabınız başarıyla silindi"),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        } on AuthException catch (e) {
+                          isLoading.value = false;
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(e.message),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                child: loading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text("Hesabı Sil"),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

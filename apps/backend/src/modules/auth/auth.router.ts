@@ -9,6 +9,8 @@ import {
   verifyEmailHandler,
   forgotPasswordHandler,
   resetPasswordHandler,
+  requestAccountDeletionHandler,
+  confirmAccountDeletionHandler,
 } from "./auth.controller";
 
 const router = Router();
@@ -28,5 +30,9 @@ router.post("/reset-password", resetPasswordHandler);
 // Profile routes (require authentication - getAdminId is called inside handlers)
 router.get("/profile", getProfileHandler);
 router.put("/profile", updateProfileHandler);
+
+// Account deletion routes (require authentication)
+router.post("/request-account-deletion", requestAccountDeletionHandler);
+router.post("/confirm-account-deletion", confirmAccountDeletionHandler);
 
 export const authRouter = router;

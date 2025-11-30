@@ -10,6 +10,7 @@ import {
   generateVerificationCode,
   sendVerificationEmail,
   sendPasswordResetEmail,
+  sendAccountDeletionEmail,
 } from "@/lib/email.service";
 
 const loginSchema = z
@@ -566,6 +567,213 @@ export const updateProfileHandler = async (req: Request, res: Response, next: Ne
         taxNumber: updated.taxNumber ?? null,
         logoUrl: updated.logoUrl ?? null,
       },
+    });
+  } catch (error) {
+    next(error as Error);
+  }
+};
+
+// Hesap silme - doğrulama kodu gönder
+export const requestAccountDeletionHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const adminId = getAdminId(req);
+
+    const admin = await prisma.admin.findUnique({
+      where: { id: adminId },
+    });
+
+    if (!admin) {
+      throw new AppError("Admin bulunamadı", 404);
+    }
+
+    // Invalidate old account deletion codes
+    await prisma.verificationCode.updateMany({
+      where: {
+        email: admin.email,
+        type: "account_deletion",
+        used: false,
+      },
+      data: { used: true },
+    });
+
+    // Generate new code
+    const deletionCode = generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await prisma.verificationCode.create({
+      data: {
+        email: admin.email,
+        code: deletionCode,
+        type: "account_deletion",
+        expiresAt,
+      },
+    });
+
+    // Send account deletion email
+    const sent = await sendAccountDeletionEmail(admin.email, deletionCode, admin.name);
+
+    if (!sent) {
+      throw new AppError("E-posta gönderilemedi. Lütfen tekrar deneyin.", 500);
+    }
+
+    console.log(`📧 Account deletion code sent to: ${admin.email}`);
+
+    res.json({
+      success: true,
+      message: "Hesap silme doğrulama kodu e-posta adresinize gönderildi",
+    });
+  } catch (error) {
+    next(error as Error);
+  }
+};
+
+// Hesap silme - onaylama ve silme
+const confirmAccountDeletionSchema = z.object({
+  code: z.string().length(6, "Doğrulama kodu 6 haneli olmalıdır"),
+});
+
+export const confirmAccountDeletionHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const adminId = getAdminId(req);
+    const { code } = confirmAccountDeletionSchema.parse(req.body);
+
+    const admin = await prisma.admin.findUnique({
+      where: { id: adminId },
+    });
+
+    if (!admin) {
+      throw new AppError("Admin bulunamadı", 404);
+    }
+
+    // Verify the deletion code
+    const verificationRecord = await prisma.verificationCode.findFirst({
+      where: {
+        email: admin.email,
+        code,
+        type: "account_deletion",
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!verificationRecord) {
+      throw new AppError("Geçersiz veya süresi dolmuş doğrulama kodu", 400);
+    }
+
+    // Mark code as used
+    await prisma.verificationCode.update({
+      where: { id: verificationRecord.id },
+      data: { used: true },
+    });
+
+    console.log(`🗑️ Starting account deletion for admin: ${admin.name} (${admin.email})`);
+
+    // Delete all related data in correct order (respecting foreign key constraints)
+    // 1. Delete job notes
+    await prisma.jobNote.deleteMany({
+      where: {
+        job: { adminId },
+      },
+    });
+
+    // 2. Delete job status history
+    await prisma.jobStatusHistory.deleteMany({
+      where: {
+        job: { adminId },
+      },
+    });
+
+    // 3. Delete job personnel assignments
+    await prisma.jobPersonnel.deleteMany({
+      where: {
+        job: { adminId },
+      },
+    });
+
+    // 4. Delete jobs
+    await prisma.job.deleteMany({
+      where: { adminId },
+    });
+
+    // 5. Delete invoices
+    await prisma.invoice.deleteMany({
+      where: { adminId },
+    });
+
+    // 6. Delete customers
+    await prisma.customer.deleteMany({
+      where: { adminId },
+    });
+
+    // 7. Delete personnel leaves
+    await prisma.personnelLeave.deleteMany({
+      where: {
+        personnel: { adminId },
+      },
+    });
+
+    // 8. Delete location logs
+    await prisma.locationLog.deleteMany({
+      where: {
+        personnel: { adminId },
+      },
+    });
+
+    // 9. Delete personnel
+    await prisma.personnel.deleteMany({
+      where: { adminId },
+    });
+
+    // 10. Delete operations
+    await prisma.operation.deleteMany({
+      where: { adminId },
+    });
+
+    // 11. Delete inventory transactions
+    await prisma.inventoryTransaction.deleteMany({
+      where: {
+        item: { adminId },
+      },
+    });
+
+    // 12. Delete inventory items
+    await prisma.inventoryItem.deleteMany({
+      where: { adminId },
+    });
+
+    // 13. Delete notifications
+    await prisma.notification.deleteMany({
+      where: { adminId },
+    });
+
+    // 14. Delete subscription
+    await prisma.subscription.deleteMany({
+      where: { adminId },
+    });
+
+    // 15. Delete verification codes for this email
+    await prisma.verificationCode.deleteMany({
+      where: { email: admin.email },
+    });
+
+    // 16. Finally, delete the admin
+    await prisma.admin.delete({
+      where: { id: adminId },
+    });
+
+    console.log(`✅ Account deleted successfully: ${admin.name} (${admin.email})`);
+
+    res.json({
+      success: true,
+      message: "Hesabınız ve tüm verileriniz başarıyla silindi",
     });
   } catch (error) {
     next(error as Error);

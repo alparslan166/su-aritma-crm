@@ -120,6 +120,64 @@ export const sendPasswordResetEmail = async (
   }
 };
 
+// Hesap silme doğrulama kodu gönder
+export const sendAccountDeletionEmail = async (
+  email: string,
+  code: string,
+  name: string,
+): Promise<boolean> => {
+  try {
+    await transporter.sendMail({
+      from: `"${APP_NAME}" <${FROM_EMAIL}>`,
+      to: email,
+      subject: `${APP_NAME} - Hesap Silme Onayı`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #DC2626; margin: 0;">${APP_NAME}</h1>
+          </div>
+          
+          <div style="background-color: #fef2f2; border-radius: 8px; padding: 30px; text-align: center; border: 2px solid #fecaca;">
+            <h2 style="color: #991b1b; margin-bottom: 10px;">⚠️ Hesap Silme Talebi</h2>
+            <p style="color: #7f1d1d; margin-bottom: 20px;">
+              Merhaba ${name}, hesabınızı silmek için aşağıdaki kodu kullanın:
+            </p>
+            
+            <div style="background-color: #DC2626; color: white; font-size: 32px; font-weight: bold; 
+                        letter-spacing: 8px; padding: 20px 40px; border-radius: 8px; display: inline-block;">
+              ${code}
+            </div>
+            
+            <p style="color: #7f1d1d; margin-top: 20px; font-size: 14px;">
+              Bu kod 10 dakika içinde geçerliliğini yitirecektir.
+            </p>
+            
+            <div style="background-color: #fee2e2; padding: 15px; border-radius: 8px; margin-top: 20px;">
+              <p style="color: #991b1b; margin: 0; font-weight: bold;">
+                ⚠️ DİKKAT: Bu işlem geri alınamaz!
+              </p>
+              <p style="color: #7f1d1d; margin: 10px 0 0 0; font-size: 13px;">
+                Hesabınız silindiğinde tüm verileriniz (personeller, müşteriler, işler, faturalar) 
+                kalıcı olarak silinecektir.
+              </p>
+            </div>
+          </div>
+          
+          <div style="margin-top: 30px; text-align: center; color: #9ca3af; font-size: 12px;">
+            <p>Bu talebi siz yapmadıysanız, bu e-postayı dikkate almayın ve şifrenizi değiştirin.</p>
+            <p>&copy; ${new Date().getFullYear()} ${APP_NAME}</p>
+          </div>
+        </div>
+      `,
+    });
+    console.log(`✅ Account deletion email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Failed to send account deletion email to ${email}:`, error);
+    return false;
+  }
+};
+
 // E-posta servisinin çalışıp çalışmadığını kontrol et
 export const verifyEmailService = async (): Promise<boolean> => {
   try {
