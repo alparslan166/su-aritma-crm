@@ -8,6 +8,7 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "../../../core/session/session_provider.dart";
 import "../../../routing/app_router.dart";
 import "../../../widgets/primary_button.dart";
+import "../../admin/presentation/views/admin_profile_page.dart";
 import "../../dashboard/presentation/admin_dashboard_page.dart";
 import "../application/auth_service.dart";
 
@@ -83,6 +84,9 @@ class EmailVerificationPage extends HookConsumerWidget {
             ),
             remember: true,
           );
+
+      // Invalidate profile to fetch fresh data with adminId
+      ref.invalidate(adminProfileProvider);
 
       if (context.mounted) {
         ref.read(appRouterProvider).goNamed(AdminDashboardPage.routeName);

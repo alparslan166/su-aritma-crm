@@ -456,36 +456,36 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                           ),
                           const SizedBox(height: 8),
                           if (_isEditing)
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              TextButton.icon(
+                                onPressed: _pickLogo,
+                                icon: const Icon(Icons.upload),
+                                label: const Text("Logo Yükle"),
+                              ),
+                              if ((_currentLogoUrl != null &&
+                                      _currentLogoUrl!.isNotEmpty) ||
+                                  _selectedLogoBytes != null)
                                 TextButton.icon(
-                                  onPressed: _pickLogo,
-                                  icon: const Icon(Icons.upload),
-                                  label: const Text("Logo Yükle"),
-                                ),
-                                if ((_currentLogoUrl != null &&
-                                        _currentLogoUrl!.isNotEmpty) ||
-                                    _selectedLogoBytes != null)
-                                  TextButton.icon(
-                                    onPressed: () {
-                                      setState(() {
-                                        _selectedLogoBytes = null;
-                                        _currentLogoUrl = null;
-                                        _logoRemoved = true;
-                                      });
-                                    },
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.red,
-                                    ),
-                                    label: const Text(
-                                      "Kaldır",
-                                      style: TextStyle(color: Colors.red),
-                                    ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedLogoBytes = null;
+                                      _currentLogoUrl = null;
+                                      _logoRemoved = true;
+                                    });
+                                  },
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
                                   ),
-                              ],
-                            ),
+                                  label: const Text(
+                                    "Kaldır",
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -671,20 +671,20 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                     ),
                   ),
                   if (_isEditing) ...[
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: _isLoading ? null : _saveProfile,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text("Kaydet"),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: _isLoading ? null : _saveProfile,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text("Kaydet"),
+                  ),
                   ],
                   const SizedBox(height: 48),
                   // Delete Account Section
