@@ -185,7 +185,14 @@ export const registerHandler = async (req: Request, res: Response, next: NextFun
     const passwordHash = await bcrypt.hash(payload.password, 10);
 
     // Generate unique adminId
-    const adminId = await generateAdminId();
+    let adminId: string;
+    try {
+      adminId = await generateAdminId();
+      console.log(`✅ Generated adminId: ${adminId}`);
+    } catch (error) {
+      console.error("❌ Failed to generate adminId:", error);
+      throw new AppError("Admin ID oluşturulamadı. Lütfen tekrar deneyin.", 500);
+    }
 
     // Create admin
     const admin = await prisma.admin.create({
@@ -198,6 +205,8 @@ export const registerHandler = async (req: Request, res: Response, next: NextFun
         adminId,
       },
     });
+
+    console.log(`✅ Created admin with adminId: ${admin.adminId}`);
 
     res.status(201).json({
       success: true,
