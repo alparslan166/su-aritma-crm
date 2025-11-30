@@ -1,17 +1,9 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-// E-posta gönderimi için transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: parseInt(process.env.SMTP_PORT || "587", 10),
-  secure: process.env.SMTP_SECURE === "true",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// Resend API client
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = process.env.SMTP_FROM || "noreply@suaritma.com";
+const FROM_EMAIL = process.env.EMAIL_FROM || "onboarding@resend.dev";
 const APP_NAME = "Su Arıtma Platformu";
 
 // 6 haneli doğrulama kodu oluştur
@@ -26,8 +18,8 @@ export const sendVerificationEmail = async (
   name: string,
 ): Promise<boolean> => {
   try {
-    await transporter.sendMail({
-      from: `"${APP_NAME}" <${FROM_EMAIL}>`,
+    const { error } = await resend.emails.send({
+      from: `${APP_NAME} <${FROM_EMAIL}>`,
       to: email,
       subject: `${APP_NAME} - E-posta Doğrulama Kodu`,
       html: `
@@ -59,6 +51,12 @@ export const sendVerificationEmail = async (
         </div>
       `,
     });
+
+    if (error) {
+      console.error(`❌ Failed to send verification email to ${email}:`, error);
+      return false;
+    }
+
     console.log(`✅ Verification email sent to ${email}`);
     return true;
   } catch (error) {
@@ -74,8 +72,8 @@ export const sendPasswordResetEmail = async (
   name: string,
 ): Promise<boolean> => {
   try {
-    await transporter.sendMail({
-      from: `"${APP_NAME}" <${FROM_EMAIL}>`,
+    const { error } = await resend.emails.send({
+      from: `${APP_NAME} <${FROM_EMAIL}>`,
       to: email,
       subject: `${APP_NAME} - Şifre Sıfırlama Kodu`,
       html: `
@@ -112,6 +110,12 @@ export const sendPasswordResetEmail = async (
         </div>
       `,
     });
+
+    if (error) {
+      console.error(`❌ Failed to send password reset email to ${email}:`, error);
+      return false;
+    }
+
     console.log(`✅ Password reset email sent to ${email}`);
     return true;
   } catch (error) {
@@ -127,8 +131,8 @@ export const sendAccountDeletionEmail = async (
   name: string,
 ): Promise<boolean> => {
   try {
-    await transporter.sendMail({
-      from: `"${APP_NAME}" <${FROM_EMAIL}>`,
+    const { error } = await resend.emails.send({
+      from: `${APP_NAME} <${FROM_EMAIL}>`,
       to: email,
       subject: `${APP_NAME} - Hesap Silme Onayı`,
       html: `
@@ -170,6 +174,12 @@ export const sendAccountDeletionEmail = async (
         </div>
       `,
     });
+
+    if (error) {
+      console.error(`❌ Failed to send account deletion email to ${email}:`, error);
+      return false;
+    }
+
     console.log(`✅ Account deletion email sent to ${email}`);
     return true;
   } catch (error) {
@@ -180,12 +190,10 @@ export const sendAccountDeletionEmail = async (
 
 // E-posta servisinin çalışıp çalışmadığını kontrol et
 export const verifyEmailService = async (): Promise<boolean> => {
-  try {
-    await transporter.verify();
-    console.log("✅ Email service is ready");
-    return true;
-  } catch (error) {
-    console.warn("⚠️ Email service not configured:", error);
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("⚠️ RESEND_API_KEY is not set. Email service is disabled.");
     return false;
   }
+  console.log("✅ Email service (Resend) is configured");
+  return true;
 };
