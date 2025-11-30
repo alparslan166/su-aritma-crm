@@ -33,6 +33,8 @@ class EmailVerificationPage extends HookConsumerWidget {
     final errorMessage = useState<String?>(null);
     final codeController = useTextEditingController();
     final resendCountdown = useState(0);
+    final isVerified = useState(false);
+    final verifiedResult = useState<AuthResult?>(null);
 
     // Countdown timer for resend button
     useEffect(() {
@@ -60,21 +62,30 @@ class EmailVerificationPage extends HookConsumerWidget {
           codeController.text.trim(),
         );
 
-        // Auto-login after verification
-        await ref
-            .read(authSessionProvider.notifier)
-            .setSession(
-              AuthSession(role: result.role, identifier: result.identifier),
-              remember: true,
-            );
-
-        if (context.mounted) {
-          ref.read(appRouterProvider).goNamed(AdminDashboardPage.routeName);
-        }
+        // Show success screen
+        verifiedResult.value = result;
+        isVerified.value = true;
       } on AuthException catch (e) {
         errorMessage.value = e.message;
-      } finally {
         isLoading.value = false;
+      }
+    }
+
+    Future<void> proceedToDashboard() async {
+      if (verifiedResult.value == null) return;
+
+      await ref
+          .read(authSessionProvider.notifier)
+          .setSession(
+            AuthSession(
+              role: verifiedResult.value!.role,
+              identifier: verifiedResult.value!.identifier,
+            ),
+            remember: true,
+          );
+
+      if (context.mounted) {
+        ref.read(appRouterProvider).goNamed(AdminDashboardPage.routeName);
       }
     }
 
@@ -100,6 +111,204 @@ class EmailVerificationPage extends HookConsumerWidget {
       }
     }
 
+    // Success screen
+    if (isVerified.value) {
+      return Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF10B981).withValues(alpha: 0.1),
+                const Color(0xFF10B981).withValues(alpha: 0.05),
+                Colors.white,
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Animated success icon
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.elasticOut,
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: child,
+                        );
+                      },
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                              blurRadius: 30,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.check_rounded,
+                          size: 64,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+
+                    // Success title with animation
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeOut,
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 20 * (1 - value)),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          Text(
+                            "Hoş Geldiniz! 🎉",
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF1F2937),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            name,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF10B981),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Success message with animation
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeOut,
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 20 * (1 - value)),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.verified_user_rounded,
+                              size: 32,
+                              color: Colors.green.shade600,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              "E-posta adresiniz başarıyla doğrulandı!",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Artık Su Arıtma Platformu'nun tüm özelliklerini kullanabilirsiniz.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+
+                    // Continue button with animation
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeOut,
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 20 * (1 - value)),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: proceedToDashboard,
+                          icon: const Icon(Icons.arrow_forward_rounded),
+                          label: const Text(
+                            "Panele Git",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Verification code input screen
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -148,11 +357,10 @@ class EmailVerificationPage extends HookConsumerWidget {
                       Text(
                         "E-postanızı Doğrulayın",
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1F2937),
-                            ),
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1F2937),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -213,9 +421,7 @@ class EmailVerificationPage extends HookConsumerWidget {
                                 style: TextStyle(color: Colors.grey.shade500),
                               )
                             : TextButton(
-                                onPressed: isResending.value
-                                    ? null
-                                    : resendCode,
+                                onPressed: isResending.value ? null : resendCode,
                                 child: isResending.value
                                     ? const SizedBox(
                                         width: 20,
