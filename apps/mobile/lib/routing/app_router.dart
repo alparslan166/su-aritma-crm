@@ -11,6 +11,8 @@ import "../features/admin/presentation/views/inventory_detail_page.dart";
 import "../features/admin/presentation/views/job_detail_page.dart";
 import "../features/admin/presentation/views/personnel_detail_page.dart";
 import "../features/auth/domain/auth_role.dart";
+import "../features/auth/presentation/email_verification_page.dart";
+import "../features/auth/presentation/forgot_password_page.dart";
 import "../features/auth/presentation/login_page.dart";
 import "../features/auth/presentation/register_page.dart";
 import "../features/dashboard/presentation/admin_dashboard_page.dart";
@@ -26,8 +28,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final currentSession = ref.read(authSessionProvider);
       final isLogin = state.matchedLocation == "/";
       final isRegister = state.matchedLocation == "/register";
+      final isEmailVerification = state.matchedLocation.startsWith("/email-verification");
+      final isForgotPassword = state.matchedLocation == "/forgot-password";
 
-      if (currentSession == null && !isLogin && !isRegister) return "/";
+      // Public routes that don't require authentication
+      if (currentSession == null && !isLogin && !isRegister && !isEmailVerification && !isForgotPassword) {
+        return "/";
+      }
 
       if (currentSession != null && (isLogin || isRegister)) {
         return currentSession.role == AuthRole.admin
@@ -47,6 +54,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: "/register",
         name: RegisterPage.routeName,
         builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: "/email-verification",
+        name: EmailVerificationPage.routeName,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, String>?;
+          return EmailVerificationPage(
+            email: extra?["email"] ?? "",
+            name: extra?["name"] ?? "",
+            password: extra?["password"] ?? "",
+          );
+        },
+      ),
+      GoRoute(
+        path: "/forgot-password",
+        name: ForgotPasswordPage.routeName,
+        builder: (context, state) => const ForgotPasswordPage(),
       ),
       GoRoute(
         path: "/dashboard/admin",

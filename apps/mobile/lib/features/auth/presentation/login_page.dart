@@ -11,6 +11,7 @@ import "../../dashboard/presentation/personnel_dashboard_page.dart";
 import "../application/auth_service.dart";
 import "../application/login_controller.dart";
 import "../domain/auth_role.dart";
+import "forgot_password_page.dart";
 import "register_page.dart";
 
 class LoginPage extends HookConsumerWidget {
@@ -66,11 +67,16 @@ class LoginPage extends HookConsumerWidget {
       }
 
       final errored = nextStatus is AsyncError;
-      if (errored && prevStatus?.isLoading == true) {
+      if (errored) {
         final errorMessage = nextStatus.error.toString();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
+        // Show error message for both loading errors and validation errors
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     });
 
@@ -205,7 +211,9 @@ class LoginPage extends HookConsumerWidget {
                           decoration: const InputDecoration(
                             labelText: "Admin ID",
                             hintText: "ör. ABC12345",
-                            prefixIcon: Icon(Icons.admin_panel_settings_outlined),
+                            prefixIcon: Icon(
+                              Icons.admin_panel_settings_outlined,
+                            ),
                           ),
                           keyboardType: TextInputType.text,
                           textInputAction: TextInputAction.next,
@@ -249,7 +257,18 @@ class LoginPage extends HookConsumerWidget {
                         obscureText: true,
                         keyboardType: loginState.role == AuthRole.admin
                             ? TextInputType.visiblePassword
-                            : TextInputType.number,
+                            : TextInputType.text,
+                        inputFormatters: loginState.role == AuthRole.personnel
+                            ? [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'[a-zA-Z0-9]'),
+                                ),
+                              ]
+                            : null,
+                        textCapitalization:
+                            loginState.role == AuthRole.personnel
+                            ? TextCapitalization.characters
+                            : TextCapitalization.none,
                         onChanged: controller.updateSecret,
                         onSubmitted: (_) => controller.submit(),
                       ),
@@ -281,11 +300,27 @@ class LoginPage extends HookConsumerWidget {
                       ),
                       if (loginState.role == AuthRole.admin) ...[
                         const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            TextButton(
+                              onPressed: () => ref
+                                  .read(appRouterProvider)
+                                  .goNamed(RegisterPage.routeName),
+                              child: const Text("Hesabınız yok mu? Kayıt olun"),
+                            ),
+                          ],
+                        ),
                         TextButton(
                           onPressed: () => ref
                               .read(appRouterProvider)
-                              .goNamed(RegisterPage.routeName),
-                          child: const Text("Hesabınız yok mu? Kayıt olun"),
+                              .goNamed(ForgotPasswordPage.routeName),
+                          child: Text(
+                            "Şifremi unuttum",
+                            style: TextStyle(
+                              color: Colors.red.shade600,
+                            ),
+                          ),
                         ),
                       ],
                       const SizedBox(height: 24),

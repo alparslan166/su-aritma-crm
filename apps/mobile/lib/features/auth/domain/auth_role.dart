@@ -13,6 +13,6 @@ extension AuthRoleX on AuthRole {
 
   String get passwordLabel => switch (this) {
     AuthRole.admin => "Şifre",
-    AuthRole.personnel => "6 Haneli Kod",
+    AuthRole.personnel => "Personel Şifre",
   };
 }

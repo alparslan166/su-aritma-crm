@@ -58,7 +58,7 @@ export const generateAdminId = async (length = 8): Promise<string> => {
       // Check if this ID already exists
       // Use findFirst since adminId might not be in WhereUniqueInput yet
       const existing = await prisma.admin.findFirst({
-        where: { 
+        where: {
           adminId: id,
         },
       });

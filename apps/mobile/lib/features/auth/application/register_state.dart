@@ -21,7 +21,7 @@ class RegisterState extends Equatable {
     confirmPassword: "",
     phone: "",
     role: "ALT",
-    status: AsyncData<AuthResult?>(null),
+    status: AsyncData<SignUpResult?>(null),
   );
 
   final String name;
@@ -30,7 +30,7 @@ class RegisterState extends Equatable {
   final String confirmPassword;
   final String phone;
   final String role; // "ANA" or "ALT"
-  final AsyncValue<AuthResult?> status;
+  final AsyncValue<SignUpResult?> status;
 
   RegisterState copyWith({
     String? name,
@@ -39,7 +39,7 @@ class RegisterState extends Equatable {
     String? confirmPassword,
     String? phone,
     String? role,
-    AsyncValue<AuthResult?>? status,
+    AsyncValue<SignUpResult?>? status,
   }) {
     return RegisterState(
       name: name ?? this.name,

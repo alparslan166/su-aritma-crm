@@ -22,13 +22,32 @@ abstract class AuthService {
     String? adminId,
   });
 
-  Future<AuthResult> signUp({
+  Future<SignUpResult> signUp({
     required String name,
     required String email,
     required String password,
     required String phone,
     required String role,
   });
+
+  Future<void> sendVerificationCode(String email);
+  Future<AuthResult> verifyEmail(String email, String code);
+  Future<void> forgotPassword(String email);
+  Future<void> resetPassword(String email, String code, String newPassword);
+}
+
+class SignUpResult {
+  SignUpResult({
+    required this.id,
+    required this.email,
+    required this.name,
+    required this.emailVerified,
+  });
+
+  final String id;
+  final String email;
+  final String name;
+  final bool emailVerified;
 }
 
 class ApiAuthService implements AuthService {
@@ -92,7 +111,7 @@ class ApiAuthService implements AuthService {
   }
 
   @override
-  Future<AuthResult> signUp({
+  Future<SignUpResult> signUp({
     required String name,
     required String email,
     required String password,
@@ -112,42 +131,90 @@ class ApiAuthService implements AuthService {
       );
       final data = response.data["data"] as Map<String, dynamic>;
       debugPrint("Signed up as admin (${data["id"]})");
-      // After signup, automatically sign in
-      return await signIn(
-        role: AuthRole.admin,
-        identifier: email,
-        secret: password,
+      return SignUpResult(
+        id: data["id"] as String,
+        email: data["email"] as String,
+        name: data["name"] as String,
+        emailVerified: data["emailVerified"] as bool? ?? false,
       );
     } on DioException catch (error) {
-      // Parse error message from backend
-      String message = "Kayıt başarısız";
+      throw AuthException(message: _parseErrorMessage(error, "Kayıt başarısız"));
+    }
+  }
 
-      if (error.response?.data != null) {
-        final errorData = error.response!.data;
+  @override
+  Future<void> sendVerificationCode(String email) async {
+    try {
+      await _client.post(
+        "/auth/send-verification-code",
+        data: {"email": email},
+      );
+    } on DioException catch (error) {
+      throw AuthException(message: _parseErrorMessage(error, "Kod gönderilemedi"));
+    }
+  }
 
-        // Check for Zod validation errors
-        if (errorData is Map<String, dynamic>) {
-          // Check for issues array (Zod validation errors)
-          if (errorData.containsKey("issues") && errorData["issues"] is List) {
-            final issues = errorData["issues"] as List;
-            if (issues.isNotEmpty) {
-              final firstIssue = issues[0] as Map<String, dynamic>;
-              message = firstIssue["message"]?.toString() ?? message;
-            }
+  @override
+  Future<AuthResult> verifyEmail(String email, String code) async {
+    try {
+      final response = await _client.post(
+        "/auth/verify-email",
+        data: {"email": email, "code": code},
+      );
+      final data = response.data["data"] as Map<String, dynamic>;
+      debugPrint("Email verified for ${data["email"]}");
+      return AuthResult(role: AuthRole.admin, identifier: data["id"] as String);
+    } on DioException catch (error) {
+      throw AuthException(message: _parseErrorMessage(error, "Doğrulama başarısız"));
+    }
+  }
+
+  @override
+  Future<void> forgotPassword(String email) async {
+    try {
+      await _client.post(
+        "/auth/forgot-password",
+        data: {"email": email},
+      );
+    } on DioException catch (error) {
+      throw AuthException(message: _parseErrorMessage(error, "İşlem başarısız"));
+    }
+  }
+
+  @override
+  Future<void> resetPassword(String email, String code, String newPassword) async {
+    try {
+      await _client.post(
+        "/auth/reset-password",
+        data: {
+          "email": email,
+          "code": code,
+          "newPassword": newPassword,
+        },
+      );
+    } on DioException catch (error) {
+      throw AuthException(message: _parseErrorMessage(error, "Şifre sıfırlanamadı"));
+    }
+  }
+
+  String _parseErrorMessage(DioException error, String defaultMessage) {
+    if (error.response?.data != null) {
+      final errorData = error.response!.data;
+      if (errorData is Map<String, dynamic>) {
+        if (errorData.containsKey("issues") && errorData["issues"] is List) {
+          final issues = errorData["issues"] as List;
+          if (issues.isNotEmpty) {
+            final firstIssue = issues[0] as Map<String, dynamic>;
+            return firstIssue["message"]?.toString() ?? defaultMessage;
           }
-          // Check for direct message
-          else if (errorData.containsKey("message")) {
-            message = errorData["message"].toString();
-          }
-          // Check for error field
-          else if (errorData.containsKey("error")) {
-            message = errorData["error"].toString();
-          }
+        } else if (errorData.containsKey("message")) {
+          return errorData["message"].toString();
+        } else if (errorData.containsKey("error")) {
+          return errorData["error"].toString();
         }
       }
-
-      throw AuthException(message: message);
     }
+    return defaultMessage;
   }
 }
 
@@ -178,7 +245,7 @@ class MockAuthService implements AuthService {
   }
 
   @override
-  Future<AuthResult> signUp({
+  Future<SignUpResult> signUp({
     required String name,
     required String email,
     required String password,
@@ -190,7 +257,42 @@ class MockAuthService implements AuthService {
       throw AuthException(message: "Geçersiz bilgiler");
     }
     debugPrint("Signed up as admin ($email)");
-    return AuthResult(role: AuthRole.admin, identifier: email);
+    return SignUpResult(
+      id: "mock-id",
+      email: email,
+      name: name,
+      emailVerified: false,
+    );
+  }
+
+  @override
+  Future<void> sendVerificationCode(String email) async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    debugPrint("Mock: Verification code sent to $email");
+  }
+
+  @override
+  Future<AuthResult> verifyEmail(String email, String code) async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (code != "123456") {
+      throw AuthException(message: "Geçersiz kod");
+    }
+    return AuthResult(role: AuthRole.admin, identifier: "mock-id");
+  }
+
+  @override
+  Future<void> forgotPassword(String email) async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    debugPrint("Mock: Password reset code sent to $email");
+  }
+
+  @override
+  Future<void> resetPassword(String email, String code, String newPassword) async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (code != "123456") {
+      throw AuthException(message: "Geçersiz kod");
+    }
+    debugPrint("Mock: Password reset for $email");
   }
 }
 

@@ -64,34 +64,49 @@ enum InventoryTransactionType {
 }
 
 model Admin {
-  id             String             @id @default(cuid())
-  adminId        String?            @unique // Public-facing admin ID for personnel login
-  name           String
-  phone          String
-  email          String             @unique
-  role           AdminRole
-  status         String             @default("active")
-  passwordHash   String?
+  id              String             @id @default(cuid())
+  adminId         String?            @unique // Public-facing admin ID for personnel login
+  name            String
+  phone           String
+  email           String             @unique
+  emailVerified   Boolean            @default(false)
+  role            AdminRole
+  status          String             @default("active")
+  passwordHash    String?
   // Company/Invoice settings
-  companyName    String?
-  companyAddress String?
-  companyPhone   String?
-  companyEmail   String?
-  taxOffice      String?
-  taxNumber      String?
-  logoUrl        String?
-  personnel      Personnel[]
-  jobs           Job[]
-  customers      Customer[]
-  operations     Operation[]
-  inventoryItems InventoryItem[]
-  notifications  Notification[]
-  jobStatusLogs  JobStatusHistory[] @relation("JobStatusHistoryAdmin")
-  jobNotes       JobNote[]          @relation("JobNoteAdmin")
-  subscription   Subscription?
-  invoices       Invoice[]
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  companyName     String?
+  companyAddress  String?
+  companyPhone    String?
+  companyEmail    String?
+  taxOffice       String?
+  taxNumber       String?
+  logoUrl         String?
+  personnel       Personnel[]
+  jobs            Job[]
+  customers       Customer[]
+  operations      Operation[]
+  inventoryItems  InventoryItem[]
+  notifications   Notification[]
+  jobStatusLogs   JobStatusHistory[] @relation("JobStatusHistoryAdmin")
+  jobNotes        JobNote[]          @relation("JobNoteAdmin")
+  subscription    Subscription?
+  invoices        Invoice[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+// E-posta doğrulama ve şifre sıfırlama kodları
+model VerificationCode {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  type      String   // "email_verification" | "password_reset"
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, type])
+  @@index([code])
 }
 
 model Personnel {

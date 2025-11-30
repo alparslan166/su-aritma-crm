@@ -4,12 +4,11 @@ import "package:flutter/services.dart";
 import "package:flutter_hooks/flutter_hooks.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
-import "../../../core/session/session_provider.dart";
 import "../../../routing/app_router.dart";
 import "../../../widgets/primary_button.dart";
-import "../../dashboard/presentation/admin_dashboard_page.dart";
 import "../application/auth_service.dart";
 import "../application/register_controller.dart";
+import "email_verification_page.dart";
 
 class RegisterPage extends HookConsumerWidget {
   const RegisterPage({super.key});
@@ -32,22 +31,19 @@ class RegisterPage extends HookConsumerWidget {
       final nextStatus = next.status;
 
       final transitionedFromLoading =
-          prevStatus?.isLoading == true && nextStatus is AsyncData<AuthResult?>;
+          prevStatus?.isLoading == true && nextStatus is AsyncData<SignUpResult?>;
       if (transitionedFromLoading) {
         final result = nextStatus.value;
         if (result != null) {
-          // Async işlemi Future olarak başlat
-          ref
-              .read(authSessionProvider.notifier)
-              .setSession(
-                AuthSession(role: result.role, identifier: result.identifier),
-                remember: true, // Register sonrası otomatik hatırla
-              )
-              .then((_) {
-                ref
-                    .read(appRouterProvider)
-                    .goNamed(AdminDashboardPage.routeName);
-              });
+          // Navigate to email verification page
+          ref.read(appRouterProvider).goNamed(
+            EmailVerificationPage.routeName,
+            extra: {
+              "email": result.email,
+              "name": result.name,
+              "password": registerState.password,
+            },
+          );
           return;
         }
       }
