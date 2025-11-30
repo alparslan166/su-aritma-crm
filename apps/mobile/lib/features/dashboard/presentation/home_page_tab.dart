@@ -15,6 +15,7 @@ import "../../admin/presentation/views/past_jobs_view.dart";
 import "../../admin/presentation/views/job_map_view.dart";
 import "../../admin/presentation/views/personnel_view.dart";
 import "../../admin/presentation/views/inventory_view.dart";
+import "../../admin/presentation/views/jobs_view.dart";
 import "../../admin/data/models/customer.dart";
 import "../../admin/data/models/maintenance_reminder.dart";
 import "customer_donut_chart.dart";
@@ -127,6 +128,11 @@ class _StatsGrid extends ConsumerWidget {
           value: stats.activeJobs.toString(),
           icon: Icons.work_outline,
           color: const Color(0xFFF59E0B),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const JobsView()),
+            );
+          },
         ),
         _StatCard(
           title: "Toplam Personel",

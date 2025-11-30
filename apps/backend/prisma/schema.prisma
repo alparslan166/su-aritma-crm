@@ -65,6 +65,7 @@ enum InventoryTransactionType {
 
 model Admin {
   id             String             @id @default(cuid())
+  adminId        String?            @unique // Public-facing admin ID for personnel login
   name           String
   phone          String
   email          String             @unique

@@ -3,13 +3,24 @@ import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { generateAdminId } from "@/lib/generators";
 import { getAdminId } from "@/lib/tenant";
 import { AppError } from "@/middleware/error-handler";
 
 const loginSchema = z.object({
-  identifier: z.string().min(3),
-  password: z.string().min(4),
+  identifier: z.string().min(1, "Identifier gereklidir"),
+  password: z.string().min(1, "Password gereklidir"),
   role: z.enum(["admin", "personnel"]).optional(),
+  adminId: z.string().optional(), // Admin ID for personnel login (replaces adminEmail for privacy)
+}).refine((data) => {
+  // For personnel login, adminId is required
+  if (data.role === "personnel" && (!data.adminId || data.adminId.trim().length === 0)) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Personel girişi için Admin ID gereklidir",
+  path: ["adminId"],
 });
 
 export const loginHandler = async (req: Request, res: Response, next: NextFunction) => {
@@ -41,16 +52,34 @@ export const loginHandler = async (req: Request, res: Response, next: NextFuncti
         },
       });
     } else if (role === "personnel") {
-      // Personnel login with personnelId and loginCode
-      // personnelId is now admin-specific, so we need to find by personnelId
+      // Personnel login with personnelId, loginCode, and adminId
+      // personnelId is admin-specific (unique per admin), so we need adminId to find the correct admin
+      if (!payload.adminId || payload.adminId.trim().length === 0) {
+        throw new AppError("Admin ID gereklidir", 400);
+      }
+
+      // Normalize adminId (trim and uppercase for consistency)
+      const normalizedAdminId = payload.adminId.trim().toUpperCase();
+
+      // First, find the admin by adminId
+      const admin = await prisma.admin.findUnique({
+        where: { adminId: normalizedAdminId },
+      });
+
+      if (!admin) {
+        throw new AppError("Geçersiz admin ID", 401);
+      }
+
+      // Then find personnel by personnelId and adminId (ensures admin-specific uniqueness)
       const personnel = await prisma.personnel.findFirst({
         where: { 
+          adminId: admin.id,
           personnelId: payload.identifier,
         },
       });
 
       if (!personnel) {
-        throw new AppError("Geçersiz personel kodu", 401);
+        throw new AppError("Geçersiz personel kodu veya admin ID", 401);
       }
 
       if (personnel.status !== "ACTIVE") {
@@ -61,6 +90,12 @@ export const loginHandler = async (req: Request, res: Response, next: NextFuncti
       if (personnel.loginCode !== payload.password) {
         throw new AppError("Geçersiz giriş kodu", 401);
       }
+
+      // Update lastLoginAt
+      await prisma.personnel.update({
+        where: { id: personnel.id },
+        data: { lastLoginAt: new Date() },
+      });
 
       res.json({
         success: true,
@@ -106,6 +141,7 @@ export const getProfileHandler = async (req: Request, res: Response, next: NextF
       success: true,
       data: {
         id: admin.id,
+        adminId: admin.adminId ?? null,
         name: admin.name,
         phone: admin.phone,
         email: admin.email,
@@ -148,6 +184,9 @@ export const registerHandler = async (req: Request, res: Response, next: NextFun
     // Hash password
     const passwordHash = await bcrypt.hash(payload.password, 10);
 
+    // Generate unique adminId
+    const adminId = await generateAdminId();
+
     // Create admin
     const admin = await prisma.admin.create({
       data: {
@@ -156,6 +195,7 @@ export const registerHandler = async (req: Request, res: Response, next: NextFun
         phone: payload.phone,
         role: payload.role,
         passwordHash,
+        adminId,
       },
     });
 
@@ -228,6 +268,7 @@ export const updateProfileHandler = async (req: Request, res: Response, next: Ne
       success: true,
       data: {
         id: updated.id,
+        adminId: updated.adminId ?? null,
         name: updated.name,
         phone: updated.phone,
         email: updated.email,

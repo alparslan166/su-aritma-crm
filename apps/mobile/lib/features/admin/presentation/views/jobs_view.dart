@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
+import "package:mobile/widgets/admin_app_bar.dart";
 import "package:mobile/widgets/empty_state.dart";
 
 import "../../../../core/error/error_handler.dart";
@@ -11,52 +12,126 @@ import "../../data/admin_repository.dart";
 import "../../data/models/job.dart";
 import "../widgets/job_card.dart";
 
-class JobsView extends ConsumerWidget {
+enum JobStatusFilter { all, pending, inProgress }
+
+class JobsView extends ConsumerStatefulWidget {
   const JobsView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<JobsView> createState() => _JobsViewState();
+}
+
+class _JobsViewState extends ConsumerState<JobsView> {
+  JobStatusFilter _filter = JobStatusFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(jobListProvider);
     final notifier = ref.read(jobListProvider.notifier);
     final content = state.when(
       data: (items) {
         final activeJobs = _activeOnly(items);
-        if (activeJobs.isEmpty) {
-          return RefreshIndicator(
-            onRefresh: notifier.refresh,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-              children: const [
-                SizedBox(height: 120),
-                EmptyState(
-                  icon: Icons.work_outline,
-                  title: "Aktif iş bulunmuyor",
-                  subtitle: "Yeni iş oluşturduğunuzda burada listelenecek.",
-                ),
-              ],
-            ),
-          );
-        }
+        final pendingJobs = activeJobs
+            .where((j) => j.status == "PENDING")
+            .length;
+        final inProgressJobs = activeJobs
+            .where((j) => j.status == "IN_PROGRESS")
+            .length;
+
+        // Filtreleme uygula
+        final filteredJobs = _filterJobs(activeJobs, _filter);
+
         return RefreshIndicator(
           onRefresh: notifier.refresh,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-            itemCount: activeJobs.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            cacheExtent: 500,
-            addAutomaticKeepAlives: false,
-            addRepaintBoundaries: true,
-            itemBuilder: (context, index) {
-              final job = activeJobs[index];
-              return RepaintBoundary(
-                child: JobCard(
-                  job: job,
-                  onTap: () =>
-                      context.push("/admin/jobs/${job.id}", extra: job),
+          child: CustomScrollView(
+            slivers: [
+              // İstatistik kartları
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _StatCard(
+                          icon: Icons.pending_outlined,
+                          iconColor: const Color(0xFF2563EB),
+                          title: "Beklemede",
+                          count: pendingJobs,
+                          isSelected: _filter == JobStatusFilter.pending,
+                          onTap: () {
+                            setState(() {
+                              _filter = _filter == JobStatusFilter.pending
+                                  ? JobStatusFilter.all
+                                  : JobStatusFilter.pending;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(
+                          icon: Icons.work_outline,
+                          iconColor: const Color(0xFFF59E0B),
+                          title: "Devam Ediyor",
+                          count: inProgressJobs,
+                          isSelected: _filter == JobStatusFilter.inProgress,
+                          onTap: () {
+                            setState(() {
+                              _filter = _filter == JobStatusFilter.inProgress
+                                  ? JobStatusFilter.all
+                                  : JobStatusFilter.inProgress;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              );
-            },
+              ),
+              // İş listesi
+              if (filteredJobs.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 48,
+                      horizontal: 24,
+                    ),
+                    child: EmptyState(
+                      icon: Icons.work_outline,
+                      title: _filter == JobStatusFilter.all
+                          ? "Aktif iş bulunmuyor"
+                          : _filter == JobStatusFilter.pending
+                          ? "Beklemede iş bulunmuyor"
+                          : "Devam eden iş bulunmuyor",
+                      subtitle: _filter == JobStatusFilter.all
+                          ? "Yeni iş oluşturduğunuzda burada listelenecek."
+                          : "Bu durumda iş bulunmuyor.",
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final job = filteredJobs[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: RepaintBoundary(
+                          child: JobCard(
+                            job: job,
+                            onTap: () => context.push(
+                              "/admin/jobs/${job.id}",
+                              extra: job,
+                            ),
+                          ),
+                        ),
+                      );
+                    }, childCount: filteredJobs.length),
+                  ),
+                ),
+            ],
           ),
         );
       },
@@ -66,153 +141,17 @@ class JobsView extends ConsumerWidget {
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
     );
-    final padding = MediaQuery.paddingOf(context).bottom;
-    return Stack(
-      children: [
-        Positioned.fill(child: content),
-        Positioned(
-          right: 16,
-          bottom: 16 + padding,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              FloatingActionButton(
-                heroTag: "assign",
-                onPressed: () => _showAssignPersonnelDialog(context, ref),
-                tooltip: "Personel Ata",
-                child: const Icon(Icons.person_add),
-              ),
-              const SizedBox(height: 8),
-              FloatingActionButton.extended(
-                heroTag: "add",
-                onPressed: () => _openAddJobSheet(context, ref),
-                icon: const Icon(Icons.add),
-                label: const Text("İş Ekle"),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showAssignPersonnelDialog(BuildContext context, WidgetRef ref) {
-    final jobState = ref.read(jobListProvider);
-    final jobs = jobState.value ?? [];
-    if (jobs.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Atanabilir iş bulunamadı")));
-      return;
-    }
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("İş Seç"),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: jobs.length,
-            itemBuilder: (context, index) {
-              final job = jobs[index];
-              return ListTile(
-                title: Text(job.title),
-                subtitle: Text(job.customer.name),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _openAssignPersonnelSheet(context, ref, job);
-                },
-              );
-            },
-          ),
-        ),
+    return Scaffold(
+      appBar: const AdminAppBar(title: Text("Aktif İşler")),
+      body: content,
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: "add",
+        onPressed: () => _openAddJobSheet(context, ref),
+        icon: const Icon(Icons.add),
+        label: const Text("İş Ata"),
+        backgroundColor: const Color(0xFF2563EB),
       ),
-    );
-  }
-
-  void _openAssignPersonnelSheet(BuildContext context, WidgetRef ref, Job job) {
-    final personnelState = ref.read(personnelListProvider);
-    final personnelList = personnelState.value ?? [];
-    if (personnelList.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Personel bulunamadı")));
-      return;
-    }
-    final selectedIds = <String>{
-      ...job.assignments.map((a) => a.personnelId).whereType<String>(),
-    };
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "Personel Seç",
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: personnelList.length,
-                    itemBuilder: (context, index) {
-                      final personnel = personnelList[index];
-                      final isSelected = selectedIds.contains(personnel.id);
-                      return CheckboxListTile(
-                        title: Text(personnel.name),
-                        subtitle: Text(personnel.phone),
-                        value: isSelected,
-                        onChanged: (value) {
-                          setState(() {
-                            if (value == true) {
-                              selectedIds.add(personnel.id);
-                            } else {
-                              selectedIds.remove(personnel.id);
-                            }
-                          });
-                        },
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () async {
-                    try {
-                      await ref
-                          .read(adminRepositoryProvider)
-                          .assignPersonnelToJob(
-                            jobId: job.id,
-                            personnelIds: selectedIds.toList(),
-                          );
-                      await ref.read(jobListProvider.notifier).refresh();
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Personel atandı")),
-                        );
-                      }
-                    } catch (error) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Atama başarısız: $error")),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text("Ata"),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -234,6 +173,109 @@ List<Job> _activeOnly(List<Job> jobs) {
   return jobs
       .where((job) => job.status == "PENDING" || job.status == "IN_PROGRESS")
       .toList();
+}
+
+List<Job> _filterJobs(List<Job> jobs, JobStatusFilter filter) {
+  switch (filter) {
+    case JobStatusFilter.pending:
+      return jobs.where((job) => job.status == "PENDING").toList();
+    case JobStatusFilter.inProgress:
+      return jobs.where((job) => job.status == "IN_PROGRESS").toList();
+    case JobStatusFilter.all:
+      return jobs;
+  }
+}
+
+// İstatistik kartı widget'ı
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.count,
+    this.isSelected = false,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final int count;
+  final bool isSelected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? iconColor.withValues(alpha: 0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? iconColor : Colors.grey.shade200,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected
+                  ? iconColor.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.03),
+              blurRadius: isSelected ? 8 : 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 20),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    "$count",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: iconColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _JobsError extends StatelessWidget {

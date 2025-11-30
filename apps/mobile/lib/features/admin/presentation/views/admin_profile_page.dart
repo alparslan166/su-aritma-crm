@@ -2,6 +2,7 @@ import "dart:typed_data";
 
 import "package:dio/dio.dart";
 import "package:flutter/material.dart";
+import "package:flutter/services.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:image_picker/image_picker.dart";
 
@@ -255,6 +256,121 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Admin ID Section (at the top)
+                  Card(
+                    color: profile["adminId"] != null
+                        ? Colors.blue.shade50
+                        : Colors.orange.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.admin_panel_settings,
+                                color: profile["adminId"] != null
+                                    ? Colors.blue.shade700
+                                    : Colors.orange.shade700,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Admin ID",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: profile["adminId"] != null
+                                      ? Colors.blue.shade900
+                                      : Colors.orange.shade900,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if (profile["adminId"] != null &&
+                              (profile["adminId"] as String).isNotEmpty) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    profile["adminId"] as String,
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: "monospace",
+                                      color: Colors.blue.shade900,
+                                      letterSpacing: 1.5,
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.copy,
+                                    color: Colors.blue.shade700,
+                                  ),
+                                  onPressed: () {
+                                    Clipboard.setData(
+                                      ClipboardData(
+                                        text: profile["adminId"] as String,
+                                      ),
+                                    );
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Admin ID kopyalandı"),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  },
+                                  tooltip: "Kopyala",
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              "Personeller giriş yaparken bu ID'yi kullanır",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue.shade700,
+                              ),
+                            ),
+                          ] else ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.orange.shade300,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    color: Colors.orange.shade700,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      "Admin ID henüz oluşturulmamış. Lütfen yönetici ile iletişime geçin.",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.orange.shade900,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   // Logo Section
                   Card(
                     child: Padding(

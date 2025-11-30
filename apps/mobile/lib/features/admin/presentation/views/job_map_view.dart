@@ -33,15 +33,22 @@ enum MapFilter { all, customersOnly, personnelOnly }
 
 class _JobMapViewState extends ConsumerState<JobMapView> {
   final MapController _mapController = MapController();
+  final DraggableScrollableController _sheetController =
+      DraggableScrollableController();
   final Map<String, LatLng> _resolvedLocations = {};
   final Set<String> _loadingLocations = {};
   final Map<String, String> _locationErrors = {};
   bool _initialized = false;
   MapFilter _filter = MapFilter.all;
+  String? _highlightedCustomerId; // Popup gösterilecek müşteri ID'si
+  bool _isSheetExpanded = false; // Sheet'in açık/kapalı durumu
+  bool _isToggling = false; // Toggle işlemi devam ediyor mu?
 
   @override
   void initState() {
     super.initState();
+    // Sheet controller listener'ını ekle
+    _sheetController.addListener(_onSheetChanged);
     // Initialize customer and personnel lists when map view is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -57,6 +64,133 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
         });
       }
     });
+  }
+
+  void _onSheetChanged() {
+    if (!mounted || _isToggling) return; // Toggle sırasında state güncelleme
+    final currentSize = _sheetController.isAttached
+        ? _sheetController.size
+        : 0.1;
+    final isExpanded = currentSize > 0.15;
+    if (_isSheetExpanded != isExpanded) {
+      setState(() {
+        _isSheetExpanded = isExpanded;
+      });
+    }
+  }
+
+  void _toggleSheet() {
+    if (!mounted || _isToggling)
+      return; // Zaten toggle işlemi devam ediyorsa bekle
+
+    debugPrint("🔄 Toggle sheet called. Current expanded: $_isSheetExpanded");
+    debugPrint("🔗 Controller attached: ${_sheetController.isAttached}");
+
+    // Toggle flag'ini aktif et
+    setState(() {
+      _isToggling = true;
+    });
+
+    // State'i tersine çevir
+    final newExpandedState = !_isSheetExpanded;
+
+    // State'i hemen güncelle (UI'da buton ikonunu değiştirmek için)
+    setState(() {
+      _isSheetExpanded = newExpandedState;
+    });
+
+    // Controller attach olana kadar bekle
+    void _animateSheet([int retryCount = 0]) {
+      if (!mounted) {
+        _isToggling = false;
+        return;
+      }
+
+      // Maksimum 10 deneme (yaklaşık 500ms)
+      if (retryCount > 10) {
+        debugPrint("⚠️ Sheet controller attach timeout");
+        if (mounted) {
+          setState(() {
+            _isToggling = false;
+          });
+        }
+        return;
+      }
+
+      if (!_sheetController.isAttached) {
+        // Controller henüz hazır değil, kısa bir süre bekle ve tekrar dene
+        Future.delayed(const Duration(milliseconds: 50), () {
+          if (mounted) {
+            _animateSheet(retryCount + 1);
+          } else {
+            _isToggling = false;
+          }
+        });
+        return;
+      }
+
+      // Controller'ı animate et
+      try {
+        if (newExpandedState) {
+          // Yarıya kadar aç
+          debugPrint("📂 Opening sheet to 0.5");
+          _sheetController
+              .animateTo(
+                0.5,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              )
+              .then((_) {
+                // Animasyon bittiğinde toggle flag'ini kaldır
+                if (mounted) {
+                  setState(() {
+                    _isToggling = false;
+                  });
+                }
+              });
+        } else {
+          // Tamamen kapat (sadece buton gözüksün)
+          debugPrint("📁 Closing sheet to 0.1");
+          _sheetController
+              .animateTo(
+                0.1, // minChildSize
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              )
+              .then((_) {
+                // Animasyon bittiğinde toggle flag'ini kaldır
+                if (mounted) {
+                  setState(() {
+                    _isToggling = false;
+                  });
+                }
+              });
+        }
+      } catch (e) {
+        debugPrint("❌ Toggle sheet error: $e");
+        if (mounted) {
+          setState(() {
+            _isToggling = false;
+          });
+        }
+      }
+    }
+
+    // Animasyonu başlat
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _animateSheet();
+      } else {
+        _isToggling = false;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _sheetController.removeListener(_onSheetChanged);
+    _sheetController.dispose();
+    super.dispose();
   }
 
   @override
@@ -132,6 +266,7 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
           customer,
           location,
           () => _showCustomerInfoSheet(context, customer),
+          isHighlighted: _highlightedCustomerId == customer.id,
         );
       }).whereType<Marker>(),
       ...visiblePersonnel.map((person) {
@@ -150,255 +285,321 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
 
     return Scaffold(
       appBar: const AdminAppBar(title: Text("Harita")),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await Future.wait([
-            ref.read(customerListProvider.notifier).refresh(),
-            ref.read(personnelListProvider.notifier).refresh(),
-          ]);
-        },
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            SizedBox(
-              height: MediaQuery.of(context).size.height * 0.55,
-              child: Stack(
-                children: [
-                  // Always show map
-                  FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: center,
-                      initialZoom: markers.isEmpty ? 10.0 : 11.0,
-                      interactionOptions: const InteractionOptions(
-                        flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                      ),
-                      onMapReady: () {
-                        // Center map on data when ready
-                        if (widget.initialCustomerLocation != null) {
-                          // If initial location is provided, zoom to that location
-                          Future.delayed(const Duration(milliseconds: 300), () {
-                            _mapController.move(
-                              widget.initialCustomerLocation!,
-                              15.0, // Higher zoom for customer detail
-                            );
-                          });
-                        } else if (markers.isNotEmpty) {
-                          Future.delayed(const Duration(milliseconds: 300), () {
-                            final target = _initialCenter(
-                              visibleCustomers,
-                              visiblePersonnel,
-                            );
-                            _mapController.move(target, 11.0);
-                          });
-                        }
-                      },
+      body: Stack(
+        children: [
+          // Harita tam ekran
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: center,
+              initialZoom: markers.isEmpty ? 10.0 : 11.0,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+              ),
+              onMapReady: () {
+                // Center map on data when ready
+                if (widget.initialCustomerLocation != null) {
+                  // If initial location is provided, zoom to that location
+                  Future.delayed(const Duration(milliseconds: 300), () {
+                    _mapController.move(
+                      widget.initialCustomerLocation!,
+                      15.0, // Higher zoom for customer detail
+                    );
+                  });
+                } else if (markers.isNotEmpty) {
+                  Future.delayed(const Duration(milliseconds: 300), () {
+                    final target = _initialCenter(
+                      visibleCustomers,
+                      visiblePersonnel,
+                    );
+                    _mapController.move(target, 11.0);
+                  });
+                }
+              },
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                userAgentPackageName: "com.suaritma.app",
+                maxZoom: 19,
+                minZoom: 3,
+              ),
+              if (markers.isNotEmpty) MarkerLayer(markers: markers),
+            ],
+          ),
+          // Error messages overlay
+          if (customerState.hasError)
+            Positioned(
+              top: 12,
+              left: 12,
+              right: 12,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Colors.red.shade700,
+                      size: 20,
                     ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                        userAgentPackageName: "com.suaritma.app",
-                        maxZoom: 19,
-                        minZoom: 3,
-                      ),
-                      if (markers.isNotEmpty) MarkerLayer(markers: markers),
-                    ],
-                  ),
-                  // Error messages overlay
-                  if (customerState.hasError)
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      right: 12,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.shade200),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Müşteri konumları alınamadı",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.red.shade700,
                         ),
-                        child: Row(
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          // Center button
+          Positioned(
+            top: 12,
+            right: 12,
+            child: FloatingActionButton.small(
+              heroTag: "map-center-btn",
+              onPressed: () {
+                final target = _initialCenter(
+                  visibleCustomers,
+                  visiblePersonnel,
+                );
+                final zoom = markers.isEmpty
+                    ? 10.0
+                    : _mapController.camera.zoom;
+                _mapController.move(target, zoom);
+              },
+              child: const Icon(Icons.my_location),
+            ),
+          ),
+          // Draggable bottom sheet
+          DraggableScrollableSheet(
+            controller: _sheetController,
+            initialChildSize: 0.1, // Başlangıçta kapalı (sadece buton)
+            minChildSize: 0.1,
+            maxChildSize: 0.9,
+            builder: (context, scrollController) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Ok butonu - aç/kapat toggle
+                    GestureDetector(
+                      onTap: _toggleSheet,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
+                        child: Center(
+                          child: Icon(
+                            _isSheetExpanded
+                                ? Icons.keyboard_arrow_down
+                                : Icons.keyboard_arrow_up,
+                            color: Colors.grey.shade700,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // İçerik - sadece sheet açıkken göster
+                    if (_isSheetExpanded) ...[
+                      // Filter buttons
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
-                            Icon(
-                              Icons.error_outline,
-                              color: Colors.red.shade700,
-                              size: 20,
+                            FilterChip(
+                              label: const Text("Sadece Müşteriler"),
+                              selected: _filter == MapFilter.customersOnly,
+                              onSelected: (_) {
+                                setState(() {
+                                  _filter = _filter == MapFilter.customersOnly
+                                      ? MapFilter.all
+                                      : MapFilter.customersOnly;
+                                });
+                              },
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                "Müşteri konumları alınamadı",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.red.shade700,
-                                ),
-                              ),
+                            FilterChip(
+                              label: const Text("Sadece Personeller"),
+                              selected: _filter == MapFilter.personnelOnly,
+                              onSelected: (_) {
+                                setState(() {
+                                  _filter = _filter == MapFilter.personnelOnly
+                                      ? MapFilter.all
+                                      : MapFilter.personnelOnly;
+                                });
+                              },
                             ),
                           ],
                         ),
                       ),
-                    ),
-                  // Center button
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: FloatingActionButton.small(
-                      heroTag: "map-center-btn",
-                      onPressed: () {
-                        final target = _initialCenter(
-                          visibleCustomers,
-                          visiblePersonnel,
-                        );
-                        final zoom = markers.isEmpty
-                            ? 10.0
-                            : _mapController.camera.zoom;
-                        _mapController.move(target, zoom);
-                      },
-                      child: const Icon(Icons.my_location),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Filter buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  FilterChip(
-                    label: const Text("Sadece Müşteriler"),
-                    selected: _filter == MapFilter.customersOnly,
-                    onSelected: (_) {
-                      setState(() {
-                        _filter = _filter == MapFilter.customersOnly
-                            ? MapFilter.all
-                            : MapFilter.customersOnly;
-                      });
-                    },
-                  ),
-                  FilterChip(
-                    label: const Text("Sadece Personeller"),
-                    selected: _filter == MapFilter.personnelOnly,
-                    onSelected: (_) {
-                      setState(() {
-                        _filter = _filter == MapFilter.personnelOnly
-                            ? MapFilter.all
-                            : MapFilter.personnelOnly;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (visibleCustomers.isEmpty && visiblePersonnel.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: EmptyState(
-                  icon: Icons.map_outlined,
-                  title: "Henüz konum verisi yok",
-                  subtitle:
-                      "Müşteri veya personel konumları geldiğinde harita güncellenecek.",
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (showCustomers && visibleCustomers.isNotEmpty) ...[
-                      Text(
-                        "Müşteri Konumları",
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      ...visibleCustomers.map((customer) {
-                        // Müşteri iş durumuna göre renk belirleme
-                        Color markerColor = Colors.blue;
-                        String statusText = "Tamamlandı";
-
-                        if (customer.jobs != null &&
-                            customer.jobs!.isNotEmpty) {
-                          // PENDING (beklemede) veya IN_PROGRESS (işlenen) işleri kontrol et
-                          final hasPending = customer.jobs!.any(
-                            (job) => job.status == "PENDING",
-                          );
-                          final hasInProgress = customer.jobs!.any(
-                            (job) => job.status == "IN_PROGRESS",
-                          );
-
-                          if (hasPending) {
-                            markerColor = Colors.red;
-                            statusText = "Beklemede";
-                          } else if (hasInProgress) {
-                            markerColor = Colors.orange;
-                            statusText = "İşleniyor";
-                          }
-                        }
-
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(Icons.location_on, color: markerColor),
-                          title: Text(customer.name),
-                          subtitle: Text(customer.address),
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: markerColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: markerColor),
-                            ),
-                            child: Text(
-                              statusText,
-                              style: TextStyle(
-                                color: markerColor,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          onTap: () => _openCustomerDetail(customer),
-                        );
-                      }),
                       const SizedBox(height: 16),
                     ],
-                    if (showPersonnel && visiblePersonnel.isNotEmpty) ...[
-                      Text(
-                        "Personel Konumları",
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      ...visiblePersonnel.map((person) {
-                        final location = person.lastKnownLocation!;
-                        final subtitle = location.timestamp != null
-                            ? "Son konum: ${location.timestamp!.toLocal()}"
-                            : "Son konum zamanı bilinmiyor";
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(
-                            Icons.person_pin_circle,
-                            color: Color(0xFF2563EB),
+                    // Scrollable content - sadece sheet açıkken göster
+                    if (_isSheetExpanded)
+                      Expanded(
+                        child: RefreshIndicator(
+                          onRefresh: () async {
+                            await Future.wait([
+                              ref.read(customerListProvider.notifier).refresh(),
+                              ref
+                                  .read(personnelListProvider.notifier)
+                                  .refresh(),
+                            ]);
+                          },
+                          child: ListView(
+                            controller: scrollController,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            children: [
+                              if (visibleCustomers.isEmpty &&
+                                  visiblePersonnel.isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 48),
+                                  child: EmptyState(
+                                    icon: Icons.map_outlined,
+                                    title: "Henüz konum verisi yok",
+                                    subtitle:
+                                        "Müşteri veya personel konumları geldiğinde harita güncellenecek.",
+                                  ),
+                                )
+                              else ...[
+                                if (showCustomers &&
+                                    visibleCustomers.isNotEmpty) ...[
+                                  Text(
+                                    "Müşteri Konumları",
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ...visibleCustomers.map((customer) {
+                                    // Müşteri iş durumuna göre renk belirleme
+                                    Color markerColor = Colors.blue;
+                                    String statusText = "Tamamlandı";
+
+                                    if (customer.jobs != null &&
+                                        customer.jobs!.isNotEmpty) {
+                                      // PENDING (beklemede) veya IN_PROGRESS (işlenen) işleri kontrol et
+                                      final hasPending = customer.jobs!.any(
+                                        (job) => job.status == "PENDING",
+                                      );
+                                      final hasInProgress = customer.jobs!.any(
+                                        (job) => job.status == "IN_PROGRESS",
+                                      );
+
+                                      if (hasPending) {
+                                        markerColor = Colors.red;
+                                        statusText = "Beklemede";
+                                      } else if (hasInProgress) {
+                                        markerColor = Colors.orange;
+                                        statusText = "İşleniyor";
+                                      }
+                                    }
+
+                                    return ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: Icon(
+                                        Icons.location_on,
+                                        color: markerColor,
+                                      ),
+                                      title: Text(customer.name),
+                                      subtitle: Text(customer.address),
+                                      trailing: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: markerColor.withValues(
+                                            alpha: 0.1,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                          border: Border.all(
+                                            color: markerColor,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          statusText,
+                                          style: TextStyle(
+                                            color: markerColor,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      onTap: () =>
+                                          _focusOnCustomerLocation(customer),
+                                    );
+                                  }),
+                                  const SizedBox(height: 16),
+                                ],
+                                if (showPersonnel &&
+                                    visiblePersonnel.isNotEmpty) ...[
+                                  Text(
+                                    "Personel Konumları",
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ...visiblePersonnel.map((person) {
+                                    final location = person.lastKnownLocation!;
+                                    final subtitle = location.timestamp != null
+                                        ? "Son konum: ${location.timestamp!.toLocal()}"
+                                        : "Son konum zamanı bilinmiyor";
+                                    return ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: const Icon(
+                                        Icons.person_pin_circle,
+                                        color: Color(0xFF2563EB),
+                                      ),
+                                      title: Text(person.name),
+                                      subtitle: Text(subtitle),
+                                      onTap: () =>
+                                          _focusOnPersonnelLocation(person),
+                                    );
+                                  }),
+                                ],
+                              ],
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).padding.bottom + 16,
+                              ),
+                            ],
                           ),
-                          title: Text(person.name),
-                          subtitle: Text(subtitle),
-                          onTap: () => _openPersonnelDetail(person),
-                        );
-                      }),
-                    ],
+                        ),
+                      ),
                   ],
                 ),
-              ),
-            const SizedBox(height: 24),
-          ],
-        ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -503,6 +704,70 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
       pathParameters: {"id": personnel.id},
       extra: personnel,
     );
+  }
+
+  void _focusOnCustomerLocation(Customer customer) {
+    // Müşteri konumunu bul
+    LatLng? location;
+    if (customer.location != null) {
+      location = LatLng(
+        customer.location!.latitude,
+        customer.location!.longitude,
+      );
+    } else if (_resolvedLocations.containsKey(customer.id)) {
+      location = _resolvedLocations[customer.id];
+    }
+
+    if (location != null) {
+      // Müşteri ismini göster
+      setState(() {
+        _highlightedCustomerId = customer.id;
+      });
+
+      // Haritayı müşteri konumuna odakla
+      _mapController.move(location, 15.0);
+      // Sheet'i küçült
+      if (_sheetController.isAttached) {
+        setState(() {
+          _isSheetExpanded = false;
+        });
+        _sheetController.animateTo(
+          0.1, // minChildSize
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+
+      // 3 saniye sonra ismi kaldır
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted && _highlightedCustomerId == customer.id) {
+          setState(() {
+            _highlightedCustomerId = null;
+          });
+        }
+      });
+    }
+  }
+
+  void _focusOnPersonnelLocation(Personnel personnel) {
+    // Personel konumunu bul
+    final location = personnel.lastKnownLocation;
+    if (location != null) {
+      final latLng = LatLng(location.lat, location.lng);
+      // Haritayı personel konumuna odakla
+      _mapController.move(latLng, 15.0);
+      // Sheet'i küçült
+      if (_sheetController.isAttached) {
+        setState(() {
+          _isSheetExpanded = false;
+        });
+        _sheetController.animateTo(
+          0.1, // minChildSize
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    }
   }
 
   void _showCustomerInfoSheet(BuildContext context, Customer customer) {
@@ -712,8 +977,9 @@ Marker _customerMarker(
   BuildContext context,
   Customer customer,
   LatLng location,
-  VoidCallback onTap,
-) {
+  VoidCallback onTap, {
+  bool isHighlighted = false,
+}) {
   // Müşteri iş durumuna göre renk belirleme
   Color markerColor = Colors.blue; // Varsayılan: tamamlanan işler
 
@@ -733,11 +999,50 @@ Marker _customerMarker(
 
   return Marker(
     point: location,
-    width: 40,
-    height: 40,
-    child: GestureDetector(
-      onTap: onTap,
-      child: Icon(Icons.location_on, size: 32, color: markerColor),
+    width: isHighlighted ? 120 : 40,
+    height: isHighlighted ? 60 : 40,
+    child: Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        // İsim popup'ı (sadece highlight edildiğinde)
+        if (isHighlighted)
+          Positioned(
+            top: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+                border: Border.all(color: markerColor, width: 1.5),
+              ),
+              child: Text(
+                customer.name,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: markerColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        // Marker ikonu
+        Positioned(
+          bottom: 0,
+          child: GestureDetector(
+            onTap: onTap,
+            child: Icon(Icons.location_on, size: 32, color: markerColor),
+          ),
+        ),
+      ],
     ),
   );
 }

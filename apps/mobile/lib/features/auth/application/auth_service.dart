@@ -19,6 +19,7 @@ abstract class AuthService {
     required AuthRole role,
     required String identifier,
     required String secret,
+    String? adminId,
   });
 
   Future<AuthResult> signUp({
@@ -40,15 +41,20 @@ class ApiAuthService implements AuthService {
     required AuthRole role,
     required String identifier,
     required String secret,
+    String? adminId,
   }) async {
     try {
+      final requestData = <String, dynamic>{
+        "identifier": identifier,
+        "password": secret,
+        "role": role == AuthRole.admin ? "admin" : "personnel",
+      };
+      if (adminId != null && adminId.isNotEmpty) {
+        requestData["adminId"] = adminId;
+      }
       final response = await _client.post(
         "/auth/login",
-        data: {
-          "identifier": identifier,
-          "password": secret,
-          "role": role == AuthRole.admin ? "admin" : "personnel",
-        },
+        data: requestData,
       );
       final data = response.data["data"] as Map<String, dynamic>;
       debugPrint("Signed in as $role (${data["id"]})");
@@ -156,6 +162,7 @@ class MockAuthService implements AuthService {
     required AuthRole role,
     required String identifier,
     required String secret,
+    String? adminId,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 900));
     final isValid = identifier.isNotEmpty && secret.length >= 4;

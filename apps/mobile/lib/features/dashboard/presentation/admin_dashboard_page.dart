@@ -9,6 +9,7 @@ import "../../admin/presentation/views/assign_job_sheet.dart";
 import "../../admin/presentation/views/customers_view.dart";
 import "../../admin/presentation/views/inventory_view.dart";
 import "../../admin/presentation/views/job_map_view.dart";
+import "../../admin/presentation/views/jobs_view.dart";
 import "../../admin/presentation/views/notifications_view.dart";
 import "../../admin/presentation/views/past_jobs_view.dart";
 import "../../admin/presentation/views/personnel_view.dart";
@@ -442,6 +443,16 @@ class _AdminDrawer extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.work),
+            title: const Text("Aktif İşler"),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const JobsView()));
+            },
           ),
           ListTile(
             leading: const Icon(Icons.people),

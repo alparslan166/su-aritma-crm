@@ -27,10 +27,14 @@ class LoginPage extends HookConsumerWidget {
       text: loginState.identifier,
     );
     final secretController = useTextEditingController(text: loginState.secret);
+    final adminIdController = useTextEditingController(
+      text: loginState.adminId,
+    );
 
     useEffect(() {
       identifierController.text = loginState.identifier;
       secretController.text = loginState.secret;
+      adminIdController.text = loginState.adminId;
       return null;
     }, [loginState.role]);
 
@@ -194,6 +198,24 @@ class LoginPage extends HookConsumerWidget {
                       ),
                       const SizedBox(height: 32),
                       // Form Fields
+                      // Admin ID field (only for personnel)
+                      if (loginState.role == AuthRole.personnel) ...[
+                        TextField(
+                          controller: adminIdController,
+                          decoration: const InputDecoration(
+                            labelText: "Admin ID",
+                            hintText: "ör. ABC12345",
+                            prefixIcon: Icon(Icons.admin_panel_settings_outlined),
+                          ),
+                          keyboardType: TextInputType.text,
+                          textInputAction: TextInputAction.next,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                          textCapitalization: TextCapitalization.characters,
+                          onChanged: controller.updateAdminId,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       TextField(
                         controller: identifierController,
                         decoration: InputDecoration(
@@ -286,7 +308,7 @@ class LoginPage extends HookConsumerWidget {
                               child: Text(
                                 loginState.role == AuthRole.admin
                                     ? "Adminler e-posta ve şifre ile giriş yapar. Hesabınız yoksa kayıt olabilirsiniz."
-                                    : "Personeller 6 haneli kodu kullanır.",
+                                    : "Personeller Admin ID, Personel ID ve 6 haneli kodu kullanır.",
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.blue.shade900,
