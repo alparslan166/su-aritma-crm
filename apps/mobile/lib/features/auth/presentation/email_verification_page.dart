@@ -148,10 +148,11 @@ class EmailVerificationPage extends HookConsumerWidget {
                       Text(
                         "E-postanızı Doğrulayın",
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1F2937),
-                        ),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF1F2937),
+                            ),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -212,7 +213,9 @@ class EmailVerificationPage extends HookConsumerWidget {
                                 style: TextStyle(color: Colors.grey.shade500),
                               )
                             : TextButton(
-                                onPressed: isResending.value ? null : resendCode,
+                                onPressed: isResending.value
+                                    ? null
+                                    : resendCode,
                                 child: isResending.value
                                     ? const SizedBox(
                                         width: 20,
@@ -264,4 +267,3 @@ class EmailVerificationPage extends HookConsumerWidget {
     );
   }
 }
-

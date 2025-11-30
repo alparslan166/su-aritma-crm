@@ -275,7 +275,11 @@ const sendCodeSchema = z.object({
   email: z.string().email("Geçerli bir e-posta adresi giriniz"),
 });
 
-export const sendVerificationCodeHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const sendVerificationCodeHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { email } = sendCodeSchema.parse(req.body);
 
@@ -477,7 +481,7 @@ export const resetPasswordHandler = async (req: Request, res: Response, next: Ne
 
     // Hash new password and update
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    
+
     await prisma.admin.update({
       where: { email },
       data: { passwordHash },

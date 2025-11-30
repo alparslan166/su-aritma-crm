@@ -17,18 +17,18 @@ class ForgotPasswordPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authService = ref.watch(authServiceProvider);
-    
+
     // Step: 0 = email input, 1 = code input, 2 = new password
     final step = useState(0);
     final isLoading = useState(false);
     final errorMessage = useState<String?>(null);
     final successMessage = useState<String?>(null);
-    
+
     final emailController = useTextEditingController();
     final codeController = useTextEditingController();
     final passwordController = useTextEditingController();
     final confirmPasswordController = useTextEditingController();
-    
+
     final resendCountdown = useState(0);
     final passwordVisible = useState(false);
 
@@ -161,9 +161,9 @@ class ForgotPasswordPage extends HookConsumerWidget {
               Text(
                 "Kayıtlı e-posta adresinize şifre sıfırlama kodu göndereceğiz.",
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
               ),
               const SizedBox(height: 32),
               TextField(
@@ -203,9 +203,9 @@ class ForgotPasswordPage extends HookConsumerWidget {
               Text(
                 "Aşağıdaki adrese gönderilen 6 haneli kodu girin:",
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
               ),
               const SizedBox(height: 8),
               Text(
@@ -233,9 +233,7 @@ class ForgotPasswordPage extends HookConsumerWidget {
                   fontWeight: FontWeight.bold,
                 ),
                 maxLength: 6,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                ],
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 onSubmitted: (_) => verifyCode(),
               ),
               const SizedBox(height: 24),
@@ -283,9 +281,9 @@ class ForgotPasswordPage extends HookConsumerWidget {
               Text(
                 "Hesabınız için yeni bir şifre oluşturun.",
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.grey.shade600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
               ),
               const SizedBox(height: 32),
               TextField(
@@ -392,7 +390,7 @@ class ForgotPasswordPage extends HookConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 32),
-                      
+
                       // Step indicator
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -445,4 +443,3 @@ class ForgotPasswordPage extends HookConsumerWidget {
     );
   }
 }
-

@@ -131,4 +131,3 @@ export const verifyEmailService = async (): Promise<boolean> => {
     return false;
   }
 };
-

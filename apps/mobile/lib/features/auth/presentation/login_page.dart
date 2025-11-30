@@ -317,9 +317,7 @@ class LoginPage extends HookConsumerWidget {
                               .goNamed(ForgotPasswordPage.routeName),
                           child: Text(
                             "Şifremi unuttum",
-                            style: TextStyle(
-                              color: Colors.red.shade600,
-                            ),
+                            style: TextStyle(color: Colors.red.shade600),
                           ),
                         ),
                       ],

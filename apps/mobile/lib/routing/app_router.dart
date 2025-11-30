@@ -28,11 +28,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final currentSession = ref.read(authSessionProvider);
       final isLogin = state.matchedLocation == "/";
       final isRegister = state.matchedLocation == "/register";
-      final isEmailVerification = state.matchedLocation.startsWith("/email-verification");
+      final isEmailVerification = state.matchedLocation.startsWith(
+        "/email-verification",
+      );
       final isForgotPassword = state.matchedLocation == "/forgot-password";
 
       // Public routes that don't require authentication
-      if (currentSession == null && !isLogin && !isRegister && !isEmailVerification && !isForgotPassword) {
+      if (currentSession == null &&
+          !isLogin &&
+          !isRegister &&
+          !isEmailVerification &&
+          !isForgotPassword) {
         return "/";
       }
 

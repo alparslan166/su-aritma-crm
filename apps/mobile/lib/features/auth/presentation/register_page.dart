@@ -31,19 +31,22 @@ class RegisterPage extends HookConsumerWidget {
       final nextStatus = next.status;
 
       final transitionedFromLoading =
-          prevStatus?.isLoading == true && nextStatus is AsyncData<SignUpResult?>;
+          prevStatus?.isLoading == true &&
+          nextStatus is AsyncData<SignUpResult?>;
       if (transitionedFromLoading) {
         final result = nextStatus.value;
         if (result != null) {
           // Navigate to email verification page
-          ref.read(appRouterProvider).goNamed(
-            EmailVerificationPage.routeName,
-            extra: {
-              "email": result.email,
-              "name": result.name,
-              "password": registerState.password,
-            },
-          );
+          ref
+              .read(appRouterProvider)
+              .goNamed(
+                EmailVerificationPage.routeName,
+                extra: {
+                  "email": result.email,
+                  "name": result.name,
+                  "password": registerState.password,
+                },
+              );
           return;
         }
       }

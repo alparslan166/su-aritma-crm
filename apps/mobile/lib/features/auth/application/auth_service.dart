@@ -71,10 +71,7 @@ class ApiAuthService implements AuthService {
       if (adminId != null && adminId.isNotEmpty) {
         requestData["adminId"] = adminId;
       }
-      final response = await _client.post(
-        "/auth/login",
-        data: requestData,
-      );
+      final response = await _client.post("/auth/login", data: requestData);
       final data = response.data["data"] as Map<String, dynamic>;
       debugPrint("Signed in as $role (${data["id"]})");
       return AuthResult(role: role, identifier: data["id"] as String);
@@ -138,7 +135,9 @@ class ApiAuthService implements AuthService {
         emailVerified: data["emailVerified"] as bool? ?? false,
       );
     } on DioException catch (error) {
-      throw AuthException(message: _parseErrorMessage(error, "Kayıt başarısız"));
+      throw AuthException(
+        message: _parseErrorMessage(error, "Kayıt başarısız"),
+      );
     }
   }
 
@@ -150,7 +149,9 @@ class ApiAuthService implements AuthService {
         data: {"email": email},
       );
     } on DioException catch (error) {
-      throw AuthException(message: _parseErrorMessage(error, "Kod gönderilemedi"));
+      throw AuthException(
+        message: _parseErrorMessage(error, "Kod gönderilemedi"),
+      );
     }
   }
 
@@ -165,35 +166,38 @@ class ApiAuthService implements AuthService {
       debugPrint("Email verified for ${data["email"]}");
       return AuthResult(role: AuthRole.admin, identifier: data["id"] as String);
     } on DioException catch (error) {
-      throw AuthException(message: _parseErrorMessage(error, "Doğrulama başarısız"));
+      throw AuthException(
+        message: _parseErrorMessage(error, "Doğrulama başarısız"),
+      );
     }
   }
 
   @override
   Future<void> forgotPassword(String email) async {
     try {
-      await _client.post(
-        "/auth/forgot-password",
-        data: {"email": email},
-      );
+      await _client.post("/auth/forgot-password", data: {"email": email});
     } on DioException catch (error) {
-      throw AuthException(message: _parseErrorMessage(error, "İşlem başarısız"));
+      throw AuthException(
+        message: _parseErrorMessage(error, "İşlem başarısız"),
+      );
     }
   }
 
   @override
-  Future<void> resetPassword(String email, String code, String newPassword) async {
+  Future<void> resetPassword(
+    String email,
+    String code,
+    String newPassword,
+  ) async {
     try {
       await _client.post(
         "/auth/reset-password",
-        data: {
-          "email": email,
-          "code": code,
-          "newPassword": newPassword,
-        },
+        data: {"email": email, "code": code, "newPassword": newPassword},
       );
     } on DioException catch (error) {
-      throw AuthException(message: _parseErrorMessage(error, "Şifre sıfırlanamadı"));
+      throw AuthException(
+        message: _parseErrorMessage(error, "Şifre sıfırlanamadı"),
+      );
     }
   }
 
@@ -287,7 +291,11 @@ class MockAuthService implements AuthService {
   }
 
   @override
-  Future<void> resetPassword(String email, String code, String newPassword) async {
+  Future<void> resetPassword(
+    String email,
+    String code,
+    String newPassword,
+  ) async {
     await Future<void>.delayed(const Duration(milliseconds: 500));
     if (code != "123456") {
       throw AuthException(message: "Geçersiz kod");
