@@ -14,29 +14,33 @@ final socketClientProvider = Provider<sio.Socket?>((ref) {
     return null;
   }
 
-  final uri = AppConfig.socketBaseUrl;
-  debugPrint("🔌 Socket: Connecting to $uri");
-  debugPrint(
-    "🔌 Socket: Role: ${session.role.name}, Identifier: ${session.identifier}",
-  );
-
   // Ensure query parameters are valid strings
   final roleStr = session.role.name;
   final userIdStr = session.identifier;
-  
+
   if (roleStr.isEmpty || userIdStr.isEmpty) {
-    debugPrint("⚠️ Socket: Invalid session data - role: $roleStr, userId: $userIdStr");
+    debugPrint(
+      "⚠️ Socket: Invalid session data - role: $roleStr, userId: $userIdStr",
+    );
     return null;
   }
 
+  // Build socket URL properly
+  final apiUrl = AppConfig.apiBaseUrl;
+  final uri = Uri.parse(apiUrl);
+  final scheme = uri.scheme == "https" ? "wss" : "ws";
+  final socketUrl = "${scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}";
+  
+  debugPrint("🔌 Socket: Connecting to $socketUrl");
+  debugPrint(
+    "🔌 Socket: Role: $roleStr, Identifier: $userIdStr",
+  );
+
   final socket = sio.io(
-    uri,
+    socketUrl,
     sio.OptionBuilder()
         .setTransports(["websocket"])
-        .setQuery({
-          "role": roleStr,
-          "userId": userIdStr,
-        })
+        .setQuery({"role": roleStr, "userId": userIdStr})
         .disableAutoConnect()
         .build(),
   );
