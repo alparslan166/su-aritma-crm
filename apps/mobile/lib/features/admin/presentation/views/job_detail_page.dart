@@ -99,6 +99,13 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                       ).format(job.scheduledAt!.toLocal())
                     : "-",
               ),
+              if (job.deliveredAt != null)
+                _Row(
+                  "Teslim Tarihi",
+                  DateFormat(
+                    "dd MMM yyyy HH:mm",
+                  ).format(job.deliveredAt!.toLocal()),
+                ),
               _Row("Adres", job.location?.address ?? job.customer.address),
               _Row("Yapılan İşlem", job.title),
               if (job.materials != null && job.materials!.isNotEmpty) ...[

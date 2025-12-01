@@ -7,6 +7,7 @@ import "package:flutter_hooks/flutter_hooks.dart";
 import "package:geocoding/geocoding.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:image_picker/image_picker.dart";
+import "package:intl/intl.dart";
 import "package:latlong2/latlong.dart";
 import "package:url_launcher/url_launcher.dart";
 
@@ -59,9 +60,17 @@ class PersonnelJobDetailPage extends HookConsumerWidget {
               _InfoTile(
                 title: "Planlanan Tarih",
                 value:
-                    detail.job.scheduledAt?.toLocal().toString() ??
-                    "Belirlenmedi",
+                    detail.job.scheduledAt != null
+                        ? DateFormat("dd MMM yyyy HH:mm")
+                            .format(detail.job.scheduledAt!.toLocal())
+                        : "Belirlenmedi",
               ),
+              if (detail.assignment.deliveredAt != null)
+                _InfoTile(
+                  title: "Teslim Tarihi",
+                  value: DateFormat("dd MMM yyyy HH:mm")
+                      .format(detail.assignment.deliveredAt!.toLocal()),
+                ),
               // Malzemeler bölümü
               if (detail.job.materials != null &&
                   detail.job.materials!.isNotEmpty) ...[
