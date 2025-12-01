@@ -5,8 +5,8 @@ import "package:flutter_local_notifications/flutter_local_notifications.dart";
 import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
+import "../../routing/app_router.dart";
 import "../network/api_client.dart";
-import "../routing/app_router.dart";
 
 // Background message handler (must be top-level function)
 @pragma("vm:entry-point")
