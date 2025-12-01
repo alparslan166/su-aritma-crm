@@ -5,6 +5,7 @@ import "core/notifications/push_notification_service.dart";
 import "core/realtime/socket_client.dart";
 import "core/session/session_provider.dart";
 import "core/theme/app_theme.dart";
+import "features/personnel/application/personnel_notifications_notifier.dart";
 import "routing/app_router.dart";
 
 class SuAritmaApp extends HookConsumerWidget {
@@ -14,10 +15,17 @@ class SuAritmaApp extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
     final pushService = ref.watch(pushNotificationServiceProvider);
+    final session = ref.watch(authSessionProvider);
     
     // Initialize WebSocket connection when user is logged in
     // This ensures socket is connected even if notifications page is not visited
     ref.watch(socketClientProvider);
+    
+    // Initialize notification listeners when user is logged in
+    // This ensures notifications are received even if notifications page is not visited
+    if (session != null && session.role.name == "personnel") {
+      ref.watch(personnelNotificationsProvider);
+    }
 
     // Initialize push notifications on app start
     WidgetsBinding.instance.addPostFrameCallback((_) {
