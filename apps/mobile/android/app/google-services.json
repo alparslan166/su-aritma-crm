@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "683335242608",
+    "project_id": "su-aritma-crm",
+    "storage_bucket": "su-aritma-crm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:683335242608:android:e273e260d4a4c5109635b5",
+        "android_client_info": {
+          "package_name": "com.suaritma.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhJPN-WfFOPs81xr3uzIs2SYGhlJBAsho"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

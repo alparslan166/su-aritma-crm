@@ -2,9 +2,11 @@ import "package:firebase_core/firebase_core.dart";
 import "package:firebase_messaging/firebase_messaging.dart";
 import "package:flutter/foundation.dart";
 import "package:flutter_local_notifications/flutter_local_notifications.dart";
+import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
 import "../network/api_client.dart";
+import "../routing/app_router.dart";
 
 // Background message handler (must be top-level function)
 @pragma("vm:entry-point")
@@ -13,15 +15,20 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint("Background message received: ${message.messageId}");
 }
 
-final pushNotificationServiceProvider =
-    Provider<PushNotificationService>((ref) {
-  return PushNotificationService(ref.read(apiClientProvider));
+final pushNotificationServiceProvider = Provider<PushNotificationService>((
+  ref,
+) {
+  return PushNotificationService(
+    ref.read(apiClientProvider),
+    ref.read(appRouterProvider),
+  );
 });
 
 class PushNotificationService {
-  PushNotificationService(this._client);
+  PushNotificationService(this._client, this._router);
 
   final dynamic _client;
+  final GoRouter _router;
   FirebaseMessaging? _messaging;
   FlutterLocalNotificationsPlugin? _localNotifications;
 
@@ -43,7 +50,9 @@ class PushNotificationService {
 
         // Setup local notifications for foreground messages
         _localNotifications = FlutterLocalNotificationsPlugin();
-        const androidSettings = AndroidInitializationSettings("@mipmap/ic_launcher");
+        const androidSettings = AndroidInitializationSettings(
+          "@mipmap/ic_launcher",
+        );
         const iosSettings = DarwinInitializationSettings(
           requestAlertPermission: true,
           requestBadgePermission: true,
@@ -59,7 +68,16 @@ class PushNotificationService {
           onDidReceiveNotificationResponse: (details) {
             debugPrint("Notification tapped: ${details.payload}");
             // Handle notification tap - navigate based on payload
-            _handleNotificationTap(details.payload);
+            // Payload is a string, try to extract data from it
+            if (details.payload != null && details.payload is String) {
+              // Try to parse as JSON or use as is
+              try {
+                // For now, we'll handle it in _handleNotificationTap
+                _handleNotificationTap(details.payload);
+              } catch (e) {
+                debugPrint("Failed to handle notification tap: $e");
+              }
+            }
           },
         );
 
@@ -70,13 +88,24 @@ class PushNotificationService {
         });
 
         // Setup background message handler
-        FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+        FirebaseMessaging.onBackgroundMessage(
+          firebaseMessagingBackgroundHandler,
+        );
 
         // Setup notification tap handler (app in background or terminated)
         FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
           debugPrint("Notification opened app: ${message.messageId}");
+          debugPrint("Notification data: ${message.data}");
           _handleNotificationTap(message.data);
         });
+        
+        // Check for initial notification (app opened from terminated state)
+        final initialMessage = await _messaging!.getInitialMessage();
+        if (initialMessage != null) {
+          debugPrint("App opened from notification: ${initialMessage.messageId}");
+          debugPrint("Initial notification data: ${initialMessage.data}");
+          _handleNotificationTap(initialMessage.data);
+        }
 
         // Get FCM token and send to backend
         await _registerToken();
@@ -102,13 +131,13 @@ class PushNotificationService {
         if (defaultTargetPlatform == TargetPlatform.iOS) {
           platform = "ios";
         }
-        
+
         // Send token to backend
         try {
-          await _client.post("/notifications/register-token", data: {
-            "token": token,
-            "platform": platform,
-          });
+          await _client.post(
+            "/notifications/register-token",
+            data: {"token": token, "platform": platform},
+          );
           debugPrint("FCM token registered with backend (platform: $platform)");
         } catch (e) {
           debugPrint("Failed to register token with backend: $e");
@@ -123,10 +152,10 @@ class PushNotificationService {
           platform = "ios";
         }
         try {
-          await _client.post("/notifications/register-token", data: {
-            "token": newToken,
-            "platform": platform,
-          });
+          await _client.post(
+            "/notifications/register-token",
+            data: {"token": newToken, "platform": platform},
+          );
           debugPrint("Refreshed FCM token registered with backend");
         } catch (e) {
           debugPrint("Failed to register refreshed token: $e");
@@ -190,38 +219,70 @@ class PushNotificationService {
       iOS: iosDetails,
     );
 
+    // Convert data map to JSON string for payload
+    final payload = message.data.isNotEmpty
+        ? message.data.toString()
+        : message.notification?.title ?? "";
+    
     await _localNotifications!.show(
       message.hashCode,
       message.notification?.title ?? "Yeni Bildirim",
       message.notification?.body ?? "",
       details,
-      payload: message.data.toString(),
+      payload: payload,
     );
   }
 
   void _handleNotificationTap(dynamic payload) {
     if (payload == null) return;
     debugPrint("Handling notification tap with payload: $payload");
-    
+
     // Handle both String and Map payloads
     Map<String, dynamic>? data;
     if (payload is String) {
       // Try to parse JSON string
       try {
-        // For now, just log - navigation will be implemented later
         debugPrint("String payload: $payload");
+        // String payload genellikle data.toString() formatında gelir
+        // Bu durumda Map'e çevirmek zor, sadece log yapıyoruz
       } catch (e) {
         debugPrint("Failed to parse payload: $e");
       }
     } else if (payload is Map<String, dynamic>) {
       data = payload;
       debugPrint("Map payload: $data");
-      // Example: Navigate to job detail page if jobId is in payload
-      // final jobId = data['jobId'];
-      // if (jobId != null) {
-      //   // Navigate to job detail
-      // }
+      
+      // Navigate based on notification type
+      final type = data['type'] as String?;
+      final jobId = data['jobId'] as String?;
+      
+      if (type == "job_assigned" && jobId != null) {
+        // Navigate to personnel job detail page
+        _router.pushNamed(
+          "personnel-job-detail",
+          pathParameters: {"id": jobId},
+        );
+      } else if (type == "job_started" && jobId != null) {
+        // Navigate to admin job detail page
+        _router.pushNamed(
+          "admin-job-detail",
+          pathParameters: {"id": jobId},
+        );
+      } else if (type == "job_completed" && jobId != null) {
+        // Navigate to admin job detail page
+        _router.pushNamed(
+          "admin-job-detail",
+          pathParameters: {"id": jobId},
+        );
+      } else if (type == "customer_created") {
+        final customerId = data['customerId'] as String?;
+        if (customerId != null) {
+          _router.pushNamed(
+            "admin-customer-detail",
+            pathParameters: {"id": customerId},
+          );
+        }
+      }
     }
   }
 }
-

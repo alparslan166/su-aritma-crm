@@ -1,9 +1,9 @@
 import { Router } from "express";
 
-import { 
-  registerTokenHandler, 
+import {
+  registerTokenHandler,
   unregisterTokenHandler,
-  sendRoleNotificationHandler 
+  sendRoleNotificationHandler,
 } from "./notification.controller";
 
 const router = Router();
@@ -13,4 +13,3 @@ router.post("/register-token", registerTokenHandler);
 router.post("/unregister-token", unregisterTokenHandler);
 
 export const notificationRouter = router;
-

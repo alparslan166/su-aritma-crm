@@ -1,3 +1,4 @@
+import "package:flutter/foundation.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:socket_io_client/socket_io_client.dart" as sio;
 
@@ -56,9 +57,24 @@ class PersonnelNotificationsNotifier extends StateNotifier<List<PersonnelNotific
   void _handleNotification(dynamic data) {
     try {
       final map = data as Map<String, dynamic>? ?? {};
+      // Generate unique ID if not provided
+      if (map["id"] == null) {
+        map["id"] = DateTime.now().millisecondsSinceEpoch.toString();
+      }
+      // Extract jobId from data if present
+      if (map["data"] != null && map["data"] is Map) {
+        final dataMap = map["data"] as Map<String, dynamic>;
+        if (dataMap["jobId"] != null) {
+          map["jobId"] = dataMap["jobId"];
+        }
+        if (dataMap["type"] != null) {
+          map["type"] = dataMap["type"];
+        }
+      }
       final notification = PersonnelNotification.fromJson(map);
       state = [notification, ...state];
     } catch (error) {
+      debugPrint("Failed to handle notification: $error");
       // Ignore invalid notifications
     }
   }

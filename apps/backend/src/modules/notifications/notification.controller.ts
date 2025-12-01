@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getAdminId, getPersonnelId } from "@/lib/tenant";
 import { notificationService } from "./notification.service";
 import { fcmService } from "./fcm.service";
+import { fcmAdminService } from "./fcm-admin.service";
 
 const sendSchema = z.object({
   role: z.enum(["admin", "personnel"]),
@@ -31,21 +32,17 @@ export const sendRoleNotificationHandler = async (
   }
 };
 
-export const registerTokenHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const registerTokenHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const payload = tokenSchema.parse(req.body);
     const { token, platform } = payload;
-    
+
     // Get user role and ID from headers (one of them will be present)
     let adminId: string | undefined;
     let personnelId: string | undefined;
     let userType: "admin" | "personnel" | undefined;
     let userId: string | undefined;
-    
+
     try {
       adminId = getAdminId(req);
       userType = "admin";
@@ -58,43 +55,49 @@ export const registerTokenHandler = async (
         userId = personnelId;
       } catch {
         // Neither present - invalid request
-        return res.status(401).json({ 
-          success: false, 
-          error: "Authentication required" 
+        return res.status(401).json({
+          success: false,
+          error: "Authentication required",
         });
       }
     }
-    
+
     if (!userId || !userType) {
-      return res.status(401).json({ 
-        success: false, 
-        error: "User identification required" 
+      return res.status(401).json({
+        success: false,
+        error: "User identification required",
       });
     }
-    
-    // Register token in database
-    await fcmService.registerToken(token, userId, userType, platform);
-    
+
+    // Register token in database (use Admin SDK if available, otherwise legacy)
+    try {
+      await fcmAdminService.registerToken(token, userId, userType, platform);
+    } catch {
+      // Fallback to legacy service
+      await fcmService.registerToken(token, userId, userType, platform);
+    }
+
     res.json({ success: true, message: "Token registered successfully" });
   } catch (error) {
     next(error);
   }
 };
 
-export const unregisterTokenHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const unregisterTokenHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const payload = tokenSchema.parse(req.body);
     const { token } = payload;
-    
-    await fcmService.unregisterToken(token);
-    
+
+    // Unregister token (use Admin SDK if available, otherwise legacy)
+    try {
+      await fcmAdminService.unregisterToken(token);
+    } catch {
+      // Fallback to legacy service
+      await fcmService.unregisterToken(token);
+    }
+
     res.json({ success: true, message: "Token unregistered successfully" });
   } catch (error) {
     next(error);
   }
 };
-

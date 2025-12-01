@@ -382,7 +382,10 @@ class JobService {
         notificationService
           .sendJobAssignedToEmployee(assignment.personnelId, job.id, job.title ?? "İş")
           .catch((error) => {
-            logger.error(`Failed to send notification to personnel ${assignment.personnelId}:`, error);
+            logger.error(
+              `Failed to send notification to personnel ${assignment.personnelId}:`,
+              error,
+            );
           }),
       );
       await Promise.allSettled(notificationPromises);

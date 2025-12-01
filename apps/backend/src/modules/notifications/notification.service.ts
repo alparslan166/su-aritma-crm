@@ -1,5 +1,7 @@
 import { fcmService } from "./fcm.service";
+import { fcmAdminService } from "./fcm-admin.service";
 import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
+import { logger } from "@/lib/logger";
 
 type NotificationPayload = {
   title: string;
@@ -9,10 +11,23 @@ type NotificationPayload = {
 
 export class NotificationService {
   /**
+   * Get the active FCM service (Admin SDK if available, otherwise legacy)
+   */
+  private getFCMService() {
+    // Try Admin SDK first (preferred)
+    if (fcmAdminService.initialized) {
+      return fcmAdminService;
+    }
+    // Fallback to legacy FCM service
+    return fcmService;
+  }
+
+  /**
    * Send notification to all users of a specific role (backward compatibility)
    */
   async notifyRole(role: "admin" | "personnel", payload: NotificationPayload) {
-    await fcmService.sendToRole(role, payload);
+    const service = this.getFCMService();
+    await service.sendToRole(role, payload);
   }
 
   /**
@@ -30,13 +45,20 @@ export class NotificationService {
       },
     };
 
-    await fcmService.sendToUser(personnelId, "personnel", payload);
+    const service = this.getFCMService();
+    await service.sendToUser(personnelId, "personnel", payload);
   }
 
   /**
    * Send notification when personnel starts a job
    */
-  async sendJobStartedToAdmin(adminId: string, personnelId: string, jobId: string, jobTitle: string, personnelName: string) {
+  async sendJobStartedToAdmin(
+    adminId: string,
+    personnelId: string,
+    jobId: string,
+    jobTitle: string,
+    personnelName: string,
+  ) {
     const payload: NotificationPayload = {
       title: "İş Başlatıldı",
       body: `${personnelName} "${jobTitle}" işine başladı`,
@@ -50,7 +72,8 @@ export class NotificationService {
       },
     };
 
-    await fcmService.sendToUser(adminId, "admin", payload);
+    const service = this.getFCMService();
+    await service.sendToUser(adminId, "admin", payload);
   }
 
   /**
@@ -76,7 +99,8 @@ export class NotificationService {
       },
     };
 
-    await fcmService.sendToUser(adminId, "admin", payload);
+    const service = this.getFCMService();
+    await service.sendToUser(adminId, "admin", payload);
   }
 
   /**
@@ -102,7 +126,8 @@ export class NotificationService {
       },
     };
 
-    await fcmService.sendToUser(adminId, "admin", payload);
+    const service = this.getFCMService();
+    await service.sendToUser(adminId, "admin", payload);
   }
 }
 

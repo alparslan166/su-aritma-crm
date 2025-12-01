@@ -176,7 +176,7 @@ class PersonnelService {
       if (payload.loginCode === "") {
         data.loginCode = generateLoginCode();
       } else {
-        data.loginCode = payload.loginCode;
+      data.loginCode = payload.loginCode;
       }
       data.loginCodeUpdatedAt = new Date();
     }

@@ -25,11 +25,7 @@ const deliverSchema = z.object({
   photoUrls: z.array(z.string().url()).optional(),
 });
 
-export const listAssignedJobsHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const listAssignedJobsHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const personnelId = getPersonnelId(req);
     const filters = listQuerySchema.parse(req.query);
@@ -40,11 +36,7 @@ export const listAssignedJobsHandler = async (
   }
 };
 
-export const getAssignedJobHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const getAssignedJobHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const personnelId = getPersonnelId(req);
     const result = await jobService.getAssignedJob(personnelId, req.params.id);
@@ -79,15 +71,14 @@ export const deliverJobHandler = async (req: Request, res: Response, next: NextF
     const personnelId = getPersonnelId(req);
     const payload = deliverSchema.parse(req.body);
     const job = await jobService.deliverJobByPersonnel(personnelId, req.params.id, payload);
-    
+
     // Send notification after job is delivered
     if (job) {
       await jobService.notifyJobCompleted(job.adminId, personnelId, job.id, job.title ?? "İş");
     }
-    
+
     res.json({ success: true, data: job });
   } catch (error) {
     next(error as Error);
   }
 };
-

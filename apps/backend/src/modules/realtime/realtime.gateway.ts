@@ -17,11 +17,11 @@ class RealtimeGateway {
   private handleConnection(socket: Socket) {
     const role = socket.handshake.query.role;
     const userId = socket.handshake.query.userId;
-    
+
     if (typeof role === "string") {
       socket.join(`role-${role}`);
     }
-    
+
     if (typeof userId === "string" && typeof role === "string") {
       if (role === "admin") {
         socket.join(`admin-${userId}`);
@@ -55,4 +55,3 @@ class RealtimeGateway {
 }
 
 export const realtimeGateway = new RealtimeGateway();
-

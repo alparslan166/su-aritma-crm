@@ -7,8 +7,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
-
 enum AdminRole {
   ANA
   ALT
@@ -64,36 +62,36 @@ enum InventoryTransactionType {
 }
 
 model Admin {
-  id              String             @id @default(cuid())
-  adminId         String?            @unique // Public-facing admin ID for personnel login
-  name            String
-  phone           String
-  email           String             @unique
-  emailVerified   Boolean            @default(false)
-  role            AdminRole
-  status          String             @default("active")
-  passwordHash    String?
+  id             String             @id @default(cuid())
+  adminId        String?            @unique // Public-facing admin ID for personnel login
+  name           String
+  phone          String
+  email          String             @unique
+  emailVerified  Boolean            @default(false)
+  role           AdminRole
+  status         String             @default("active")
+  passwordHash   String?
   // Company/Invoice settings
-  companyName     String?
-  companyAddress  String?
-  companyPhone    String?
-  companyEmail    String?
-  taxOffice       String?
-  taxNumber       String?
-  logoUrl         String?
-  personnel       Personnel[]
-  jobs            Job[]
-  customers       Customer[]
-  operations      Operation[]
-  inventoryItems  InventoryItem[]
-  notifications   Notification[]
-  jobStatusLogs   JobStatusHistory[] @relation("JobStatusHistoryAdmin")
-  jobNotes        JobNote[]          @relation("JobNoteAdmin")
-  subscription    Subscription?
-  invoices        Invoice[]
-  deviceTokens    DeviceToken[]       @relation("AdminDeviceTokens")
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  companyName    String?
+  companyAddress String?
+  companyPhone   String?
+  companyEmail   String?
+  taxOffice      String?
+  taxNumber      String?
+  logoUrl        String?
+  personnel      Personnel[]
+  jobs           Job[]
+  customers      Customer[]
+  operations     Operation[]
+  inventoryItems InventoryItem[]
+  notifications  Notification[]
+  jobStatusLogs  JobStatusHistory[] @relation("JobStatusHistoryAdmin")
+  jobNotes       JobNote[]          @relation("JobNoteAdmin")
+  subscription   Subscription?
+  invoices       Invoice[]
+  deviceTokens   DeviceToken[]      @relation("AdminDeviceTokens")
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 }
 
 // E-posta doğrulama ve şifre sıfırlama kodları
@@ -101,7 +99,7 @@ model VerificationCode {
   id        String   @id @default(cuid())
   email     String
   code      String
-  type      String   // "email_verification" | "password_reset"
+  type      String // "email_verification" | "password_reset"
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -131,7 +129,7 @@ model Personnel {
   jobStatusLogs      JobStatusHistory[] @relation("JobStatusHistoryPersonnel")
   jobNotes           JobNote[]          @relation("JobNotePersonnel")
   leaves             PersonnelLeave[]
-  deviceTokens       DeviceToken[]       @relation("PersonnelDeviceTokens")
+  deviceTokens       DeviceToken[]      @relation("PersonnelDeviceTokens")
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -406,19 +404,19 @@ model Invoice {
 
 // FCM Device Token Management
 model DeviceToken {
-  id          String   @id @default(cuid())
-  token       String   @unique
-  platform    String   // "android" | "ios" | "web"
-  userId      String   // Admin ID or Personnel ID
-  userType    String   // "admin" | "personnel"
+  id          String     @id @default(cuid())
+  token       String     @unique
+  platform    String // "android" | "ios" | "web"
+  userId      String // Admin ID or Personnel ID
+  userType    String // "admin" | "personnel"
   adminId     String?
   personnelId String?
-  admin       Admin?   @relation("AdminDeviceTokens", fields: [adminId], references: [id], onDelete: Cascade)
+  admin       Admin?     @relation("AdminDeviceTokens", fields: [adminId], references: [id], onDelete: Cascade)
   personnel   Personnel? @relation("PersonnelDeviceTokens", fields: [personnelId], references: [id], onDelete: Cascade)
-  isActive    Boolean  @default(true)
-  lastUsedAt  DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive    Boolean    @default(true)
+  lastUsedAt  DateTime   @default(now())
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   @@index([userId, userType])
   @@index([token])
