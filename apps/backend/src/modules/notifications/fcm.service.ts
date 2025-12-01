@@ -119,7 +119,6 @@ export class FCMService {
    */
   async sendToRole(role: "admin" | "personnel", payload: NotificationPayload): Promise<void> {
     // Get all active device tokens for the role
-    // @ts-expect-error - DeviceToken model will be available after migration
     const tokens = await prisma.deviceToken.findMany({
       where: {
         userType: role,
@@ -152,7 +151,6 @@ export class FCMService {
     userType: "admin" | "personnel",
     payload: NotificationPayload,
   ): Promise<void> {
-    // @ts-expect-error - DeviceToken model will be available after migration
     const tokens = await prisma.deviceToken.findMany({
       where: {
         userId,
@@ -188,7 +186,6 @@ export class FCMService {
     userType: "admin" | "personnel",
     platform: "android" | "ios" | "web",
   ): Promise<void> {
-    // @ts-expect-error - DeviceToken model will be available after migration
     await prisma.deviceToken.upsert({
       where: { token },
       create: {
@@ -217,7 +214,6 @@ export class FCMService {
    * Remove invalid token
    */
   private async removeInvalidToken(token: string): Promise<void> {
-    // @ts-expect-error - DeviceToken model will be available after migration
     await prisma.deviceToken.updateMany({
       where: { token },
       data: { isActive: false },
@@ -229,7 +225,6 @@ export class FCMService {
    * Unregister device token (on logout)
    */
   async unregisterToken(token: string): Promise<void> {
-    // @ts-expect-error - DeviceToken model will be available after migration
     await prisma.deviceToken.updateMany({
       where: { token },
       data: { isActive: false },
