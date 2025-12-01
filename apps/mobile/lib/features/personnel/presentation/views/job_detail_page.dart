@@ -140,6 +140,29 @@ class _ActionButtons extends HookConsumerWidget {
     final sending = useState(false);
 
     Future<void> handleStart() async {
+      // Show confirmation dialog
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("İşe Başla"),
+          content: const Text(
+            "Bu işe başlamak istediğinizden emin misiniz? İşe başladıktan sonra işi teslim edebilirsiniz.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text("İptal"),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text("Evet, Başla"),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+
       try {
         sending.value = true;
         await repository.startJob(jobId);
@@ -168,6 +191,30 @@ class _ActionButtons extends HookConsumerWidget {
         );
         return;
       }
+
+      // Show confirmation dialog
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("İşi Teslim Et"),
+          content: const Text(
+            "Bu işi teslim etmek istediğinizden emin misiniz? Teslim işlemi geri alınamaz.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text("İptal"),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text("Evet, Teslim Et"),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+
       final result = await showModalBottomSheet<DeliveryPayload>(
         context: context,
         isScrollControlled: true,
@@ -204,12 +251,23 @@ class _ActionButtons extends HookConsumerWidget {
         ),
         const SizedBox(height: 12),
         ElevatedButton.icon(
-          onPressed: status != "DELIVERED" && !sending.value
+          onPressed: status == "IN_PROGRESS" && !sending.value
               ? handleDeliver
               : null,
           icon: const Icon(Icons.task_alt),
           label: Text(readOnly ? "Teslim - Sadece Görüntüle" : "İşi Teslim Et"),
         ),
+        if (status == "PENDING")
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              "İşi teslim etmek için önce işe başlamanız gerekiyor",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey.shade600,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ),
       ],
     );
   }
