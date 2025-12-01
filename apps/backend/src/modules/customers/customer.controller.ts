@@ -132,20 +132,18 @@ export const createCustomerHandler = async (req: Request, res: Response, next: N
     });
 
     // If customer was created by personnel, send notification to admin
-    if (personnelId) {
+    if (personnelId && adminId) {
       const personnel = await prisma.personnel.findUnique({
         where: { id: personnelId },
         select: { name: true },
       });
-      await notificationService.notifyRole("admin", {
-        title: "Yeni Müşteri Eklendi",
-        body: `${personnel?.name || "Bir personel"} tarafından "${data.name}" adlı yeni müşteri eklendi.`,
-        data: {
-          type: "customer_created",
-          customerId: data.id,
-          personnelId: personnelId,
-        },
-      });
+      await notificationService.sendCustomerCreatedToAdmin(
+        adminId,
+        personnelId,
+        data.id,
+        data.name,
+        personnel?.name ?? "Personel",
+      );
     }
 
     res.status(201).json({ success: true, data });

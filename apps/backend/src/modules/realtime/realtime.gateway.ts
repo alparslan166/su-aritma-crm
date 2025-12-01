@@ -16,8 +16,18 @@ class RealtimeGateway {
 
   private handleConnection(socket: Socket) {
     const role = socket.handshake.query.role;
+    const userId = socket.handshake.query.userId;
+    
     if (typeof role === "string") {
       socket.join(`role-${role}`);
+    }
+    
+    if (typeof userId === "string" && typeof role === "string") {
+      if (role === "admin") {
+        socket.join(`admin-${userId}`);
+      } else if (role === "personnel") {
+        socket.join(`personnel-${userId}`);
+      }
     }
 
     socket.on("join:job", (jobId: string) => socket.join(`job-${jobId}`));
@@ -29,6 +39,14 @@ class RealtimeGateway {
 
   emitToRole(role: string, event: string, payload: unknown) {
     this.io?.to(`role-${role}`).emit(event, payload);
+  }
+
+  emitToAdmin(adminId: string, event: string, payload: unknown) {
+    this.io?.to(`admin-${adminId}`).emit(event, payload);
+  }
+
+  emitToPersonnel(personnelId: string, event: string, payload: unknown) {
+    this.io?.to(`personnel-${personnelId}`).emit(event, payload);
   }
 
   emitMaintenanceReminder(payload: unknown) {

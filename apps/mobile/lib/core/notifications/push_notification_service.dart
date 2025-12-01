@@ -97,25 +97,40 @@ class PushNotificationService {
       final token = await _messaging?.getToken();
       if (token != null) {
         debugPrint("FCM Token: $token");
+        // Platform detection
+        String platform = "android";
+        if (defaultTargetPlatform == TargetPlatform.iOS) {
+          platform = "ios";
+        }
+        
         // Send token to backend
         try {
           await _client.post("/notifications/register-token", data: {
             "token": token,
+            "platform": platform,
           });
-          debugPrint("FCM token registered with backend");
+          debugPrint("FCM token registered with backend (platform: $platform)");
         } catch (e) {
           debugPrint("Failed to register token with backend: $e");
         }
       }
 
       // Listen for token refresh
-      _messaging?.onTokenRefresh.listen((newToken) {
+      _messaging?.onTokenRefresh.listen((newToken) async {
         debugPrint("FCM token refreshed: $newToken");
-        _client.post("/notifications/register-token", data: {
-          "token": newToken,
-        }).catchError((e) {
+        String platform = "android";
+        if (defaultTargetPlatform == TargetPlatform.iOS) {
+          platform = "ios";
+        }
+        try {
+          await _client.post("/notifications/register-token", data: {
+            "token": newToken,
+            "platform": platform,
+          });
+          debugPrint("Refreshed FCM token registered with backend");
+        } catch (e) {
           debugPrint("Failed to register refreshed token: $e");
-        });
+        }
       });
     } catch (e) {
       debugPrint("Token registration error: $e");

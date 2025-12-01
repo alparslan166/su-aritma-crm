@@ -377,17 +377,15 @@ class JobService {
     });
 
     // Send notifications to assigned personnel
-    if (job) {
-      try {
-        await notificationService.notifyRole("personnel", {
-          title: "Yeni İş Atandı",
-          body: `${job.title} işi size atandı`,
-          data: { jobId: job.id, type: "job-assigned" },
-        });
-      } catch (error) {
-        logger.error("Failed to send notification to personnel:", error);
-        // Continue even if notification fails
-      }
+    if (job && job.personnel) {
+      const notificationPromises = job.personnel.map((assignment) =>
+        notificationService
+          .sendJobAssignedToEmployee(assignment.personnelId, job.id, job.title ?? "İş")
+          .catch((error) => {
+            logger.error(`Failed to send notification to personnel ${assignment.personnelId}:`, error);
+          }),
+      );
+      await Promise.allSettled(notificationPromises);
     }
 
     return job;
@@ -608,11 +606,30 @@ class JobService {
 
   async startJobByPersonnel(personnelId: string, jobId: string) {
     const assignment = await this.ensurePersonnelAssignment(jobId, personnelId);
-    return this.updateStatus(assignment.job.adminId, jobId, {
+    const job = await this.updateStatus(assignment.job.adminId, jobId, {
       status: JobStatus.IN_PROGRESS,
       performerType: "personnel",
       performerId: personnelId,
     });
+
+    // Send notification to admin
+    try {
+      const personnel = await prisma.personnel.findUnique({
+        where: { id: personnelId },
+        select: { name: true },
+      });
+      await notificationService.sendJobStartedToAdmin(
+        assignment.job.adminId,
+        personnelId,
+        jobId,
+        job.title ?? "İş",
+        personnel?.name ?? "Personel",
+      );
+    } catch (error) {
+      logger.error("Failed to send job started notification:", error);
+    }
+
+    return job;
   }
 
   async deliverJobByPersonnel(personnelId: string, jobId: string, payload: DeliveryPayload) {
@@ -710,7 +727,7 @@ class JobService {
         data: { deliveredAt: now },
       });
 
-      return this.updateStatus(
+      const updatedJob = await this.updateStatus(
         adminId,
         jobId,
         {
@@ -721,7 +738,28 @@ class JobService {
         },
         tx,
       );
+
+      return updatedJob;
     });
+  }
+
+  // Send notification after transaction completes
+  async notifyJobCompleted(adminId: string, personnelId: string, jobId: string, jobTitle: string) {
+    try {
+      const personnel = await prisma.personnel.findUnique({
+        where: { id: personnelId },
+        select: { name: true },
+      });
+      await notificationService.sendJobCompletedToAdmin(
+        adminId,
+        personnelId,
+        jobId,
+        jobTitle,
+        personnel?.name ?? "Personel",
+      );
+    } catch (error) {
+      logger.error("Failed to send job completed notification:", error);
+    }
   }
 
   private emitMaintenanceUpdate(

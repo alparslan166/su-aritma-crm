@@ -1,4 +1,4 @@
-import { config } from "@/config/env";
+import { fcmService } from "./fcm.service";
 import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
 
 type NotificationPayload = {
@@ -8,33 +8,101 @@ type NotificationPayload = {
 };
 
 export class NotificationService {
+  /**
+   * Send notification to all users of a specific role (backward compatibility)
+   */
   async notifyRole(role: "admin" | "personnel", payload: NotificationPayload) {
-    await this.sendPush({
-      topic: `role-${role}`,
-      ...payload,
-    });
-
-    realtimeGateway.emitToRole(role, "notification", payload);
+    await fcmService.sendToRole(role, payload);
   }
 
-  private async sendPush({ topic, title, body, data }: NotificationPayload & { topic: string }) {
-    const response = await fetch("https://fcm.googleapis.com/fcm/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `key=${config.fcm.serverKey}`,
+  /**
+   * Send notification when job is assigned to personnel
+   */
+  async sendJobAssignedToEmployee(personnelId: string, jobId: string, jobTitle: string) {
+    const payload: NotificationPayload = {
+      title: "Yeni İş Atandı",
+      body: `${jobTitle} işi size atandı`,
+      data: {
+        type: "job_assigned",
+        jobId,
+        personnelId,
+        title: jobTitle,
       },
-      body: JSON.stringify({
-        to: `/topics/${topic}`,
-        notification: { title, body },
-        data,
-      }),
-    });
+    };
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`FCM request failed: ${text}`);
-    }
+    await fcmService.sendToUser(personnelId, "personnel", payload);
+  }
+
+  /**
+   * Send notification when personnel starts a job
+   */
+  async sendJobStartedToAdmin(adminId: string, personnelId: string, jobId: string, jobTitle: string, personnelName: string) {
+    const payload: NotificationPayload = {
+      title: "İş Başlatıldı",
+      body: `${personnelName} "${jobTitle}" işine başladı`,
+      data: {
+        type: "job_started",
+        jobId,
+        personnelId,
+        adminId,
+        title: jobTitle,
+        personnelName,
+      },
+    };
+
+    await fcmService.sendToUser(adminId, "admin", payload);
+  }
+
+  /**
+   * Send notification when personnel completes a job
+   */
+  async sendJobCompletedToAdmin(
+    adminId: string,
+    personnelId: string,
+    jobId: string,
+    jobTitle: string,
+    personnelName: string,
+  ) {
+    const payload: NotificationPayload = {
+      title: "İş Tamamlandı",
+      body: `${personnelName} "${jobTitle}" işini tamamladı`,
+      data: {
+        type: "job_completed",
+        jobId,
+        personnelId,
+        adminId,
+        title: jobTitle,
+        personnelName,
+      },
+    };
+
+    await fcmService.sendToUser(adminId, "admin", payload);
+  }
+
+  /**
+   * Send notification when personnel creates a new customer
+   */
+  async sendCustomerCreatedToAdmin(
+    adminId: string,
+    personnelId: string,
+    customerId: string,
+    customerName: string,
+    personnelName: string,
+  ) {
+    const payload: NotificationPayload = {
+      title: "Yeni Müşteri Eklendi",
+      body: `${personnelName} "${customerName}" adlı yeni bir müşteri ekledi`,
+      data: {
+        type: "customer_created",
+        customerId,
+        personnelId,
+        adminId,
+        customerName,
+        personnelName,
+      },
+    };
+
+    await fcmService.sendToUser(adminId, "admin", payload);
   }
 }
 

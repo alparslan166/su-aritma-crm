@@ -91,6 +91,7 @@ model Admin {
   jobNotes        JobNote[]          @relation("JobNoteAdmin")
   subscription    Subscription?
   invoices        Invoice[]
+  deviceTokens    DeviceToken[]       @relation("AdminDeviceTokens")
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 }
@@ -130,6 +131,7 @@ model Personnel {
   jobStatusLogs      JobStatusHistory[] @relation("JobStatusHistoryPersonnel")
   jobNotes           JobNote[]          @relation("JobNotePersonnel")
   leaves             PersonnelLeave[]
+  deviceTokens       DeviceToken[]       @relation("PersonnelDeviceTokens")
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -400,4 +402,26 @@ model Invoice {
 
   @@index([adminId])
   @@index([jobId])
+}
+
+// FCM Device Token Management
+model DeviceToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  platform    String   // "android" | "ios" | "web"
+  userId      String   // Admin ID or Personnel ID
+  userType    String   // "admin" | "personnel"
+  adminId     String?
+  personnelId String?
+  admin       Admin?   @relation("AdminDeviceTokens", fields: [adminId], references: [id], onDelete: Cascade)
+  personnel   Personnel? @relation("PersonnelDeviceTokens", fields: [personnelId], references: [id], onDelete: Cascade)
+  isActive    Boolean  @default(true)
+  lastUsedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, userType])
+  @@index([token])
+  @@index([adminId])
+  @@index([personnelId])
 }

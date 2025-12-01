@@ -40,7 +40,7 @@ class RegisterController extends StateNotifier<RegisterState> {
   Future<void> submit() async {
     if (!state.isValid) {
       String errorMessage = "Lütfen tüm alanları doğru şekilde doldurun";
-      
+
       if (state.password.length < 6) {
         errorMessage = "Şifre en az 6 karakter olmalıdır";
       } else if (state.password != state.confirmPassword) {
@@ -52,7 +52,7 @@ class RegisterController extends StateNotifier<RegisterState> {
       } else if (state.phone.isEmpty) {
         errorMessage = "Telefon gereklidir";
       }
-      
+
       state = state.copyWith(
         status: AsyncError(
           AuthException(message: errorMessage),
@@ -79,4 +79,3 @@ class RegisterController extends StateNotifier<RegisterState> {
     }
   }
 }
-

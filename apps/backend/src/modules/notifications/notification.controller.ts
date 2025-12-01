@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { getAdminId, getPersonnelId } from "@/lib/tenant";
 import { notificationService } from "./notification.service";
+import { fcmService } from "./fcm.service";
 
 const sendSchema = z.object({
   role: z.enum(["admin", "personnel"]),
@@ -13,6 +14,7 @@ const sendSchema = z.object({
 
 const tokenSchema = z.object({
   token: z.string().min(1),
+  platform: z.enum(["android", "ios", "web"]),
 });
 
 export const sendRoleNotificationHandler = async (
@@ -36,31 +38,61 @@ export const registerTokenHandler = async (
 ) => {
   try {
     const payload = tokenSchema.parse(req.body);
-    const token = payload.token;
+    const { token, platform } = payload;
     
     // Get user role and ID from headers (one of them will be present)
     let adminId: string | undefined;
     let personnelId: string | undefined;
+    let userType: "admin" | "personnel" | undefined;
+    let userId: string | undefined;
     
     try {
       adminId = getAdminId(req);
+      userType = "admin";
+      userId = adminId;
     } catch {
       // Admin ID not present, try personnel
-    }
-    
-    if (!adminId) {
       try {
         personnelId = getPersonnelId(req);
+        userType = "personnel";
+        userId = personnelId;
       } catch {
         // Neither present - invalid request
+        return res.status(401).json({ 
+          success: false, 
+          error: "Authentication required" 
+        });
       }
     }
     
-    // TODO: Store FCM token in database for direct notifications
-    // For now, we just log it - tokens are subscribed to topics automatically via Firebase
-    // The client subscribes to role-based topics automatically
+    if (!userId || !userType) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "User identification required" 
+      });
+    }
     
-    res.json({ success: true, message: "Token registered" });
+    // Register token in database
+    await fcmService.registerToken(token, userId, userType, platform);
+    
+    res.json({ success: true, message: "Token registered successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const unregisterTokenHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const payload = tokenSchema.parse(req.body);
+    const { token } = payload;
+    
+    await fcmService.unregisterToken(token);
+    
+    res.json({ success: true, message: "Token unregistered successfully" });
   } catch (error) {
     next(error);
   }
