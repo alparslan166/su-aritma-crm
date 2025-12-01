@@ -1,5 +1,25 @@
+# Tek emülatör ile çalıştırma
 cd apps/mobile
 flutter run -d emulator-5554 --dart-define=API_BASE_URL=https://su-aritma-crm-production-5d49.up.railway.app/api
+
+# İki emülatör ile aynı anda çalıştırma (iki ayrı terminal penceresi aç)
+# Terminal 1 - İlk emülatör (emulator-5554)
+cd apps/mobile
+flutter run -d emulator-5554 --dart-define=API_BASE_URL=https://su-aritma-crm-production-5d49.up.railway.app/api
+
+# Terminal 2 - İkinci emülatör (emulator-5556)
+cd apps/mobile
+flutter run -d emulator-5556 --dart-define=API_BASE_URL=https://su-aritma-crm-production-5d49.up.railway.app/api
+
+# Emülatörleri başlatma
+# İlk emülatör: Medium Phone API 36.1
+flutter emulators --launch Medium_Phone_API_36.1
+
+# İkinci emülatör: Pixel 3a
+flutter emulators --launch Pixel_3a
+
+# Mevcut cihazları listele
+flutter devices
 
 # Web olarak çalıştırma (Railway backend ile)
 cd apps/mobile
