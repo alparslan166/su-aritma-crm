@@ -16,9 +16,9 @@ export const sendVerificationEmail = async (
   email: string,
   code: string,
   name: string,
-): Promise<boolean> => {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const { error } = await resend.emails.send({
+    const { error, data } = await resend.emails.send({
       from: `${APP_NAME} <${FROM_EMAIL}>`,
       to: email,
       subject: `${APP_NAME} - E-posta Doğrulama Kodu`,
@@ -54,14 +54,30 @@ export const sendVerificationEmail = async (
 
     if (error) {
       console.error(`❌ Failed to send verification email to ${email}:`, error);
-      return false;
+
+      // Check if it's a domain verification error
+      const errorMessage = error.message || JSON.stringify(error);
+      if (errorMessage.includes("verify a domain") || errorMessage.includes("testing emails")) {
+        return {
+          success: false,
+          error: "EMAIL_DOMAIN_NOT_VERIFIED",
+        };
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+      };
     }
 
-    console.log(`✅ Verification email sent to ${email}`);
-    return true;
-  } catch (error) {
+    console.log(`✅ Verification email sent to ${email}`, data?.id ? `(ID: ${data.id})` : "");
+    return { success: true };
+  } catch (error: unknown) {
     console.error(`❌ Failed to send verification email to ${email}:`, error);
-    return false;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 };
 
@@ -70,9 +86,9 @@ export const sendPasswordResetEmail = async (
   email: string,
   code: string,
   name: string,
-): Promise<boolean> => {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const { error } = await resend.emails.send({
+    const { error, data } = await resend.emails.send({
       from: `${APP_NAME} <${FROM_EMAIL}>`,
       to: email,
       subject: `${APP_NAME} - Şifre Sıfırlama Kodu`,
@@ -113,14 +129,27 @@ export const sendPasswordResetEmail = async (
 
     if (error) {
       console.error(`❌ Failed to send password reset email to ${email}:`, error);
-      return false;
+      const errorMessage = error.message || JSON.stringify(error);
+      if (errorMessage.includes("verify a domain") || errorMessage.includes("testing emails")) {
+        return {
+          success: false,
+          error: "EMAIL_DOMAIN_NOT_VERIFIED",
+        };
+      }
+      return {
+        success: false,
+        error: errorMessage,
+      };
     }
 
-    console.log(`✅ Password reset email sent to ${email}`);
-    return true;
-  } catch (error) {
+    console.log(`✅ Password reset email sent to ${email}`, data?.id ? `(ID: ${data.id})` : "");
+    return { success: true };
+  } catch (error: unknown) {
     console.error(`❌ Failed to send password reset email to ${email}:`, error);
-    return false;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 };
 
@@ -129,9 +158,9 @@ export const sendAccountDeletionEmail = async (
   email: string,
   code: string,
   name: string,
-): Promise<boolean> => {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const { error } = await resend.emails.send({
+    const { error, data } = await resend.emails.send({
       from: `${APP_NAME} <${FROM_EMAIL}>`,
       to: email,
       subject: `${APP_NAME} - Hesap Silme Onayı`,
@@ -177,14 +206,27 @@ export const sendAccountDeletionEmail = async (
 
     if (error) {
       console.error(`❌ Failed to send account deletion email to ${email}:`, error);
-      return false;
+      const errorMessage = error.message || JSON.stringify(error);
+      if (errorMessage.includes("verify a domain") || errorMessage.includes("testing emails")) {
+        return {
+          success: false,
+          error: "EMAIL_DOMAIN_NOT_VERIFIED",
+        };
+      }
+      return {
+        success: false,
+        error: errorMessage,
+      };
     }
 
-    console.log(`✅ Account deletion email sent to ${email}`);
-    return true;
-  } catch (error) {
+    console.log(`✅ Account deletion email sent to ${email}`, data?.id ? `(ID: ${data.id})` : "");
+    return { success: true };
+  } catch (error: unknown) {
     console.error(`❌ Failed to send account deletion email to ${email}:`, error);
-    return false;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 };
 

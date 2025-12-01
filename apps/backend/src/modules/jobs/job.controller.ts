@@ -24,29 +24,34 @@ const customerSchema = z.object({
   address: z.string().min(3),
 });
 
-const jobBaseSchema = z.object({
-  title: z.string().min(2),
-  customer: customerSchema,
-  customerId: z.string().optional(),
-  scheduledAt: z.string().datetime().optional(),
-  location: z.record(z.string(), z.any()).refine((val) => Object.keys(val).length > 0, {
-    message: "Location must have at least one field",
-  }),
-  price: z.number().positive().optional(),
-  hasInstallment: z.boolean().optional(),
-  notes: z.string().optional(),
-  maintenanceDueAt: z.string().datetime().optional(),
-  priority: z.number().int().optional(),
-  personnelIds: z.array(z.string()).optional(),
-  materialIds: z
-    .array(
-      z.object({
-        inventoryItemId: z.string(),
-        quantity: z.number().int().positive(),
-      }),
-    )
-    .optional(),
-});
+const jobBaseSchema = z
+  .object({
+    title: z.string().min(2),
+    customer: customerSchema.optional(),
+    customerId: z.string().optional(),
+    scheduledAt: z.string().datetime().optional(),
+    location: z.record(z.string(), z.any()).refine((val) => Object.keys(val).length > 0, {
+      message: "Location must have at least one field",
+    }),
+    price: z.number().positive().optional(),
+    hasInstallment: z.boolean().optional(),
+    notes: z.string().optional(),
+    maintenanceDueAt: z.string().datetime().optional(),
+    priority: z.number().int().optional(),
+    personnelIds: z.array(z.string()).optional(),
+    materialIds: z
+      .array(
+        z.object({
+          inventoryItemId: z.string(),
+          quantity: z.number().int().positive(),
+        }),
+      )
+      .optional(),
+  })
+  .refine((data) => data.customer || data.customerId, {
+    message: "Either customer or customerId must be provided",
+    path: ["customer"],
+  });
 
 const jobUpdateSchema = jobBaseSchema.partial().extend({
   status: z.nativeEnum(JobStatus).optional(),

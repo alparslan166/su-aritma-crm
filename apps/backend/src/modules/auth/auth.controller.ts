@@ -250,10 +250,13 @@ export const registerHandler = async (req: Request, res: Response, next: NextFun
       },
     });
 
-    // Send verification email (don't block if email fails)
-    sendVerificationEmail(admin.email, verificationCode, admin.name).catch((err) => {
-      console.error("Failed to send verification email:", err);
-    });
+    // Send verification email
+    const emailResult = await sendVerificationEmail(admin.email, verificationCode, admin.name);
+    if (!emailResult.success) {
+      console.error("❌ Failed to send verification email:", emailResult.error);
+      // Don't fail registration if email fails, but log the error
+      // The user can request a new code later
+    }
 
     res.status(201).json({
       success: true,
@@ -320,10 +323,20 @@ export const sendVerificationCodeHandler = async (
     });
 
     // Send verification email
-    const sent = await sendVerificationEmail(email, verificationCode, admin.name);
+    const emailResult = await sendVerificationEmail(email, verificationCode, admin.name);
 
-    if (!sent) {
-      throw new AppError("E-posta gönderilemedi. Lütfen tekrar deneyin.", 500);
+    if (!emailResult.success) {
+      // Check if it's a domain verification error
+      if (emailResult.error === "EMAIL_DOMAIN_NOT_VERIFIED") {
+        throw new AppError(
+          "E-posta gönderilemedi. Domain doğrulaması gerekiyor. Lütfen sistem yöneticisine başvurun.",
+          500,
+        );
+      }
+      throw new AppError(
+        `E-posta gönderilemedi: ${emailResult.error || "Bilinmeyen hata"}. Lütfen tekrar deneyin.`,
+        500,
+      );
     }
 
     res.json({
@@ -436,9 +449,14 @@ export const forgotPasswordHandler = async (req: Request, res: Response, next: N
     });
 
     // Send password reset email
-    await sendPasswordResetEmail(email, resetCode, admin.name);
-
-    console.log(`📧 Password reset code sent to: ${email}`);
+    const emailResult = await sendPasswordResetEmail(email, resetCode, admin.name);
+    if (!emailResult.success) {
+      console.error("❌ Failed to send password reset email:", emailResult.error);
+      // Don't fail the request, but log the error
+      // The user can try again later
+    } else {
+      console.log(`📧 Password reset code sent to: ${email}`);
+    }
 
     res.json({
       success: true,
@@ -614,10 +632,19 @@ export const requestAccountDeletionHandler = async (
     });
 
     // Send account deletion email
-    const sent = await sendAccountDeletionEmail(admin.email, deletionCode, admin.name);
+    const emailResult = await sendAccountDeletionEmail(admin.email, deletionCode, admin.name);
 
-    if (!sent) {
-      throw new AppError("E-posta gönderilemedi. Lütfen tekrar deneyin.", 500);
+    if (!emailResult.success) {
+      if (emailResult.error === "EMAIL_DOMAIN_NOT_VERIFIED") {
+        throw new AppError(
+          "E-posta gönderilemedi. Domain doğrulaması gerekiyor. Lütfen sistem yöneticisine başvurun.",
+          500,
+        );
+      }
+      throw new AppError(
+        `E-posta gönderilemedi: ${emailResult.error || "Bilinmeyen hata"}. Lütfen tekrar deneyin.`,
+        500,
+      );
     }
 
     console.log(`📧 Account deletion code sent to: ${admin.email}`);
