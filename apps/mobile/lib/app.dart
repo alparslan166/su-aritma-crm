@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
 import "core/notifications/push_notification_service.dart";
+import "core/realtime/socket_client.dart";
 import "core/session/session_provider.dart";
 import "core/theme/app_theme.dart";
 import "routing/app_router.dart";
@@ -13,6 +14,10 @@ class SuAritmaApp extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
     final pushService = ref.watch(pushNotificationServiceProvider);
+    
+    // Initialize WebSocket connection when user is logged in
+    // This ensures socket is connected even if notifications page is not visited
+    ref.watch(socketClientProvider);
 
     // Initialize push notifications on app start
     WidgetsBinding.instance.addPostFrameCallback((_) {
