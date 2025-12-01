@@ -72,12 +72,12 @@ class PersonnelNotificationsNotifier
     try {
       debugPrint("📬 Received notification: $data");
       final map = data as Map<String, dynamic>? ?? {};
-      
+
       // Generate unique ID if not provided
       if (map["id"] == null) {
         map["id"] = DateTime.now().millisecondsSinceEpoch.toString();
       }
-      
+
       // Extract data from nested data field if present
       if (map["data"] != null && map["data"] is Map) {
         final dataMap = map["data"] as Map<String, dynamic>;
@@ -95,12 +95,12 @@ class PersonnelNotificationsNotifier
           }
         }
       }
-      
+
       // Ensure receivedAt is set
       if (map["receivedAt"] == null) {
         map["receivedAt"] = DateTime.now().toIso8601String();
       }
-      
+
       // Ensure title and body are present
       if (map["title"] == null) {
         map["title"] = "Yeni Bildirim";
@@ -108,10 +108,12 @@ class PersonnelNotificationsNotifier
       if (map["body"] == null) {
         map["body"] = "";
       }
-      
+
       debugPrint("📬 Processed notification map: $map");
       final notification = PersonnelNotification.fromJson(map);
-      debugPrint("✅ Added notification: ${notification.title} - ${notification.body}");
+      debugPrint(
+        "✅ Added notification: ${notification.title} - ${notification.body}",
+      );
       state = [notification, ...state];
     } catch (error, stackTrace) {
       debugPrint("❌ Failed to handle notification: $error");

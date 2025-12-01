@@ -98,11 +98,13 @@ class PushNotificationService {
           debugPrint("Notification data: ${message.data}");
           _handleNotificationTap(message.data);
         });
-        
+
         // Check for initial notification (app opened from terminated state)
         final initialMessage = await _messaging!.getInitialMessage();
         if (initialMessage != null) {
-          debugPrint("App opened from notification: ${initialMessage.messageId}");
+          debugPrint(
+            "App opened from notification: ${initialMessage.messageId}",
+          );
           debugPrint("Initial notification data: ${initialMessage.data}");
           _handleNotificationTap(initialMessage.data);
         }
@@ -223,7 +225,7 @@ class PushNotificationService {
     final payload = message.data.isNotEmpty
         ? message.data.toString()
         : message.notification?.title ?? "";
-    
+
     await _localNotifications!.show(
       message.hashCode,
       message.notification?.title ?? "Yeni Bildirim",
@@ -251,11 +253,11 @@ class PushNotificationService {
     } else if (payload is Map<String, dynamic>) {
       data = payload;
       debugPrint("Map payload: $data");
-      
+
       // Navigate based on notification type
       final type = data['type'] as String?;
       final jobId = data['jobId'] as String?;
-      
+
       if (type == "job_assigned" && jobId != null) {
         // Navigate to personnel job detail page
         _router.pushNamed(
@@ -264,16 +266,10 @@ class PushNotificationService {
         );
       } else if (type == "job_started" && jobId != null) {
         // Navigate to admin job detail page
-        _router.pushNamed(
-          "admin-job-detail",
-          pathParameters: {"id": jobId},
-        );
+        _router.pushNamed("admin-job-detail", pathParameters: {"id": jobId});
       } else if (type == "job_completed" && jobId != null) {
         // Navigate to admin job detail page
-        _router.pushNamed(
-          "admin-job-detail",
-          pathParameters: {"id": jobId},
-        );
+        _router.pushNamed("admin-job-detail", pathParameters: {"id": jobId});
       } else if (type == "customer_created") {
         final customerId = data['customerId'] as String?;
         if (customerId != null) {

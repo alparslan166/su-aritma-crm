@@ -16,8 +16,10 @@ final socketClientProvider = Provider<sio.Socket?>((ref) {
 
   final uri = AppConfig.socketBaseUrl;
   debugPrint("🔌 Socket: Connecting to $uri");
-  debugPrint("🔌 Socket: Role: ${session.role.name}, Identifier: ${session.identifier}");
-  
+  debugPrint(
+    "🔌 Socket: Role: ${session.role.name}, Identifier: ${session.identifier}",
+  );
+
   final socket = sio.io(
     uri,
     sio.OptionBuilder()

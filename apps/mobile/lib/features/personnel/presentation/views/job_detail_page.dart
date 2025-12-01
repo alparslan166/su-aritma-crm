@@ -138,6 +138,7 @@ class _ActionButtons extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(personnelRepositoryProvider);
     final sending = useState(false);
+    final mounted = useIsMounted();
 
     Future<void> handleStart() async {
       // Show confirmation dialog
@@ -164,23 +165,27 @@ class _ActionButtons extends HookConsumerWidget {
       if (confirmed != true) return;
 
       try {
+        if (!mounted()) return;
         sending.value = true;
         await repository.startJob(jobId);
+        if (!mounted()) return;
         await ref.read(personnelJobDetailProvider(jobId).notifier).refresh();
         ref.invalidate(personnelJobsProvider);
-        if (context.mounted) {
+        if (context.mounted && mounted()) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("İşe başlama bildirildi")),
           );
         }
       } catch (error) {
-        if (context.mounted) {
+        if (context.mounted && mounted()) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(error.toString())));
         }
       } finally {
-        sending.value = false;
+        if (mounted()) {
+          sending.value = false;
+        }
       }
     }
 
@@ -222,23 +227,27 @@ class _ActionButtons extends HookConsumerWidget {
       );
       if (result == null) return;
       try {
+        if (!mounted()) return;
         sending.value = true;
         await repository.deliverJob(jobId, result);
+        if (!mounted()) return;
         await ref.read(personnelJobDetailProvider(jobId).notifier).refresh();
         ref.invalidate(personnelJobsProvider);
-        if (context.mounted) {
+        if (context.mounted && mounted()) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text("İş teslim edildi")));
         }
       } catch (error) {
-        if (context.mounted) {
+        if (context.mounted && mounted()) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(error.toString())));
         }
       } finally {
-        sending.value = false;
+        if (mounted()) {
+          sending.value = false;
+        }
       }
     }
 
@@ -262,9 +271,9 @@ class _ActionButtons extends HookConsumerWidget {
             padding: const EdgeInsets.only(top: 8),
             child: Text(
               "İşi teslim etmek için önce işe başlamanız gerekiyor",
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey.shade600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
               textAlign: TextAlign.center,
             ),
           ),

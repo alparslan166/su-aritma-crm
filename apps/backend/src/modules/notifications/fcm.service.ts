@@ -170,10 +170,13 @@ export class FCMService {
     }
 
     // Also emit via WebSocket
+    logger.info(`📡 Emitting WebSocket notification to ${userType} ${userId}`);
     if (userType === "admin") {
       realtimeGateway.emitToAdmin(userId, "notification", payload);
+      logger.info(`✅ WebSocket notification sent to admin ${userId}`);
     } else {
       realtimeGateway.emitToPersonnel(userId, "notification", payload);
+      logger.info(`✅ WebSocket notification sent to personnel ${userId}`);
     }
   }
 
