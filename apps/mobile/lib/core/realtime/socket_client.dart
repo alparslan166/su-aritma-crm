@@ -9,22 +9,43 @@ typedef SocketEventHandler = void Function(dynamic data);
 final socketClientProvider = Provider<sio.Socket?>((ref) {
   final session = ref.watch(authSessionProvider);
   if (session == null) {
+    debugPrint("🔌 Socket: No session, returning null");
     return null;
   }
 
   final uri = AppConfig.socketBaseUrl;
+  debugPrint("🔌 Socket: Connecting to $uri");
+  debugPrint("🔌 Socket: Role: ${session.role.name}, Identifier: ${session.identifier}");
+  
   final socket = sio.io(
     uri,
     sio.OptionBuilder()
         .setTransports(["websocket"])
-        .setQuery({"role": session.role.name, "identifier": session.identifier})
+        .setQuery({"role": session.role.name, "userId": session.identifier})
         .disableAutoConnect()
         .build(),
   );
 
+  socket.onConnect((_) {
+    debugPrint("✅ Socket: Connected successfully");
+  });
+
+  socket.onDisconnect((_) {
+    debugPrint("❌ Socket: Disconnected");
+  });
+
+  socket.onError((error) {
+    debugPrint("❌ Socket: Error: $error");
+  });
+
+  socket.onConnectError((error) {
+    debugPrint("❌ Socket: Connection error: $error");
+  });
+
   socket.connect();
 
   ref.onDispose(() {
+    debugPrint("🔌 Socket: Disposing socket");
     socket.dispose();
   });
 
