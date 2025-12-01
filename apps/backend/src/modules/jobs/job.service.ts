@@ -676,6 +676,7 @@ class JobService {
           deliveryMediaUrls: (payload.photoUrls ?? []) as Prisma.InputJsonValue,
           maintenanceDueAt: maintenanceDate ?? assignment.job.maintenanceDueAt,
           nextMaintenanceIntervalMonths: payload.maintenanceIntervalMonths,
+          deliveredAt: now, // Personel teslim ettiği andaki saat
         },
       });
 
