@@ -41,7 +41,6 @@ type CreateJobPayload = {
   hasInstallment?: boolean;
   notes?: string;
   maintenanceDueAt?: Date;
-  priority?: number;
   personnelIds?: string[];
   materialIds?: Array<{ inventoryItemId: string; quantity: number }>;
 };
@@ -247,7 +246,6 @@ class JobService {
             hasInstallment: payload.hasInstallment ?? false,
             notes: payload.notes,
             maintenanceDueAt: payload.maintenanceDueAt,
-            priority: payload.priority,
           };
           logger.debug("📥 Job data:", JSON.stringify(jobData, null, 2));
 
@@ -356,7 +354,6 @@ class JobService {
       hasInstallment: payload.hasInstallment,
       notes: payload.notes,
       maintenanceDueAt: payload.maintenanceDueAt,
-      priority: payload.priority,
     };
     return prisma.job.update({
       where: { id: jobId },

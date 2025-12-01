@@ -111,7 +111,6 @@ class Job {
     required this.status,
     required this.customer,
     required this.scheduledAt,
-    required this.priority,
     required this.assignments,
     this.location,
     this.price,
@@ -131,7 +130,6 @@ class Job {
   final String status;
   final JobCustomer customer;
   final DateTime? scheduledAt;
-  final int? priority;
   final List<JobAssignment> assignments;
   final JobLocation? location;
   final double? price;
@@ -163,7 +161,6 @@ class Job {
       status: json["status"] as String? ?? "PENDING",
       customer: JobCustomer.fromJson(json["customer"] as Map<String, dynamic>?),
       scheduledAt: DateTime.tryParse(json["scheduledAt"] as String? ?? ""),
-      priority: _parseInt(json["priority"]),
       assignments: personnelList,
       location: JobLocation.maybeFromJson(
         json["location"] as Map<String, dynamic>?,
@@ -194,7 +191,6 @@ class Job {
     String? status,
     JobCustomer? customer,
     DateTime? scheduledAt,
-    int? priority,
     List<JobAssignment>? assignments,
     JobLocation? location,
     double? price,
@@ -214,7 +210,6 @@ class Job {
       status: status ?? this.status,
       customer: customer ?? this.customer,
       scheduledAt: scheduledAt ?? this.scheduledAt,
-      priority: priority ?? this.priority,
       assignments: assignments ?? this.assignments,
       location: location ?? this.location,
       price: price ?? this.price,

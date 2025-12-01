@@ -62,10 +62,6 @@ class PersonnelJobDetailPage extends HookConsumerWidget {
                     detail.job.scheduledAt?.toLocal().toString() ??
                     "Belirlenmedi",
               ),
-              _InfoTile(
-                title: "Öncelik",
-                value: detail.job.priority?.toString() ?? "-",
-              ),
               // Malzemeler bölümü
               if (detail.job.materials != null &&
                   detail.job.materials!.isNotEmpty) ...[

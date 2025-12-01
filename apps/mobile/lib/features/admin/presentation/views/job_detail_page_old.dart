@@ -22,7 +22,6 @@ class AdminJobDetailPage extends StatelessWidget {
                 "Planlanan Tarih",
                 job.scheduledAt?.toLocal().toString() ?? "-",
               ),
-              _Row("Öncelik", job.priority?.toString() ?? "-"),
               _Row("Adres", job.location?.address ?? job.customer.address),
             ],
           ),

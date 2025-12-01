@@ -99,7 +99,6 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                       ).format(job.scheduledAt!.toLocal())
                     : "-",
               ),
-              _Row("Öncelik", job.priority?.toString() ?? "-"),
               _Row("Adres", job.location?.address ?? job.customer.address),
               _Row("Yapılan İşlem", job.title),
               if (job.materials != null && job.materials!.isNotEmpty) ...[
@@ -350,9 +349,6 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
     );
     final notesController = TextEditingController();
     final priceController = TextEditingController();
-    final priorityController = TextEditingController(
-      text: job.priority?.toString() ?? "",
-    );
     DateTime? scheduledAt = job.scheduledAt;
     final formKey = GlobalKey<FormState>();
 
@@ -467,14 +463,6 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                           decimal: true,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: priorityController,
-                        decoration: const InputDecoration(
-                          labelText: "Öncelik (opsiyonel)",
-                        ),
-                        keyboardType: TextInputType.number,
-                      ),
                       const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
@@ -502,11 +490,6 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                                     ? null
                                     : double.tryParse(
                                         priceController.text.trim(),
-                                      ),
-                                priority: priorityController.text.trim().isEmpty
-                                    ? null
-                                    : int.tryParse(
-                                        priorityController.text.trim(),
                                       ),
                               );
                               ref.invalidate(jobListProvider);

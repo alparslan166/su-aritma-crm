@@ -356,7 +356,6 @@ class AdminRepository {
     DateTime? scheduledAt,
     String? notes,
     double? price,
-    int? priority,
   }) async {
     final data = <String, dynamic>{};
     if (title != null) data["title"] = title;
@@ -378,7 +377,6 @@ class AdminRepository {
     }
     if (notes != null) data["notes"] = notes;
     if (price != null) data["price"] = price;
-    if (priority != null) data["priority"] = priority;
     final response = await _client.put("/jobs/$id", data: data);
     return Job.fromJson(response.data["data"] as Map<String, dynamic>);
   }
@@ -556,8 +554,12 @@ class AdminRepository {
       location["latitude"] = latitude;
       location["longitude"] = longitude;
     }
+    // Backend requires at least one field in location
     if (locationDescription != null && locationDescription.isNotEmpty) {
       location["address"] = locationDescription;
+    } else if (location.isEmpty) {
+      // Fallback: add default address if no location data is available
+      location["address"] = "Konum bilgisi yok";
     }
 
     final requestData = <String, dynamic>{

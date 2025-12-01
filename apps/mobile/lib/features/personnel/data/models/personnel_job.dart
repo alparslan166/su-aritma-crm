@@ -97,7 +97,6 @@ class PersonnelJob {
     required this.readOnly,
     required this.customer,
     this.scheduledAt,
-    this.priority,
     this.materials,
   });
 
@@ -107,7 +106,6 @@ class PersonnelJob {
   final bool readOnly;
   final PersonnelJobCustomer customer;
   final DateTime? scheduledAt;
-  final int? priority;
   final List<PersonnelJobMaterial>? materials;
 
   factory PersonnelJob.fromJson(Map<String, dynamic> json) {
@@ -120,7 +118,6 @@ class PersonnelJob {
         json["customer"] as Map<String, dynamic>?,
       ),
       scheduledAt: DateTime.tryParse(json["scheduledAt"] as String? ?? ""),
-      priority: json["priority"] as int?,
       materials: (json["materials"] as List<dynamic>?)
           ?.map((e) => PersonnelJobMaterial.fromJson(e as Map<String, dynamic>))
           .toList(),

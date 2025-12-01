@@ -1,3 +1,16 @@
 cd apps/mobile
 flutter run -d emulator-5554 --dart-define=API_BASE_URL=https://su-aritma-crm-production-5d49.up.railway.app/api
 
+# Web olarak çalıştırma (Railway backend ile)
+cd apps/mobile
+flutter run -d chrome --dart-define=API_BASE_URL=https://su-aritma-crm-production-5d49.up.railway.app/api
+
+# Web build (production için)
+cd apps/mobile
+flutter build web --release --dart-define=API_BASE_URL=https://su-aritma-crm-production-5d49.up.railway.app/api
+
+# APK olarak sürüm güncelleme
+# Versiyon numarasını buradan güncelle:
+# apps/mobile/pubspec.yaml  -->  version: x.y.z+build
+cd apps/mobile
+flutter build apk --release --dart-define=API_BASE_URL=https://su-aritma-crm-production-5d49.up.railway.app/api

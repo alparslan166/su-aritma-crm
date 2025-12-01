@@ -143,10 +143,7 @@ class EmailVerificationPage extends HookConsumerWidget {
                       duration: const Duration(milliseconds: 600),
                       curve: Curves.elasticOut,
                       builder: (context, value, child) {
-                        return Transform.scale(
-                          scale: value,
-                          child: child,
-                        );
+                        return Transform.scale(scale: value, child: child);
                       },
                       child: Container(
                         width: 120,
@@ -156,7 +153,9 @@ class EmailVerificationPage extends HookConsumerWidget {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                              color: const Color(
+                                0xFF10B981,
+                              ).withValues(alpha: 0.3),
                               blurRadius: 30,
                               spreadRadius: 5,
                             ),
@@ -190,19 +189,21 @@ class EmailVerificationPage extends HookConsumerWidget {
                           Text(
                             "Hoş Geldiniz! 🎉",
                             textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1F2937),
-                            ),
+                            style: Theme.of(context).textTheme.headlineMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF1F2937),
+                                ),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             name,
                             textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF10B981),
-                            ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF10B981),
+                                ),
                           ),
                         ],
                       ),
@@ -361,10 +362,11 @@ class EmailVerificationPage extends HookConsumerWidget {
                       Text(
                         "E-postanızı Doğrulayın",
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1F2937),
-                        ),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF1F2937),
+                            ),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -425,7 +427,9 @@ class EmailVerificationPage extends HookConsumerWidget {
                                 style: TextStyle(color: Colors.grey.shade500),
                               )
                             : TextButton(
-                                onPressed: isResending.value ? null : resendCode,
+                                onPressed: isResending.value
+                                    ? null
+                                    : resendCode,
                                 child: isResending.value
                                     ? const SizedBox(
                                         width: 20,

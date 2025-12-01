@@ -13,8 +13,9 @@ final apiClientProvider = Provider<Dio>((ref) {
   final dio = Dio(
     BaseOptions(
       baseUrl: AppConfig.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
+      connectTimeout: const Duration(seconds: 30), // Railway cold start için artırıldı
+      receiveTimeout: const Duration(seconds: 30), // Yavaş network için artırıldı
+      sendTimeout: const Duration(seconds: 30),
       headers: {"Content-Type": "application/json"},
     ),
   );
@@ -30,6 +31,31 @@ final apiClientProvider = Provider<Dio>((ref) {
           }
         }
         handler.next(options);
+      },
+      onError: (error, handler) async {
+        // Connection timeout için retry mekanizması
+        if (error.type == DioExceptionType.connectionTimeout ||
+            error.type == DioExceptionType.receiveTimeout) {
+          final options = error.requestOptions;
+          
+          // Maksimum 2 retry (toplam 3 deneme)
+          final retryCount = options.extra['retryCount'] as int? ?? 0;
+          if (retryCount < 2) {
+            options.extra['retryCount'] = retryCount + 1;
+            
+            // Exponential backoff: 1s, 2s
+            await Future.delayed(Duration(seconds: retryCount + 1));
+            
+            try {
+              final response = await dio.fetch(options);
+              return handler.resolve(response);
+            } catch (e) {
+              // Retry başarısız, orijinal hatayı döndür
+              return handler.reject(error);
+            }
+          }
+        }
+        return handler.next(error);
       },
     ),
   );

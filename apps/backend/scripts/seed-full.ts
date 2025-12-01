@@ -204,7 +204,6 @@ async function seedJobs(adminId: string, customers: any[], personnel: any[]) {
     };
 
     const price = 500 + Math.floor(Math.random() * 2000);
-    const priority = i % 5 === 0 ? 1 : i % 5 === 1 ? 2 : null;
 
     let startedAt: Date | null = null;
     let deliveredAt: Date | null = null;
@@ -239,7 +238,6 @@ async function seedJobs(adminId: string, customers: any[], personnel: any[]) {
         location: location as any,
         price,
         paymentStatus,
-        priority,
         notes: i % 3 === 0 ? `Not: ${title} için özel talimatlar` : null,
         statusChangedAt,
         startedAt,

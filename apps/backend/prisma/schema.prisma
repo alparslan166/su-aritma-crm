@@ -200,7 +200,6 @@ model Job {
   hasInstallment                Boolean                @default(false)
   notes                         String?
   maintenanceDueAt              DateTime?
-  priority                      Int?
   collectedAmount               Decimal?               @db.Decimal(12, 2)
   deliveryNote                  String?
   deliveryMediaUrls             Json?

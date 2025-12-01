@@ -456,36 +456,36 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                           ),
                           const SizedBox(height: 8),
                           if (_isEditing)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              TextButton.icon(
-                                onPressed: _pickLogo,
-                                icon: const Icon(Icons.upload),
-                                label: const Text("Logo Yükle"),
-                              ),
-                              if ((_currentLogoUrl != null &&
-                                      _currentLogoUrl!.isNotEmpty) ||
-                                  _selectedLogoBytes != null)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
                                 TextButton.icon(
-                                  onPressed: () {
-                                    setState(() {
-                                      _selectedLogoBytes = null;
-                                      _currentLogoUrl = null;
-                                      _logoRemoved = true;
-                                    });
-                                  },
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  label: const Text(
-                                    "Kaldır",
-                                    style: TextStyle(color: Colors.red),
-                                  ),
+                                  onPressed: _pickLogo,
+                                  icon: const Icon(Icons.upload),
+                                  label: const Text("Logo Yükle"),
                                 ),
-                            ],
-                          ),
+                                if ((_currentLogoUrl != null &&
+                                        _currentLogoUrl!.isNotEmpty) ||
+                                    _selectedLogoBytes != null)
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedLogoBytes = null;
+                                        _currentLogoUrl = null;
+                                        _logoRemoved = true;
+                                      });
+                                    },
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                    ),
+                                    label: const Text(
+                                      "Kaldır",
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                              ],
+                            ),
                         ],
                       ),
                     ),
@@ -671,20 +671,20 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                     ),
                   ),
                   if (_isEditing) ...[
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: _isLoading ? null : _saveProfile,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    const SizedBox(height: 24),
+                    FilledButton(
+                      onPressed: _isLoading ? null : _saveProfile,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text("Kaydet"),
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text("Kaydet"),
-                  ),
                   ],
                   const SizedBox(height: 48),
                   // Delete Account Section
@@ -703,7 +703,7 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                "Tehlikeli Bölge",
+                                "Hesap Silme",
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -724,13 +724,16 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton.icon(
-                              onPressed: () => _showDeleteAccountDialog(context),
+                              onPressed: () =>
+                                  _showDeleteAccountDialog(context),
                               icon: const Icon(Icons.delete_forever),
                               label: const Text("Hesabı Sil"),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.red.shade700,
                                 side: BorderSide(color: Colors.red.shade300),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                               ),
                             ),
                           ),
@@ -779,9 +782,7 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
               Navigator.of(context).pop();
               _requestDeleteCode();
             },
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: const Text("Devam Et"),
           ),
         ],
@@ -838,9 +839,7 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "E-posta adresinize gönderilen 6 haneli kodu girin:",
-              ),
+              const Text("E-posta adresinize gönderilen 6 haneli kodu girin:"),
               const SizedBox(height: 16),
               TextField(
                 controller: codeController,
@@ -857,9 +856,7 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                   fontWeight: FontWeight.bold,
                 ),
                 maxLength: 6,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                ],
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
               const SizedBox(height: 8),
               ValueListenableBuilder<int>(
@@ -874,7 +871,9 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                   return TextButton(
                     onPressed: () async {
                       try {
-                        await ref.read(authServiceProvider).requestAccountDeletion();
+                        await ref
+                            .read(authServiceProvider)
+                            .requestAccountDeletion();
                         startResendTimer();
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -886,7 +885,10 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                       } on AuthException catch (e) {
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+                          SnackBar(
+                            content: Text(e.message),
+                            backgroundColor: Colors.red,
+                          ),
                         );
                       }
                     },
@@ -930,7 +932,9 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                           Navigator.of(context).pop();
 
                           // Clear session and redirect to login
-                          await ref.read(authSessionProvider.notifier).clearSession();
+                          await ref
+                              .read(authSessionProvider.notifier)
+                              .clearSession();
                           if (!mounted) return;
                           ref.read(appRouterProvider).go("/");
 
