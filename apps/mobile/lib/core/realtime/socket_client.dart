@@ -1,3 +1,4 @@
+import "package:flutter/foundation.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:socket_io_client/socket_io_client.dart" as sio;
 
