@@ -37,7 +37,10 @@ export class FCMService {
       this.sendToToken(token, payload).catch((error) => {
         logger.error(`Failed to send notification to token ${token.substring(0, 20)}...`, error);
         // Remove invalid tokens
-        if (error.message?.includes("InvalidRegistration") || error.message?.includes("NotRegistered")) {
+        if (
+          error.message?.includes("InvalidRegistration") ||
+          error.message?.includes("NotRegistered")
+        ) {
           this.removeInvalidToken(token);
         }
       }),
@@ -75,7 +78,10 @@ export class FCMService {
       throw new Error(`FCM request failed: ${text}`);
     }
 
-    const result = await response.json();
+    const result = (await response.json()) as {
+      failure?: number;
+      results?: Array<{ error?: string }>;
+    };
     if (result.failure === 1) {
       throw new Error(result.results?.[0]?.error || "FCM send failed");
     }
@@ -148,7 +154,11 @@ export class FCMService {
   /**
    * Send notification to specific user (admin or personnel)
    */
-  async sendToUser(userId: string, userType: "admin" | "personnel", payload: NotificationPayload): Promise<void> {
+  async sendToUser(
+    userId: string,
+    userType: "admin" | "personnel",
+    payload: NotificationPayload,
+  ): Promise<void> {
     const tokens = await prisma.deviceToken.findMany({
       where: {
         userId,
@@ -232,4 +242,3 @@ export class FCMService {
 }
 
 export const fcmService = new FCMService();
-
