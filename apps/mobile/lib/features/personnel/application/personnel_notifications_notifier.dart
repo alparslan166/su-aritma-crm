@@ -48,7 +48,6 @@ class PersonnelNotificationsNotifier
   }
 
   final Ref ref;
-  sio.Socket? _currentSocket;
 
   void _listenRealtime() {
     // Watch socket provider and setup listener when socket is available
@@ -60,8 +59,6 @@ class PersonnelNotificationsNotifier
         previous.off("disconnect", _onSocketDisconnect);
         debugPrint("🔔 Removed notification listener from previous socket");
       }
-      
-      _currentSocket = next;
       
       if (next != null) {
         debugPrint("🔔 Setting up notification listener for socket");
