@@ -20,11 +20,23 @@ final socketClientProvider = Provider<sio.Socket?>((ref) {
     "🔌 Socket: Role: ${session.role.name}, Identifier: ${session.identifier}",
   );
 
+  // Ensure query parameters are valid strings
+  final roleStr = session.role.name;
+  final userIdStr = session.identifier;
+  
+  if (roleStr.isEmpty || userIdStr.isEmpty) {
+    debugPrint("⚠️ Socket: Invalid session data - role: $roleStr, userId: $userIdStr");
+    return null;
+  }
+
   final socket = sio.io(
     uri,
     sio.OptionBuilder()
         .setTransports(["websocket"])
-        .setQuery({"role": session.role.name, "userId": session.identifier})
+        .setQuery({
+          "role": roleStr,
+          "userId": userIdStr,
+        })
         .disableAutoConnect()
         .build(),
   );
