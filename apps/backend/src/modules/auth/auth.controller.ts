@@ -251,12 +251,14 @@ export const registerHandler = async (req: Request, res: Response, next: NextFun
     });
 
     // Send verification email
-    const emailResult = await sendVerificationEmail(admin.email, verificationCode, admin.name);
-    if (!emailResult.success) {
-      console.error("❌ Failed to send verification email:", emailResult.error);
-      // Don't fail registration if email fails, but log the error
-      // The user can request a new code later
-    }
+    // TODO: Email gönderme geçici olarak devre dışı - domain doğrulaması bekleniyor
+    // const emailResult = await sendVerificationEmail(admin.email, verificationCode, admin.name);
+    // if (!emailResult.success) {
+    //   console.error("❌ Failed to send verification email:", emailResult.error);
+    //   // Don't fail registration if email fails, but log the error
+    //   // The user can request a new code later
+    // }
+    console.log(`⚠️ Email gönderme devre dışı. Verification code: ${verificationCode} (sadece log için)`);
 
     res.status(201).json({
       success: true,
@@ -323,21 +325,22 @@ export const sendVerificationCodeHandler = async (
     });
 
     // Send verification email
-    const emailResult = await sendVerificationEmail(email, verificationCode, admin.name);
-
-    if (!emailResult.success) {
-      // Check if it's a domain verification error
-      if (emailResult.error === "EMAIL_DOMAIN_NOT_VERIFIED") {
-        throw new AppError(
-          "E-posta gönderilemedi. Domain doğrulaması gerekiyor. Lütfen sistem yöneticisine başvurun.",
-          500,
-        );
-      }
-      throw new AppError(
-        `E-posta gönderilemedi: ${emailResult.error || "Bilinmeyen hata"}. Lütfen tekrar deneyin.`,
-        500,
-      );
-    }
+    // TODO: Email gönderme geçici olarak devre dışı - domain doğrulaması bekleniyor
+    // const emailResult = await sendVerificationEmail(email, verificationCode, admin.name);
+    // if (!emailResult.success) {
+    //   // Check if it's a domain verification error
+    //   if (emailResult.error === "EMAIL_DOMAIN_NOT_VERIFIED") {
+    //     throw new AppError(
+    //       "E-posta gönderilemedi. Domain doğrulaması gerekiyor. Lütfen sistem yöneticisine başvurun.",
+    //       500,
+    //     );
+    //   }
+    //   throw new AppError(
+    //     `E-posta gönderilemedi: ${emailResult.error || "Bilinmeyen hata"}. Lütfen tekrar deneyin.`,
+    //     500,
+    //   );
+    // }
+    console.log(`⚠️ Email gönderme devre dışı. Verification code for ${email}: ${verificationCode} (sadece log için)`);
 
     res.json({
       success: true,
@@ -449,14 +452,16 @@ export const forgotPasswordHandler = async (req: Request, res: Response, next: N
     });
 
     // Send password reset email
-    const emailResult = await sendPasswordResetEmail(email, resetCode, admin.name);
-    if (!emailResult.success) {
-      console.error("❌ Failed to send password reset email:", emailResult.error);
-      // Don't fail the request, but log the error
-      // The user can try again later
-    } else {
-      console.log(`📧 Password reset code sent to: ${email}`);
-    }
+    // TODO: Email gönderme geçici olarak devre dışı - domain doğrulaması bekleniyor
+    // const emailResult = await sendPasswordResetEmail(email, resetCode, admin.name);
+    // if (!emailResult.success) {
+    //   console.error("❌ Failed to send password reset email:", emailResult.error);
+    //   // Don't fail the request, but log the error
+    //   // The user can try again later
+    // } else {
+    //   console.log(`📧 Password reset code sent to: ${email}`);
+    // }
+    console.log(`⚠️ Email gönderme devre dışı. Password reset code for ${email}: ${resetCode} (sadece log için)`);
 
     res.json({
       success: true,
@@ -632,22 +637,21 @@ export const requestAccountDeletionHandler = async (
     });
 
     // Send account deletion email
-    const emailResult = await sendAccountDeletionEmail(admin.email, deletionCode, admin.name);
-
-    if (!emailResult.success) {
-      if (emailResult.error === "EMAIL_DOMAIN_NOT_VERIFIED") {
-        throw new AppError(
-          "E-posta gönderilemedi. Domain doğrulaması gerekiyor. Lütfen sistem yöneticisine başvurun.",
-          500,
-        );
-      }
-      throw new AppError(
-        `E-posta gönderilemedi: ${emailResult.error || "Bilinmeyen hata"}. Lütfen tekrar deneyin.`,
-        500,
-      );
-    }
-
-    console.log(`📧 Account deletion code sent to: ${admin.email}`);
+    // TODO: Email gönderme geçici olarak devre dışı - domain doğrulaması bekleniyor
+    // const emailResult = await sendAccountDeletionEmail(admin.email, deletionCode, admin.name);
+    // if (!emailResult.success) {
+    //   if (emailResult.error === "EMAIL_DOMAIN_NOT_VERIFIED") {
+    //     throw new AppError(
+    //       "E-posta gönderilemedi. Domain doğrulaması gerekiyor. Lütfen sistem yöneticisine başvurun.",
+    //       500,
+    //     );
+    //   }
+    //   throw new AppError(
+    //     `E-posta gönderilemedi: ${emailResult.error || "Bilinmeyen hata"}. Lütfen tekrar deneyin.`,
+    //     500,
+    //   );
+    // }
+    console.log(`⚠️ Email gönderme devre dışı. Account deletion code for ${admin.email}: ${deletionCode} (sadece log için)`);
 
     res.json({
       success: true,
