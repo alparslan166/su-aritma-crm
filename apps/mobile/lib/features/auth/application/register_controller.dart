@@ -39,9 +39,23 @@ class RegisterController extends StateNotifier<RegisterState> {
 
   Future<void> submit() async {
     if (!state.isValid) {
+      String errorMessage = "Lütfen tüm alanları doğru şekilde doldurun";
+      
+      if (state.password.length < 6) {
+        errorMessage = "Şifre en az 6 karakter olmalıdır";
+      } else if (state.password != state.confirmPassword) {
+        errorMessage = "Şifreler uyuşmuyor";
+      } else if (state.name.isEmpty) {
+        errorMessage = "Ad Soyad gereklidir";
+      } else if (state.email.isEmpty) {
+        errorMessage = "E-posta gereklidir";
+      } else if (state.phone.isEmpty) {
+        errorMessage = "Telefon gereklidir";
+      }
+      
       state = state.copyWith(
         status: AsyncError(
-          AuthException(message: "Lütfen tüm alanları doğru şekilde doldurun"),
+          AuthException(message: errorMessage),
           StackTrace.current,
         ),
       );

@@ -59,17 +59,18 @@ class PersonnelJobDetailPage extends HookConsumerWidget {
               const SizedBox(height: 16),
               _InfoTile(
                 title: "Planlanan Tarih",
-                value:
-                    detail.job.scheduledAt != null
-                        ? DateFormat("dd MMM yyyy HH:mm")
-                            .format(detail.job.scheduledAt!.toLocal())
-                        : "Belirlenmedi",
+                value: detail.job.scheduledAt != null
+                    ? DateFormat(
+                        "dd MMM yyyy HH:mm",
+                      ).format(detail.job.scheduledAt!.toLocal())
+                    : "Belirlenmedi",
               ),
               if (detail.assignment.deliveredAt != null)
                 _InfoTile(
                   title: "Teslim Tarihi",
-                  value: DateFormat("dd MMM yyyy HH:mm")
-                      .format(detail.assignment.deliveredAt!.toLocal()),
+                  value: DateFormat(
+                    "dd MMM yyyy HH:mm",
+                  ).format(detail.assignment.deliveredAt!.toLocal()),
                 ),
               // Malzemeler bölümü
               if (detail.job.materials != null &&

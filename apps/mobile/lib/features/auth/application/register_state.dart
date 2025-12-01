@@ -60,6 +60,22 @@ class RegisterState extends Equatable {
         phone.isNotEmpty;
   }
 
+  String? get passwordError {
+    if (password.isEmpty) return null;
+    if (password.length < 6) {
+      return "Şifre en az 6 karakter olmalıdır";
+    }
+    return null;
+  }
+
+  String? get confirmPasswordError {
+    if (confirmPassword.isEmpty) return null;
+    if (password != confirmPassword) {
+      return "Şifreler uyuşmuyor";
+    }
+    return null;
+  }
+
   @override
   List<Object?> get props => [
     name,

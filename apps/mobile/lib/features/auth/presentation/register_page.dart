@@ -179,6 +179,7 @@ class RegisterPage extends HookConsumerWidget {
                           labelText: "Şifre",
                           hintText: "En az 6 karakter",
                           prefixIcon: const Icon(Icons.lock_outline),
+                          errorText: registerState.passwordError,
                           suffixIcon: IconButton(
                             icon: Icon(
                               passwordVisible.value
@@ -203,6 +204,7 @@ class RegisterPage extends HookConsumerWidget {
                           labelText: "Şifre Tekrar",
                           hintText: "Şifrenizi tekrar girin",
                           prefixIcon: const Icon(Icons.lock_outline),
+                          errorText: registerState.confirmPasswordError,
                           suffixIcon: IconButton(
                             icon: Icon(
                               confirmPasswordVisible.value
