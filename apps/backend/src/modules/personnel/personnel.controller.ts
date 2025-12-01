@@ -22,7 +22,7 @@ const upsertSchema = z.object({
   permissions: z.record(z.string(), z.any()).default({}),
   canShareLocation: z.boolean().optional(),
   status: z.nativeEnum(PersonnelStatus).optional(),
-  loginCode: z.string().min(4).max(20).optional(),
+  loginCode: z.string().min(4).max(20).optional().or(z.literal("")),
 });
 
 export const listPersonnelHandler = async (req: Request, res: Response, next: NextFunction) => {

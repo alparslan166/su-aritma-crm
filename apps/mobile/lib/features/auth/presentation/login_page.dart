@@ -265,10 +265,7 @@ class LoginPage extends HookConsumerWidget {
                                 ),
                               ]
                             : null,
-                        textCapitalization:
-                            loginState.role == AuthRole.personnel
-                            ? TextCapitalization.characters
-                            : TextCapitalization.none,
+                        textCapitalization: TextCapitalization.none,
                         onChanged: controller.updateSecret,
                         onSubmitted: (_) => controller.submit(),
                       ),

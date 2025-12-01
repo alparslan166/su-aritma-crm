@@ -104,7 +104,10 @@ class AdminRepository {
     if (photoUrl != null) {
       data["photoUrl"] = photoUrl;
     }
-    if (loginCode != null && loginCode.isNotEmpty) data["loginCode"] = loginCode;
+    // Empty string means generate new code, null means keep existing, string means use provided
+    if (loginCode != null) {
+      data["loginCode"] = loginCode;
+    }
     final response = await _client.put("/personnel/$id", data: data);
     return Personnel.fromJson(response.data["data"] as Map<String, dynamic>);
   }

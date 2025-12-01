@@ -172,7 +172,12 @@ class PersonnelService {
       data.canShareLocation = payload.canShareLocation;
     }
     if (payload.loginCode !== undefined) {
-      data.loginCode = payload.loginCode;
+      // Empty string means generate new code, otherwise use provided code
+      if (payload.loginCode === "") {
+        data.loginCode = generateLoginCode();
+      } else {
+        data.loginCode = payload.loginCode;
+      }
       data.loginCodeUpdatedAt = new Date();
     }
 

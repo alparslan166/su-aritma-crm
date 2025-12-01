@@ -654,9 +654,14 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
             hireDate: _hireDate,
             status: _status,
             photoUrl: shouldUpdatePhoto ? photoUrl : null,
+            // If loginCode is empty, send empty string to trigger auto-generation
+            // If loginCode has value and changed, send it
+            // If loginCode is unchanged (same as original), don't send (null = keep existing)
             loginCode: _loginCodeController.text.trim().isEmpty
-                ? null
-                : _loginCodeController.text.trim(),
+                ? "" // Empty string triggers backend to generate new code
+                : _loginCodeController.text.trim() != widget.personnel.loginCode
+                    ? _loginCodeController.text.trim()
+                    : null, // null means keep existing
           );
       ref.invalidate(personnelDetailProvider(widget.personnelId));
       ref.invalidate(personnelListProvider);
@@ -804,8 +809,8 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
               TextFormField(
                 controller: _loginCodeController,
                 decoration: const InputDecoration(
-                  labelText: "Giriş Kodu",
-                  helperText: "Personel girişi için kullanılacak kod",
+                  labelText: "Giriş Kodu (Şifre)",
+                  helperText: "Boş bırakılırsa yeni kod otomatik oluşturulur",
                 ),
                 maxLength: 20,
                 buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
