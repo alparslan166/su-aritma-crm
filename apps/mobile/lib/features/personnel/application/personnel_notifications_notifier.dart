@@ -48,24 +48,44 @@ class PersonnelNotificationsNotifier
   }
 
   final Ref ref;
+  sio.Socket? _currentSocket;
 
   void _listenRealtime() {
+    // Watch socket provider and setup listener when socket is available
     ref.listen<sio.Socket?>(socketClientProvider, (previous, next) {
-      previous?.off("notification", _handleNotification);
+      // Remove listener from previous socket
+      if (previous != null) {
+        previous.off("notification", _handleNotification);
+        previous.off("connect", _onSocketConnect);
+        previous.off("disconnect", _onSocketDisconnect);
+        debugPrint("🔔 Removed notification listener from previous socket");
+      }
+      
+      _currentSocket = next;
+      
       if (next != null) {
         debugPrint("🔔 Setting up notification listener for socket");
+        // Setup listeners
         next.on("notification", _handleNotification);
-        // Also listen for connection events
-        next.on("connect", (_) {
-          debugPrint("✅ Notification listener: Socket connected");
-        });
-        next.on("disconnect", (_) {
-          debugPrint("❌ Notification listener: Socket disconnected");
-        });
+        next.on("connect", _onSocketConnect);
+        next.on("disconnect", _onSocketDisconnect);
+        
+        // If socket is already connected, log it
+        if (next.connected) {
+          debugPrint("✅ Notification listener: Socket already connected");
+        }
       } else {
         debugPrint("⚠️ Notification listener: Socket is null");
       }
     });
+  }
+
+  void _onSocketConnect(_) {
+    debugPrint("✅ Notification listener: Socket connected");
+  }
+
+  void _onSocketDisconnect(_) {
+    debugPrint("❌ Notification listener: Socket disconnected");
   }
 
   void _handleNotification(dynamic data) {
