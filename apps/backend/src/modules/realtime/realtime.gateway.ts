@@ -1,5 +1,6 @@
 import type { Server as HTTPServer } from "node:http";
 import { Server as SocketIOServer, type Socket } from "socket.io";
+import { logger } from "@/lib/logger";
 
 class RealtimeGateway {
   private io?: SocketIOServer;
@@ -12,25 +13,38 @@ class RealtimeGateway {
     });
 
     this.io.on("connection", (socket) => this.handleConnection(socket));
+    logger.info("🔌 WebSocket server initialized");
   }
 
   private handleConnection(socket: Socket) {
     const role = socket.handshake.query.role;
     const userId = socket.handshake.query.userId;
 
+    logger.info(`🔌 New WebSocket connection: role=${role}, userId=${userId}`);
+
     if (typeof role === "string") {
       socket.join(`role-${role}`);
+      logger.info(`✅ Socket joined role-${role}`);
     }
 
     if (typeof userId === "string" && typeof role === "string") {
       if (role === "admin") {
         socket.join(`admin-${userId}`);
+        logger.info(`✅ Socket joined admin-${userId}`);
       } else if (role === "personnel") {
         socket.join(`personnel-${userId}`);
+        logger.info(`✅ Socket joined personnel-${userId}`);
       }
     }
 
-    socket.on("join:job", (jobId: string) => socket.join(`job-${jobId}`));
+    socket.on("join:job", (jobId: string) => {
+      socket.join(`job-${jobId}`);
+      logger.info(`✅ Socket joined job-${jobId}`);
+    });
+
+    socket.on("disconnect", () => {
+      logger.info(`🔌 Socket disconnected: role=${role}, userId=${userId}`);
+    });
   }
 
   emitJobStatus(jobId: string, payload: unknown) {
@@ -46,7 +60,12 @@ class RealtimeGateway {
   }
 
   emitToPersonnel(personnelId: string, event: string, payload: unknown) {
-    this.io?.to(`personnel-${personnelId}`).emit(event, payload);
+    const room = `personnel-${personnelId}`;
+    const socketsInRoom = this.io?.sockets.adapter.rooms.get(room);
+    const socketCount = socketsInRoom?.size ?? 0;
+    logger.info(`📡 Emitting ${event} to room ${room} (${socketCount} sockets)`);
+    this.io?.to(room).emit(event, payload);
+    logger.info(`✅ Emitted ${event} to personnel ${personnelId}:`, payload);
   }
 
   emitMaintenanceReminder(payload: unknown) {
