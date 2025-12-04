@@ -16,11 +16,11 @@ class SuAritmaApp extends HookConsumerWidget {
     final router = ref.watch(appRouterProvider);
     final pushService = ref.watch(pushNotificationServiceProvider);
     final session = ref.watch(authSessionProvider);
-    
+
     // Initialize WebSocket connection when user is logged in
     // This ensures socket is connected even if notifications page is not visited
     ref.watch(socketClientProvider);
-    
+
     // Initialize notification listeners when user is logged in
     // This ensures notifications are received even if notifications page is not visited
     if (session != null && session.role.name == "personnel") {

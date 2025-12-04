@@ -59,14 +59,14 @@ class PersonnelNotificationsNotifier
         previous.off("disconnect", _onSocketDisconnect);
         debugPrint("🔔 Removed notification listener from previous socket");
       }
-      
+
       if (next != null) {
         debugPrint("🔔 Setting up notification listener for socket");
         // Setup listeners
         next.on("notification", _handleNotification);
         next.on("connect", _onSocketConnect);
         next.on("disconnect", _onSocketDisconnect);
-        
+
         // If socket is already connected, log it
         if (next.connected) {
           debugPrint("✅ Notification listener: Socket already connected");

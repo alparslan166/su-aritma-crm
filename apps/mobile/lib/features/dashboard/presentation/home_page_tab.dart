@@ -129,9 +129,9 @@ class _StatsGrid extends ConsumerWidget {
           icon: Icons.work_outline,
           color: const Color(0xFFF59E0B),
           onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const JobsView()),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const JobsView()));
           },
         ),
         _StatCard(

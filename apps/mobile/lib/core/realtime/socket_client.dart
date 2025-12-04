@@ -29,12 +29,11 @@ final socketClientProvider = Provider<sio.Socket?>((ref) {
   final apiUrl = AppConfig.apiBaseUrl;
   final uri = Uri.parse(apiUrl);
   final scheme = uri.scheme == "https" ? "wss" : "ws";
-  final socketUrl = "${scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}";
-  
+  final socketUrl =
+      "${scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}";
+
   debugPrint("🔌 Socket: Connecting to $socketUrl");
-  debugPrint(
-    "🔌 Socket: Role: $roleStr, Identifier: $userIdStr",
-  );
+  debugPrint("🔌 Socket: Role: $roleStr, Identifier: $userIdStr");
 
   final socket = sio.io(
     socketUrl,

@@ -289,7 +289,8 @@ class AdminRepository {
     };
     if (email != null) data["email"] = email;
     if (photoUrl != null) data["photoUrl"] = photoUrl;
-    if (loginCode != null && loginCode.isNotEmpty) data["loginCode"] = loginCode;
+    if (loginCode != null && loginCode.isNotEmpty)
+      data["loginCode"] = loginCode;
     await _client.post("/personnel", data: data);
   }
 
@@ -305,6 +306,7 @@ class AdminRepository {
     double? longitude,
     String? locationDescription,
     List<String>? personnelIds,
+    List<Map<String, dynamic>>? materialIds,
   }) async {
     final location = <String, dynamic>{};
     if (latitude != null && longitude != null) {
@@ -344,6 +346,9 @@ class AdminRepository {
     }
     if (personnelIds != null && personnelIds.isNotEmpty) {
       requestData["personnelIds"] = personnelIds;
+    }
+    if (materialIds != null && materialIds.isNotEmpty) {
+      requestData["materialIds"] = materialIds;
     }
 
     await _client.post("/jobs", data: requestData);
@@ -461,7 +466,8 @@ class AdminRepository {
       if (debtAmount != null) "debtAmount": debtAmount,
       if (hasInstallment != null) "hasInstallment": hasInstallment,
       if (installmentCount != null) "installmentCount": installmentCount,
-      if (nextDebtDate != null) "nextDebtDate": nextDebtDate.toUtc().toIso8601String(),
+      if (nextDebtDate != null)
+        "nextDebtDate": nextDebtDate.toUtc().toIso8601String(),
       if (installmentStartDate != null)
         "installmentStartDate": installmentStartDate.toUtc().toIso8601String(),
       if (installmentIntervalDays != null)
@@ -496,7 +502,8 @@ class AdminRepository {
     if (status != null) data["status"] = status;
     if (email != null) data["email"] = email;
     if (location != null) data["location"] = location;
-    if (createdAt != null) data["createdAt"] = createdAt.toUtc().toIso8601String();
+    if (createdAt != null)
+      data["createdAt"] = createdAt.toUtc().toIso8601String();
     if (hasDebt != null) data["hasDebt"] = hasDebt;
     if (debtAmount != null) data["debtAmount"] = debtAmount;
     if (hasInstallment != null) data["hasInstallment"] = hasInstallment;
@@ -505,7 +512,9 @@ class AdminRepository {
       data["nextDebtDate"] = nextDebtDate.toUtc().toIso8601String();
     }
     if (installmentStartDate != null) {
-      data["installmentStartDate"] = installmentStartDate.toUtc().toIso8601String();
+      data["installmentStartDate"] = installmentStartDate
+          .toUtc()
+          .toIso8601String();
     }
     if (installmentIntervalDays != null) {
       data["installmentIntervalDays"] = installmentIntervalDays;

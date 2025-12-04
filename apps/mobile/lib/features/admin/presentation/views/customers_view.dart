@@ -424,7 +424,7 @@ class CustomersView extends HookConsumerWidget {
             ),
           ),
         ),
-        if (!isSelectionMode.value)
+        if (!isSelectionMode.value && filterType == CustomerFilterType.all)
           Positioned(
             right: 16,
             bottom: 16 + padding,
