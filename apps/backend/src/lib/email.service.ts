@@ -1,7 +1,17 @@
 import { Resend } from "resend";
 
-// Resend API client
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Resend API client - sadece API key varsa initialize et
+let resend: Resend | null = null;
+if (process.env.RESEND_API_KEY) {
+  try {
+    resend = new Resend(process.env.RESEND_API_KEY);
+    console.log("✅ Resend email service initialized");
+  } catch (error) {
+    console.warn("⚠️ Failed to initialize Resend:", error);
+  }
+} else {
+  console.warn("⚠️ RESEND_API_KEY not set. Email service is disabled.");
+}
 
 const FROM_EMAIL = process.env.EMAIL_FROM || "onboarding@resend.dev";
 const APP_NAME = "Su Arıtma Platformu";
@@ -17,6 +27,14 @@ export const sendVerificationEmail = async (
   code: string,
   name: string,
 ): Promise<{ success: boolean; error?: string }> => {
+  if (!resend) {
+    console.warn("⚠️ Email service not available. RESEND_API_KEY not set.");
+    return {
+      success: false,
+      error: "EMAIL_SERVICE_NOT_CONFIGURED",
+    };
+  }
+
   try {
     const { error, data } = await resend.emails.send({
       from: `${APP_NAME} <${FROM_EMAIL}>`,
@@ -87,6 +105,14 @@ export const sendPasswordResetEmail = async (
   code: string,
   name: string,
 ): Promise<{ success: boolean; error?: string }> => {
+  if (!resend) {
+    console.warn("⚠️ Email service not available. RESEND_API_KEY not set.");
+    return {
+      success: false,
+      error: "EMAIL_SERVICE_NOT_CONFIGURED",
+    };
+  }
+
   try {
     const { error, data } = await resend.emails.send({
       from: `${APP_NAME} <${FROM_EMAIL}>`,
@@ -159,6 +185,14 @@ export const sendAccountDeletionEmail = async (
   code: string,
   name: string,
 ): Promise<{ success: boolean; error?: string }> => {
+  if (!resend) {
+    console.warn("⚠️ Email service not available. RESEND_API_KEY not set.");
+    return {
+      success: false,
+      error: "EMAIL_SERVICE_NOT_CONFIGURED",
+    };
+  }
+
   try {
     const { error, data } = await resend.emails.send({
       from: `${APP_NAME} <${FROM_EMAIL}>`,

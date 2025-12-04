@@ -5,7 +5,9 @@ dotenv.config();
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  // Railway otomatik olarak PORT environment variable'ını set eder
   PORT: z.coerce.number().default(4000),
+  // Railway PostgreSQL servisi DATABASE_URL'i otomatik set eder
   DATABASE_URL: z
     .string()
     .min(1, "DATABASE_URL is required")
@@ -19,6 +21,9 @@ const envSchema = z.object({
   MAINTENANCE_CRON: z.string().optional(),
   // CORS origin - production'da belirli domain'ler, development'ta *
   ALLOWED_ORIGINS: z.string().optional(),
+  // Email service (opsiyonel)
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
 });
 
 const env = envSchema.parse({

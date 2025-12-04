@@ -1,5 +1,5 @@
 import "package:dio/dio.dart";
-import "package:flutter/foundation.dart" show kIsWeb;
+import "package:flutter/foundation.dart" show kIsWeb, debugPrint;
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:path_provider/path_provider.dart";
 import "package:url_launcher/url_launcher.dart";
@@ -673,6 +673,50 @@ class AdminRepository {
   Future<Map<String, dynamic>> getProfile() async {
     final response = await _client.get("/auth/profile");
     return response.data["data"] as Map<String, dynamic>;
+  }
+
+  // Subscription methods
+  Future<Map<String, dynamic>?> getSubscription() async {
+    try {
+      final response = await _client.get(
+        "/subscriptions",
+        options: Options(
+          receiveTimeout: const Duration(seconds: 15),
+          sendTimeout: const Duration(seconds: 15),
+        ),
+      );
+      debugPrint("📦 Subscription API response: ${response.data}");
+      if (response.data["data"] == null) {
+        debugPrint("⚠️ Subscription data is null");
+        return null;
+      }
+      final subscription = response.data["data"] as Map<String, dynamic>;
+      debugPrint("✅ Subscription loaded: $subscription");
+      return subscription;
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        debugPrint("❌ Subscription API timeout: ${e.message}");
+        debugPrint("⚠️ Backend'e bağlanılamıyor. Backend çalışıyor mu kontrol edin.");
+      } else if (e.type == DioExceptionType.connectionError) {
+        debugPrint("❌ Subscription API connection error: ${e.message}");
+        debugPrint("⚠️ Backend'e bağlanılamıyor. API URL doğru mu kontrol edin: ${_client.options.baseUrl}");
+      } else if (e.response?.statusCode == 404) {
+        debugPrint("⚠️ Subscription not found (404) - Admin'in subscription'ı yok");
+        return null;
+      } else {
+        debugPrint("❌ Subscription API error: ${e.type} - ${e.message}");
+        if (e.response != null) {
+          debugPrint("   Response status: ${e.response?.statusCode}");
+          debugPrint("   Response data: ${e.response?.data}");
+        }
+      }
+      // Subscription not found or error - return null to show empty state
+      return null;
+    } catch (e) {
+      debugPrint("❌ Subscription API unexpected error: $e");
+      return null;
+    }
   }
 
   Future<Map<String, dynamic>> updateProfile({

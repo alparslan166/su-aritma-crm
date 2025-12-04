@@ -6,6 +6,7 @@ import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:image_picker/image_picker.dart";
+import "package:intl/intl.dart";
 
 import "../../../../core/constants/app_config.dart";
 import "../../../../core/network/api_client.dart" show apiClientProvider;
@@ -17,6 +18,22 @@ import "../../data/admin_repository.dart";
 final adminProfileProvider = FutureProvider<Map<String, dynamic>>((ref) {
   final repository = ref.read(adminRepositoryProvider);
   return repository.getProfile();
+});
+
+final adminSubscriptionProvider = FutureProvider<Map<String, dynamic>?>((
+  ref,
+) async {
+  try {
+    final repository = ref.read(adminRepositoryProvider);
+    final subscription = await repository.getSubscription();
+    debugPrint("📦 Subscription provider result: $subscription");
+    return subscription;
+  } catch (e, stackTrace) {
+    debugPrint("❌ Subscription provider error: $e");
+    debugPrint("Stack trace: $stackTrace");
+    // Return null instead of throwing to show empty state
+    return null;
+  }
 });
 
 class AdminProfilePage extends ConsumerStatefulWidget {
@@ -670,6 +687,314 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  // Subscription Section
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final subscriptionAsync = ref.watch(
+                        adminSubscriptionProvider,
+                      );
+                      return subscriptionAsync.when(
+                        data: (subscription) {
+                          if (subscription == null) {
+                            return Card(
+                              color: Colors.blue.shade50,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline,
+                                      color: Colors.blue.shade700,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        "Abonelik bilgisi bulunamadı. Lütfen yönetici ile iletişime geçin.",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.blue.shade900,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+
+                          final status =
+                              subscription["status"] as String? ?? "";
+                          final planType =
+                              subscription["planType"] as String? ?? "";
+                          final startDate =
+                              subscription["startDate"] as String?;
+                          final endDate = subscription["endDate"] as String?;
+                          final trialEnds =
+                              subscription["trialEnds"] as String?;
+                          final daysRemaining =
+                              subscription["daysRemaining"] as int?;
+                          final isExpired =
+                              subscription["isExpired"] as bool? ?? false;
+
+                          MaterialColor statusColor;
+                          String statusText;
+                          IconData statusIcon;
+
+                          if (status == "trial") {
+                            statusColor = Colors.orange;
+                            statusText = "Deneme Süresi";
+                            statusIcon = Icons.access_time;
+                          } else if (status == "active") {
+                            statusColor = Colors.green;
+                            statusText = "Aktif Abonelik";
+                            statusIcon = Icons.check_circle;
+                          } else if (status == "expired" || isExpired) {
+                            statusColor = Colors.red;
+                            statusText = "Süresi Dolmuş";
+                            statusIcon = Icons.error;
+                          } else {
+                            statusColor = Colors.grey;
+                            statusText = "Bilinmiyor";
+                            statusIcon = Icons.help;
+                          }
+
+                          String formatDate(String? dateStr) {
+                            if (dateStr == null) return "Bilinmiyor";
+                            try {
+                              final date = DateTime.parse(dateStr);
+                              return DateFormat(
+                                "dd MMMM yyyy",
+                                "tr_TR",
+                              ).format(date);
+                            } catch (e) {
+                              return dateStr;
+                            }
+                          }
+
+                          return Card(
+                            color: statusColor.withValues(alpha: 0.1),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        statusIcon,
+                                        color: statusColor,
+                                        size: 24,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        "Abonelik Durumu",
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: statusColor.shade900,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: statusColor.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                statusText,
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: statusColor.shade900,
+                                                ),
+                                              ),
+                                              if (status == "trial" &&
+                                                  daysRemaining != null) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  daysRemaining > 0
+                                                      ? "$daysRemaining gün kaldı"
+                                                      : "Süre doldu",
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: statusColor.shade700,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: statusColor,
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            status == "trial"
+                                                ? "DENEME"
+                                                : status == "active"
+                                                ? "AKTİF"
+                                                : "SÜRESİ DOLMUŞ",
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  if (status == "trial" &&
+                                      trialEnds != null) ...[
+                                    _buildInfoRow(
+                                      "Deneme Bitiş Tarihi",
+                                      formatDate(trialEnds),
+                                      Icons.calendar_today,
+                                    ),
+                                    const SizedBox(height: 12),
+                                  ],
+                                  if (status == "active") ...[
+                                    _buildInfoRow(
+                                      "Plan Tipi",
+                                      planType == "monthly"
+                                          ? "Aylık"
+                                          : "Yıllık",
+                                      Icons.credit_card,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildInfoRow(
+                                      "Başlangıç Tarihi",
+                                      formatDate(startDate),
+                                      Icons.play_arrow,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildInfoRow(
+                                      "Bitiş Tarihi",
+                                      formatDate(endDate),
+                                      Icons.stop,
+                                    ),
+                                    if (daysRemaining != null) ...[
+                                      const SizedBox(height: 12),
+                                      _buildInfoRow(
+                                        "Kalan Süre",
+                                        "$daysRemaining gün",
+                                        Icons.timer,
+                                      ),
+                                    ],
+                                  ],
+                                  if (isExpired) ...[
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Colors.red.shade200,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.warning,
+                                            color: Colors.red.shade700,
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              "Aboneliğinizin süresi dolmuş. Lütfen aboneliğinizi yenileyin.",
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.red.shade800,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        loading: () => Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Text(
+                                  "Abonelik bilgileri yükleniyor...",
+                                  style: TextStyle(color: Colors.grey.shade600),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        error: (error, stackTrace) {
+                          debugPrint("❌ Subscription provider error: $error");
+                          debugPrint("Stack trace: $stackTrace");
+                          return Card(
+                            color: Colors.red.shade50,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    color: Colors.red.shade700,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      "Abonelik bilgileri yüklenirken hata oluştu: ${error.toString()}",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.red.shade900,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
                   if (_isEditing) ...[
                     const SizedBox(height: 24),
                     FilledButton(
@@ -780,21 +1105,34 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
           FilledButton(
             onPressed: () {
               Navigator.of(context).pop();
-              _requestDeleteCode();
+              // Geçici olarak doğrulama kodunu atla, direkt sil
+              _deleteAccountDirectly();
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text("Devam Et"),
+            child: const Text("Hesabı Sil"),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _requestDeleteCode() async {
+  // Geçici olarak doğrulama kodunu atla, direkt sil
+  Future<void> _deleteAccountDirectly() async {
     try {
-      await ref.read(authServiceProvider).requestAccountDeletion();
+      // Backend'de doğrulama kodu bypass edildi, boş kod gönder
+      await ref.read(authServiceProvider).confirmAccountDeletion("");
+
+      // Clear session and redirect to login
+      await ref.read(authSessionProvider.notifier).clearSession();
       if (!mounted) return;
-      _showVerificationCodeDialog();
+      ref.read(appRouterProvider).go("/");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Hesabınız başarıyla silindi"),
+          backgroundColor: Colors.green,
+        ),
+      );
     } on AuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -971,6 +1309,34 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.grey.shade600),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

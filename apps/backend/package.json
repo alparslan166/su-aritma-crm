@@ -24,6 +24,8 @@
     "seed:add-operations": "ts-node -r tsconfig-paths/register scripts/add-operations.ts",
     "seed:upcoming-maintenance": "ts-node -r tsconfig-paths/register scripts/add-upcoming-maintenance.ts",
     "update:customer-locations": "ts-node -r tsconfig-paths/register scripts/update-customer-locations.ts",
+    "create:subscriptions": "ts-node -r tsconfig-paths/register scripts/create-subscriptions-for-admins.ts",
+    "create:subscription": "ts-node -r tsconfig-paths/register scripts/create-subscription-for-admin.ts",
     "copy:apk": "ts-node scripts/copy-apk.ts"
   },
   "keywords": [],

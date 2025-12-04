@@ -2,16 +2,12 @@ import bcrypt from "bcryptjs";
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-import { prisma } from "@/lib/prisma";
+import { generateVerificationCode } from "@/lib/email.service";
 import { generateAdminId } from "@/lib/generators";
+import { prisma } from "@/lib/prisma";
 import { getAdminId } from "@/lib/tenant";
 import { AppError } from "@/middleware/error-handler";
-import {
-  generateVerificationCode,
-  sendVerificationEmail,
-  sendPasswordResetEmail,
-  sendAccountDeletionEmail,
-} from "@/lib/email.service";
+import { SubscriptionService } from "@/modules/subscriptions/subscription.service";
 
 const loginSchema = z
   .object({
@@ -237,6 +233,18 @@ export const registerHandler = async (req: Request, res: Response, next: NextFun
 
     console.log(`✅ Created admin with adminId: ${admin.adminId}`);
 
+    // Start 30-day trial for ALT admins
+    if (admin.role === "ALT") {
+      try {
+        const subscriptionService = new SubscriptionService();
+        await subscriptionService.startTrial(admin.id);
+        console.log(`✅ Started 30-day trial for admin: ${admin.id}`);
+      } catch (error) {
+        console.error("❌ Failed to start trial:", error);
+        // Don't fail registration if trial creation fails
+      }
+    }
+
     // Generate and send verification code
     const verificationCode = generateVerificationCode();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -258,7 +266,9 @@ export const registerHandler = async (req: Request, res: Response, next: NextFun
     //   // Don't fail registration if email fails, but log the error
     //   // The user can request a new code later
     // }
-    console.log(`⚠️ Email gönderme devre dışı. Verification code: ${verificationCode} (sadece log için)`);
+    console.log(
+      `⚠️ Email gönderme devre dışı. Verification code: ${verificationCode} (sadece log için)`,
+    );
 
     res.status(201).json({
       success: true,
@@ -340,7 +350,9 @@ export const sendVerificationCodeHandler = async (
     //     500,
     //   );
     // }
-    console.log(`⚠️ Email gönderme devre dışı. Verification code for ${email}: ${verificationCode} (sadece log için)`);
+    console.log(
+      `⚠️ Email gönderme devre dışı. Verification code for ${email}: ${verificationCode} (sadece log için)`,
+    );
 
     res.json({
       success: true,
@@ -461,7 +473,9 @@ export const forgotPasswordHandler = async (req: Request, res: Response, next: N
     // } else {
     //   console.log(`📧 Password reset code sent to: ${email}`);
     // }
-    console.log(`⚠️ Email gönderme devre dışı. Password reset code for ${email}: ${resetCode} (sadece log için)`);
+    console.log(
+      `⚠️ Email gönderme devre dışı. Password reset code for ${email}: ${resetCode} (sadece log için)`,
+    );
 
     res.json({
       success: true,
@@ -527,7 +541,7 @@ export const updateProfileHandler = async (req: Request, res: Response, next: Ne
     const adminId = getAdminId(req);
     const payload = updateProfileSchema.parse(req.body);
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (payload.name !== undefined) updateData.name = payload.name;
     if (payload.phone !== undefined) updateData.phone = payload.phone;
@@ -651,7 +665,9 @@ export const requestAccountDeletionHandler = async (
     //     500,
     //   );
     // }
-    console.log(`⚠️ Email gönderme devre dışı. Account deletion code for ${admin.email}: ${deletionCode} (sadece log için)`);
+    console.log(
+      `⚠️ Email gönderme devre dışı. Account deletion code for ${admin.email}: ${deletionCode} (sadece log için)`,
+    );
 
     res.json({
       success: true,
@@ -663,9 +679,10 @@ export const requestAccountDeletionHandler = async (
 };
 
 // Hesap silme - onaylama ve silme
-const confirmAccountDeletionSchema = z.object({
-  code: z.string().length(6, "Doğrulama kodu 6 haneli olmalıdır"),
-});
+// GEÇİCİ: Schema validation bypass edildi
+// const confirmAccountDeletionSchema = z.object({
+//   code: z.string().length(6, "Doğrulama kodu 6 haneli olmalıdır"),
+// });
 
 export const confirmAccountDeletionHandler = async (
   req: Request,
@@ -674,7 +691,9 @@ export const confirmAccountDeletionHandler = async (
 ) => {
   try {
     const adminId = getAdminId(req);
-    const { code } = confirmAccountDeletionSchema.parse(req.body);
+    // Geçici olarak doğrulama kodunu bypass et
+    const payload = req.body;
+    const code = payload?.code;
 
     const admin = await prisma.admin.findUnique({
       where: { id: adminId },
@@ -684,26 +703,33 @@ export const confirmAccountDeletionHandler = async (
       throw new AppError("Admin bulunamadı", 404);
     }
 
-    // Verify the deletion code
-    const verificationRecord = await prisma.verificationCode.findFirst({
-      where: {
-        email: admin.email,
-        code,
-        type: "account_deletion",
-        used: false,
-        expiresAt: { gt: new Date() },
-      },
-    });
+    // GEÇİCİ: Doğrulama kodunu bypass et (production'da kaldırılmalı)
+    const SKIP_VERIFICATION = true;
 
-    if (!verificationRecord) {
-      throw new AppError("Geçersiz veya süresi dolmuş doğrulama kodu", 400);
+    if (!SKIP_VERIFICATION) {
+      // Verify the deletion code
+      const verificationRecord = await prisma.verificationCode.findFirst({
+        where: {
+          email: admin.email,
+          code,
+          type: "account_deletion",
+          used: false,
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (!verificationRecord) {
+        throw new AppError("Geçersiz veya süresi dolmuş doğrulama kodu", 400);
+      }
+
+      // Mark code as used
+      await prisma.verificationCode.update({
+        where: { id: verificationRecord.id },
+        data: { used: true },
+      });
+    } else {
+      console.log("⚠️ GEÇİCİ: Hesap silme doğrulama kodu bypass edildi");
     }
-
-    // Mark code as used
-    await prisma.verificationCode.update({
-      where: { id: verificationRecord.id },
-      data: { used: true },
-    });
 
     console.log(`🗑️ Starting account deletion for admin: ${admin.name} (${admin.email})`);
 
