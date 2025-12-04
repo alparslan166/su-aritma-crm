@@ -13,18 +13,19 @@ class JobCard extends ConsumerWidget {
   final Job job;
   final VoidCallback? onTap;
 
-  Color _statusColor(BuildContext context) {
+  // Durum badge'i için tam renk (alpha olmadan)
+  Color _statusTextColor() {
     switch (job.status) {
       case "PENDING":
-        return const Color(0xFF2563EB).withValues(alpha: 0.1);
+        return const Color(0xFF2563EB); // Mavi
       case "IN_PROGRESS":
-        return const Color(0xFFF59E0B).withValues(alpha: 0.1);
+        return const Color(0xFFF59E0B); // Turuncu
       case "DELIVERED":
-        return Colors.grey.shade300;
+        return Colors.grey.shade700;
       case "ARCHIVED":
-        return Colors.grey.shade200;
+        return Colors.grey.shade600;
       default:
-        return Theme.of(context).colorScheme.surfaceContainerHighest;
+        return Colors.grey.shade800;
     }
   }
 
@@ -81,20 +82,20 @@ class JobCard extends ConsumerWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: _statusColor(context).withValues(alpha: 0.15),
+                      color: _statusTextColor().withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: _statusColor(context).withValues(alpha: 0.3),
-                        width: 1,
+                        color: _statusTextColor().withValues(alpha: 0.4),
+                        width: 1.5,
                       ),
                     ),
                     child: Text(
                       _getStatusText(job.status),
                       style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _statusColor(context),
-                        letterSpacing: 0.5,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _statusTextColor(),
+                        letterSpacing: 0.3,
                       ),
                     ),
                   ),

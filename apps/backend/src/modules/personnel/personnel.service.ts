@@ -190,6 +190,23 @@ class PersonnelService {
     return mediaService.transformPhotoUrl(record);
   }
 
+  // Personel kendi profilini güncelleyebilir (sadece canShareLocation)
+  async updateMyProfile(personnelId: string, payload: { canShareLocation?: boolean }) {
+    const data: Prisma.PersonnelUpdateInput = {};
+    
+    if (payload.canShareLocation !== undefined) {
+      data.canShareLocation = payload.canShareLocation;
+    }
+
+    const record = await prisma.personnel.update({
+      where: { id: personnelId },
+      data,
+    });
+
+    // Transform photoUrl to full URL
+    return mediaService.transformPhotoUrl(record);
+  }
+
   async delete(adminId: string, id: string) {
     await this.ensureOwnership(adminId, id);
     await prisma.personnel.delete({

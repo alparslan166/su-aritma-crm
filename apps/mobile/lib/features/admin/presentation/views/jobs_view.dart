@@ -148,7 +148,7 @@ class _JobsViewState extends ConsumerState<JobsView> {
         heroTag: "add",
         onPressed: () => _openAddJobSheet(context, ref),
         icon: const Icon(Icons.add),
-        label: const Text("İş Ata"),
+        label: const Text("Yeni İş Ata"),
         backgroundColor: const Color(0xFF2563EB),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,

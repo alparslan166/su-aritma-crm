@@ -328,7 +328,7 @@ model JobNote {
 
 model MaintenanceReminder {
   id                 String             @id @default(cuid())
-  job                Job                @relation(fields: [jobId], references: [id])
+  job                Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
   jobId              String             @unique
   dueAt              DateTime
   status             MaintenanceStatus  @default(PENDING)

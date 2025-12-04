@@ -62,4 +62,15 @@ class PersonnelRepository {
     final response = await _client.get("/personnel/$personnelId");
     return response.data["data"] as Map<String, dynamic>;
   }
+
+  Future<Map<String, dynamic>> updateMyProfile({
+    bool? canShareLocation,
+  }) async {
+    final data = <String, dynamic>{};
+    if (canShareLocation != null) {
+      data["canShareLocation"] = canShareLocation;
+    }
+    final response = await _client.patch("/personnel/me/profile", data: data);
+    return response.data["data"] as Map<String, dynamic>;
+  }
 }

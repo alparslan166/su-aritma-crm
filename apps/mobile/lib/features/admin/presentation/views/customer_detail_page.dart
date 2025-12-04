@@ -19,6 +19,7 @@ import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
 import "edit_customer_sheet.dart";
 import "job_map_view.dart";
+import "customers_view.dart"; // CustomerFilterType enum'ı için
 
 final customerDetailProvider = FutureProvider.family<Customer, String>((
   ref,
@@ -270,7 +271,23 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           .read(adminRepositoryProvider)
           .updateCustomer(id: customer.id, status: newStatus);
       ref.invalidate(customerDetailProvider(customer.id));
-      ref.invalidate(customerListProvider);
+      
+      // Tüm filter type'lar için provider'ları refresh et
+      ref.read(customerListProvider.notifier).refresh(showLoading: false);
+      
+      // Tüm filter type'lar için ayrı ayrı refresh et
+      for (final filterType in [
+        CustomerFilterType.all,
+        CustomerFilterType.overduePayment,
+        CustomerFilterType.upcomingMaintenance,
+        CustomerFilterType.overdueInstallment,
+      ]) {
+        final filterTypeKey = filterType.toString();
+        final notifier = ref.read(
+          customerListProviderForFilter(filterTypeKey).notifier,
+        );
+        notifier.refresh(showLoading: false);
+      }
       if (context.mounted) {
         messenger.showSnackBar(
           SnackBar(
@@ -313,7 +330,22 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
     if (confirm != true) return;
     try {
       await ref.read(adminRepositoryProvider).deleteCustomer(customer.id);
-      ref.invalidate(customerListProvider);
+      
+      // Tüm filter type'lar için provider'ları refresh et
+      ref.read(customerListProvider.notifier).refresh(showLoading: false);
+      for (final filterType in [
+        CustomerFilterType.all,
+        CustomerFilterType.overduePayment,
+        CustomerFilterType.upcomingMaintenance,
+        CustomerFilterType.overdueInstallment,
+      ]) {
+        final filterTypeKey = filterType.toString();
+        final notifier = ref.read(
+          customerListProviderForFilter(filterTypeKey).notifier,
+        );
+        notifier.refresh(showLoading: false);
+      }
+      
       navigator.pop();
       messenger.showSnackBar(
         SnackBar(content: Text("${customer.name} silindi")),
@@ -369,7 +401,22 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
     try {
       await ref.read(adminRepositoryProvider).deleteJob(job.id);
       ref.invalidate(customerDetailProvider(customerId));
-      ref.invalidate(customerListProvider);
+      
+      // Tüm filter type'lar için provider'ları refresh et
+      ref.read(customerListProvider.notifier).refresh(showLoading: false);
+      for (final filterType in [
+        CustomerFilterType.all,
+        CustomerFilterType.overduePayment,
+        CustomerFilterType.upcomingMaintenance,
+        CustomerFilterType.overdueInstallment,
+      ]) {
+        final filterTypeKey = filterType.toString();
+        final notifier = ref.read(
+          customerListProviderForFilter(filterTypeKey).notifier,
+        );
+        notifier.refresh(showLoading: false);
+      }
+      
       ref.invalidate(jobListProvider);
       if (context.mounted) {
         messenger.showSnackBar(SnackBar(content: Text("${job.title} silindi")));

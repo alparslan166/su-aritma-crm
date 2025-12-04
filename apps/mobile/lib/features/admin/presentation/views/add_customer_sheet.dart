@@ -17,6 +17,7 @@ import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/personnel.dart";
 import "../../data/models/inventory_item.dart";
+import "customers_view.dart"; // CustomerFilterType enum'ı için
 
 class AddCustomerSheet extends ConsumerStatefulWidget {
   const AddCustomerSheet({super.key});
@@ -318,7 +319,26 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
         }
       }
 
-      await ref.read(customerListProvider.notifier).refresh();
+      // Tüm filter type'lar için provider'ları refresh et
+      // Böylece hangi sayfada olursa olsun müşteri listesi otomatik güncellenir
+      // Mevcut filtreleri koruyarak refresh et (showLoading=false)
+      ref.read(customerListProvider.notifier).refresh(showLoading: false);
+
+      // Tüm filter type'lar için ayrı ayrı refresh et
+      for (final filterType in [
+        CustomerFilterType.all,
+        CustomerFilterType.overduePayment,
+        CustomerFilterType.upcomingMaintenance,
+        CustomerFilterType.overdueInstallment,
+      ]) {
+        final filterTypeKey = filterType.toString();
+        final notifier = ref.read(
+          customerListProviderForFilter(filterTypeKey).notifier,
+        );
+        // Mevcut filtreleri koruyarak refresh et (showLoading=false)
+        notifier.refresh(showLoading: false);
+      }
+
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(

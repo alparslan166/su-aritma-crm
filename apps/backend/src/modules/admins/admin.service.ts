@@ -80,28 +80,35 @@ export class AdminService {
     console.log(`🗑️ Starting admin deletion for: ${admin.name} (${admin.email})`);
 
     // Delete all related data in correct order (same as account deletion)
-    // 1. Delete job notes
+    // 1. Delete maintenance reminders
+    await prisma.maintenanceReminder.deleteMany({
+      where: {
+        job: { adminId },
+      },
+    });
+
+    // 2. Delete job notes
     await prisma.jobNote.deleteMany({
       where: {
         job: { adminId },
       },
     });
 
-    // 2. Delete job status history
+    // 3. Delete job status history
     await prisma.jobStatusHistory.deleteMany({
       where: {
         job: { adminId },
       },
     });
 
-    // 3. Delete job personnel assignments
+    // 4. Delete job personnel assignments
     await prisma.jobPersonnel.deleteMany({
       where: {
         job: { adminId },
       },
     });
 
-    // 4. Delete jobs
+    // 5. Delete jobs
     await prisma.job.deleteMany({
       where: { adminId },
     });

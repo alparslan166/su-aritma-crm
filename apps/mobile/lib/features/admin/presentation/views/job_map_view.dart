@@ -47,8 +47,6 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
   @override
   void initState() {
     super.initState();
-    // Sheet controller listener'ını ekle
-    _sheetController.addListener(_onSheetChanged);
     // Initialize customer and personnel lists when map view is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -66,43 +64,28 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
     });
   }
 
-  void _onSheetChanged() {
-    if (!mounted || _isToggling) return; // Toggle sırasında state güncelleme
-    final currentSize = _sheetController.isAttached
-        ? _sheetController.size
-        : 0.1;
-    final isExpanded = currentSize > 0.15;
-    if (_isSheetExpanded != isExpanded) {
-      setState(() {
-        _isSheetExpanded = isExpanded;
-      });
-    }
-  }
-
   void _toggleSheet() {
-    if (!mounted || _isToggling)
-      return; // Zaten toggle işlemi devam ediyorsa bekle
+    if (!mounted || _isToggling) return;
 
     debugPrint("🔄 Toggle sheet called. Current expanded: $_isSheetExpanded");
-    debugPrint("🔗 Controller attached: ${_sheetController.isAttached}");
 
     // Toggle flag'ini aktif et
     setState(() {
       _isToggling = true;
+      // State'i hemen güncelle (buton ikonu için)
+      // İçerik opacity ile kontrol edildiği için kaybolmaz
+      _isSheetExpanded = !_isSheetExpanded;
     });
 
-    // State'i tersine çevir
-    final newExpandedState = !_isSheetExpanded;
-
-    // State'i hemen güncelle (UI'da buton ikonunu değiştirmek için)
-    setState(() {
-      _isSheetExpanded = newExpandedState;
-    });
+    // Mevcut durumu kontrol et
+    final shouldExpand = _isSheetExpanded;
 
     // Controller attach olana kadar bekle
     void _animateSheet([int retryCount = 0]) {
       if (!mounted) {
-        _isToggling = false;
+        setState(() {
+          _isToggling = false;
+        });
         return;
       }
 
@@ -123,7 +106,9 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
           if (mounted) {
             _animateSheet(retryCount + 1);
           } else {
-            _isToggling = false;
+            setState(() {
+              _isToggling = false;
+            });
           }
         });
         return;
@@ -131,7 +116,7 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
 
       // Controller'ı animate et
       try {
-        if (newExpandedState) {
+        if (shouldExpand) {
           // Yarıya kadar aç
           debugPrint("📂 Opening sheet to 0.5");
           _sheetController
@@ -181,14 +166,15 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
       if (mounted) {
         _animateSheet();
       } else {
-        _isToggling = false;
+        setState(() {
+          _isToggling = false;
+        });
       }
     });
   }
 
   @override
   void dispose() {
-    _sheetController.removeListener(_onSheetChanged);
     _sheetController.dispose();
     super.dispose();
   }
@@ -404,11 +390,15 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                 child: Column(
                   children: [
                     // Ok butonu - aç/kapat toggle
+                    // Tıklanabilir alanı genişletmek için behavior ve daha fazla padding
                     GestureDetector(
                       onTap: _toggleSheet,
+                      behavior:
+                          HitTestBehavior.opaque, // Tüm alanı tıklanabilir yap
                       child: Container(
+                        width: double.infinity, // Tam genişlik
                         padding: const EdgeInsets.symmetric(
-                          vertical: 12,
+                          vertical: 20, // Daha fazla dikey padding
                           horizontal: 16,
                         ),
                         child: Center(
@@ -422,9 +412,8 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                         ),
                       ),
                     ),
-                    // İçerik - sadece sheet açıkken göster
+                    // Filter buttons - sadece sheet açıkken göster
                     if (_isSheetExpanded) ...[
-                      // Filter buttons
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Wrap(
@@ -458,142 +447,156 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    // Scrollable content - sadece sheet açıkken göster
-                    if (_isSheetExpanded)
-                      Expanded(
-                        child: RefreshIndicator(
-                          onRefresh: () async {
-                            await Future.wait([
-                              ref.read(customerListProvider.notifier).refresh(),
-                              ref
-                                  .read(personnelListProvider.notifier)
-                                  .refresh(),
-                            ]);
-                          },
-                          child: ListView(
-                            controller: scrollController,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            children: [
-                              if (visibleCustomers.isEmpty &&
-                                  visiblePersonnel.isEmpty)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 48),
-                                  child: EmptyState(
-                                    icon: Icons.map_outlined,
-                                    title: "Henüz konum verisi yok",
-                                    subtitle:
-                                        "Müşteri veya personel konumları geldiğinde harita güncellenecek.",
-                                  ),
-                                )
-                              else ...[
-                                if (showCustomers &&
-                                    visibleCustomers.isNotEmpty) ...[
-                                  Text(
-                                    "Müşteri Konumları",
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.titleMedium,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  ...visibleCustomers.map((customer) {
-                                    // Müşteri iş durumuna göre renk belirleme
-                                    Color markerColor = Colors.blue;
-                                    String statusText = "Tamamlandı";
-
-                                    if (customer.jobs != null &&
-                                        customer.jobs!.isNotEmpty) {
-                                      // PENDING (beklemede) veya IN_PROGRESS (işlenen) işleri kontrol et
-                                      final hasPending = customer.jobs!.any(
-                                        (job) => job.status == "PENDING",
-                                      );
-                                      final hasInProgress = customer.jobs!.any(
-                                        (job) => job.status == "IN_PROGRESS",
-                                      );
-
-                                      if (hasPending) {
-                                        markerColor = Colors.red;
-                                        statusText = "Beklemede";
-                                      } else if (hasInProgress) {
-                                        markerColor = Colors.orange;
-                                        statusText = "İşleniyor";
-                                      }
-                                    }
-
-                                    return ListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      leading: Icon(
-                                        Icons.location_on,
-                                        color: markerColor,
-                                      ),
-                                      title: Text(customer.name),
-                                      subtitle: Text(customer.address),
-                                      trailing: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: markerColor.withValues(
-                                            alpha: 0.1,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                          border: Border.all(
-                                            color: markerColor,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          statusText,
-                                          style: TextStyle(
-                                            color: markerColor,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                      onTap: () =>
-                                          _focusOnCustomerLocation(customer),
-                                    );
-                                  }),
-                                  const SizedBox(height: 16),
-                                ],
-                                if (showPersonnel &&
-                                    visiblePersonnel.isNotEmpty) ...[
-                                  Text(
-                                    "Personel Konumları",
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.titleMedium,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  ...visiblePersonnel.map((person) {
-                                    final location = person.lastKnownLocation!;
-                                    final subtitle = location.timestamp != null
-                                        ? "Son konum: ${location.timestamp!.toLocal()}"
-                                        : "Son konum zamanı bilinmiyor";
-                                    return ListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      leading: const Icon(
-                                        Icons.person_pin_circle,
-                                        color: Color(0xFF2563EB),
-                                      ),
-                                      title: Text(person.name),
-                                      subtitle: Text(subtitle),
-                                      onTap: () =>
-                                          _focusOnPersonnelLocation(person),
-                                    );
-                                  }),
-                                ],
-                              ],
-                              SizedBox(
-                                height:
-                                    MediaQuery.of(context).padding.bottom + 16,
+                    // Scrollable content - Expanded Opacity dışında
+                    Expanded(
+                      child: Opacity(
+                        opacity: _isSheetExpanded ? 1.0 : 0.0,
+                        child: IgnorePointer(
+                          ignoring: !_isSheetExpanded,
+                          child: RefreshIndicator(
+                            onRefresh: () async {
+                              await Future.wait([
+                                ref
+                                    .read(customerListProvider.notifier)
+                                    .refresh(),
+                                ref
+                                    .read(personnelListProvider.notifier)
+                                    .refresh(),
+                              ]);
+                            },
+                            child: ListView(
+                              controller: scrollController,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
                               ),
-                            ],
+                              children: [
+                                if (visibleCustomers.isEmpty &&
+                                    visiblePersonnel.isEmpty)
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 48),
+                                    child: EmptyState(
+                                      icon: Icons.map_outlined,
+                                      title: "Henüz konum verisi yok",
+                                      subtitle:
+                                          "Müşteri veya personel konumları geldiğinde harita güncellenecek.",
+                                    ),
+                                  )
+                                else ...[
+                                  if (showCustomers &&
+                                      visibleCustomers.isNotEmpty) ...[
+                                    Text(
+                                      "Müşteri Konumları",
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ...visibleCustomers.map((customer) {
+                                      // Müşteri iş durumuna göre renk belirleme
+                                      Color markerColor = Colors.blue;
+                                      String statusText = "Tamamlandı";
+
+                                      if (customer.jobs != null &&
+                                          customer.jobs!.isNotEmpty) {
+                                        // PENDING (beklemede) veya IN_PROGRESS (işlenen) işleri kontrol et
+                                        final hasPending = customer.jobs!.any(
+                                          (job) => job.status == "PENDING",
+                                        );
+                                        final hasInProgress = customer.jobs!
+                                            .any(
+                                              (job) =>
+                                                  job.status == "IN_PROGRESS",
+                                            );
+
+                                        if (hasPending) {
+                                          markerColor = Colors.red;
+                                          statusText = "Beklemede";
+                                        } else if (hasInProgress) {
+                                          markerColor = Colors.orange;
+                                          statusText = "İşleniyor";
+                                        }
+                                      }
+
+                                      return ListTile(
+                                        contentPadding: EdgeInsets.zero,
+                                        leading: Icon(
+                                          Icons.location_on,
+                                          color: markerColor,
+                                        ),
+                                        title: Text(customer.name),
+                                        subtitle: Text(customer.address),
+                                        trailing: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: markerColor.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                            border: Border.all(
+                                              color: markerColor,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            statusText,
+                                            style: TextStyle(
+                                              color: markerColor,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        onTap: () =>
+                                            _focusOnCustomerLocation(customer),
+                                      );
+                                    }),
+                                    const SizedBox(height: 16),
+                                  ],
+                                  if (showPersonnel &&
+                                      visiblePersonnel.isNotEmpty) ...[
+                                    Text(
+                                      "Personel Konumları",
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ...visiblePersonnel.map((person) {
+                                      final location =
+                                          person.lastKnownLocation!;
+                                      final subtitle =
+                                          location.timestamp != null
+                                          ? "Son konum: ${location.timestamp!.toLocal()}"
+                                          : "Son konum zamanı bilinmiyor";
+                                      return ListTile(
+                                        contentPadding: EdgeInsets.zero,
+                                        leading: const Icon(
+                                          Icons.person_pin_circle,
+                                          color: Color(0xFF2563EB),
+                                        ),
+                                        title: Text(person.name),
+                                        subtitle: Text(subtitle),
+                                        onTap: () =>
+                                            _focusOnPersonnelLocation(person),
+                                      );
+                                    }),
+                                  ],
+                                ],
+                                SizedBox(
+                                  height:
+                                      MediaQuery.of(context).padding.bottom +
+                                      16,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
+                    ),
                   ],
                 ),
               );

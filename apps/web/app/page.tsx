@@ -93,7 +93,7 @@ export default function HomePage() {
             <div className="flex items-center">
               <h1 className="text-xl font-semibold text-gray-900">
                 Su Arıtma CRM - Ana Admin Paneli
-              </h1>
+          </h1>
             </div>
             <div className="flex items-center">
               <button
@@ -159,8 +159,8 @@ export default function HomePage() {
                               <p className="text-sm text-gray-500">{admin.email}</p>
                               <p className="text-xs text-gray-400">
                                 {admin.adminId && `ID: ${admin.adminId}`}
-                              </p>
-                            </div>
+          </p>
+        </div>
                           </div>
                           <div className="flex items-center space-x-4">
                             <div className="text-right">

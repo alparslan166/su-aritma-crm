@@ -13,6 +13,7 @@ import "../../application/customer_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
 import "customer_detail_page.dart" show customerDetailProvider;
+import "customers_view.dart"; // CustomerFilterType enum'ı için
 
 class EditCustomerSheet extends ConsumerStatefulWidget {
   const EditCustomerSheet({super.key, required this.customer});
@@ -189,7 +190,26 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
             installmentIntervalDays: installmentIntervalDays,
           );
 
-      await ref.read(customerListProvider.notifier).refresh();
+      // Tüm filter type'lar için provider'ları refresh et
+      // Böylece hangi sayfada olursa olsun müşteri listesi otomatik güncellenir
+      // Mevcut filtreleri koruyarak refresh et (showLoading=false)
+      ref.read(customerListProvider.notifier).refresh(showLoading: false);
+      
+      // Tüm filter type'lar için ayrı ayrı refresh et
+      for (final filterType in [
+        CustomerFilterType.all,
+        CustomerFilterType.overduePayment,
+        CustomerFilterType.upcomingMaintenance,
+        CustomerFilterType.overdueInstallment,
+      ]) {
+        final filterTypeKey = filterType.toString();
+        final notifier = ref.read(
+          customerListProviderForFilter(filterTypeKey).notifier,
+        );
+        // Mevcut filtreleri koruyarak refresh et (showLoading=false)
+        notifier.refresh(showLoading: false);
+      }
+      
       // Invalidate customer detail provider to refresh the detail page
       ref.invalidate(customerDetailProvider(widget.customer.id));
       if (!mounted) return;

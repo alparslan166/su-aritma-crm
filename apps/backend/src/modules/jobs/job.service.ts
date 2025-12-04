@@ -518,6 +518,8 @@ class JobService {
 
   async delete(adminId: string, jobId: string) {
     await this.ensureJob(adminId, jobId);
+    
+    // MaintenanceReminder will be automatically deleted due to CASCADE
     await prisma.job.delete({
       where: { id: jobId },
     });
