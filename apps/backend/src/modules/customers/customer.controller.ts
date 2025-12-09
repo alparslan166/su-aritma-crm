@@ -1,12 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
+import { customerService } from "./customer.service";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { getAdminId, getPersonnelId } from "@/lib/tenant";
 import { notificationService } from "@/modules/notifications/notification.service";
-
-import { customerService } from "./customer.service";
 
 const listQuerySchema = z.object({
   search: z.string().optional(),
