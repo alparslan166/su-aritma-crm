@@ -79,9 +79,9 @@ const createSchema = z
 const updateSchema = createSchema.partial().extend({
   remainingDebtAmount: z.number().nonnegative().optional(),
   nextMaintenanceDate: z
-    .union([z.string().datetime(), z.null()])
+    .union([z.string().datetime(), z.null(), z.literal("")])
     .optional()
-    .transform((val) => (val === "" ? null : val)),
+    .transform((val) => (val === "" || val === null ? null : val)),
 });
 
 export const listCustomersHandler = async (req: Request, res: Response, next: NextFunction) => {
