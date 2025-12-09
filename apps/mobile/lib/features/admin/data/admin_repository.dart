@@ -552,16 +552,22 @@ class AdminRepository {
       if (nextMaintenanceDate != null) {
         final dateString = nextMaintenanceDate.toUtc().toIso8601String();
         data["nextMaintenanceDate"] = dateString;
-        debugPrint("🔵 Frontend Repository - nextMaintenanceDate gönderiliyor: $dateString");
+        debugPrint(
+          "🔵 Frontend Repository - nextMaintenanceDate gönderiliyor: $dateString",
+        );
       } else {
         // Null göndermek için null olarak gönder
         // Backend'de payload.nextMaintenanceDate !== undefined kontrolü var
         // null gönderilirse !== undefined true olur ve işlenir (null olarak set edilir)
         data["nextMaintenanceDate"] = null;
-        debugPrint("🔵 Frontend Repository - nextMaintenanceDate null olarak gönderiliyor");
+        debugPrint(
+          "🔵 Frontend Repository - nextMaintenanceDate null olarak gönderiliyor",
+        );
       }
     } else {
-      debugPrint("🔵 Frontend Repository - nextMaintenanceDate gönderilmiyor (undefined)");
+      debugPrint(
+        "🔵 Frontend Repository - nextMaintenanceDate gönderilmiyor (undefined)",
+      );
     }
     // Eğer sendNextMaintenanceDate false ise, nextMaintenanceDate hiç gönderilmez (undefined)
     final response = await _client.put("/customers/$id", data: data);

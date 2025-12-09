@@ -205,15 +205,19 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
           calculatedMaintenanceDate = null;
         }
         debugPrint(
-          "🔵 Frontend - Bakım tarihi değiştirildi: _maintenanceDateChanged=$_maintenanceDateChanged, _nextMaintenanceMonths=$_nextMaintenanceMonths, calculatedMaintenanceDate=$calculatedMaintenanceDate",
+          "🔵 Frontend - Bakım tarihi değiştirildi: _maintenanceDateChanged=$_maintenanceDateChanged, _nextMaintenanceMonths=$_nextMaintenanceMonths, _lastMaintenanceDate=$_lastMaintenanceDate, calculatedMaintenanceDate=$calculatedMaintenanceDate",
         );
       } else {
         debugPrint(
-          "🔵 Frontend - Bakım tarihi değiştirilmedi: _maintenanceDateChanged=$_maintenanceDateChanged",
+          "🔵 Frontend - Bakım tarihi değiştirilmedi: _maintenanceDateChanged=$_maintenanceDateChanged, _nextMaintenanceMonths=$_nextMaintenanceMonths",
         );
       }
       // Eğer _maintenanceDateChanged false ise, calculatedMaintenanceDate undefined kalır
       // ve backend'de mevcut değer korunur
+      
+      debugPrint(
+        "🔵 Frontend - updateCustomer çağrılıyor: sendNextMaintenanceDate=$_maintenanceDateChanged, nextMaintenanceDate=$calculatedMaintenanceDate",
+      );
 
       // GPS konumunu location formatına çevir
       Map<String, dynamic>? locationData;
