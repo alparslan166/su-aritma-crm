@@ -26,6 +26,7 @@
     "update:customer-locations": "ts-node -r tsconfig-paths/register scripts/update-customer-locations.ts",
     "create:subscriptions": "ts-node -r tsconfig-paths/register scripts/create-subscriptions-for-admins.ts",
     "create:subscription": "ts-node -r tsconfig-paths/register scripts/create-subscription-for-admin.ts",
+    "create:ana-admin": "ts-node -r tsconfig-paths/register scripts/create-ana-admin.ts",
     "copy:apk": "ts-node scripts/copy-apk.ts"
   },
   "keywords": [],

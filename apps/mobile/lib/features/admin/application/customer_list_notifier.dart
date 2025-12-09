@@ -1,23 +1,34 @@
 import "package:hooks_riverpod/hooks_riverpod.dart";
+import "package:socket_io_client/socket_io_client.dart" as sio;
 
+import "../../../core/realtime/socket_client.dart";
 import "../data/admin_repository.dart";
 import "../data/models/customer.dart";
 
 final customerListProvider =
     StateNotifierProvider<CustomerListNotifier, AsyncValue<List<Customer>>>(
-      (ref) => CustomerListNotifier(ref.watch(adminRepositoryProvider)),
+      (ref) => CustomerListNotifier(ref.watch(adminRepositoryProvider), ref),
     );
 
 // Her filterType için ayrı provider instance'ı
-final customerListProviderForFilter = StateNotifierProvider.family<
-    CustomerListNotifier, AsyncValue<List<Customer>>, String>(
-  (ref, filterTypeKey) => CustomerListNotifier(ref.watch(adminRepositoryProvider)),
-);
+final customerListProviderForFilter =
+    StateNotifierProvider.family<
+      CustomerListNotifier,
+      AsyncValue<List<Customer>>,
+      String
+    >(
+      (ref, filterTypeKey) =>
+          CustomerListNotifier(ref.watch(adminRepositoryProvider), ref),
+    );
 
 class CustomerListNotifier extends StateNotifier<AsyncValue<List<Customer>>> {
-  CustomerListNotifier(this._repository) : super(const AsyncValue.loading());
+  CustomerListNotifier(this._repository, this._ref)
+    : super(const AsyncValue.loading()) {
+    _listenSocket();
+  }
 
   final AdminRepository _repository;
+  final Ref _ref;
   bool? _hasOverduePayment;
   bool? _hasUpcomingMaintenance;
   bool? _hasOverdueInstallment;
@@ -36,7 +47,9 @@ class CustomerListNotifier extends StateNotifier<AsyncValue<List<Customer>>> {
     // showLoading false ise state'i değiştirme, mevcut data korunur
 
     print("🔄 CustomerListNotifier.refresh: showLoading=$showLoading");
-    print("   Filters: search=$_search, phoneSearch=$_phoneSearch, createdAtFrom=$_createdAtFrom, createdAtTo=$_createdAtTo, hasOverduePayment=$_hasOverduePayment, hasUpcomingMaintenance=$_hasUpcomingMaintenance");
+    print(
+      "   Filters: search=$_search, phoneSearch=$_phoneSearch, createdAtFrom=$_createdAtFrom, createdAtTo=$_createdAtTo, hasOverduePayment=$_hasOverduePayment, hasUpcomingMaintenance=$_hasUpcomingMaintenance",
+    );
 
     try {
       final customers = await _repository.fetchCustomers(
@@ -71,7 +84,9 @@ class CustomerListNotifier extends StateNotifier<AsyncValue<List<Customer>>> {
     final newInstallment = hasOverdueInstallment;
     // Search için: null gelirse temizle, boş string gelirse temizle, değer gelirse kullan
     final newSearch = search == null ? null : (search.isEmpty ? null : search);
-    final newPhoneSearch = phoneSearch == null ? null : (phoneSearch.isEmpty ? null : phoneSearch);
+    final newPhoneSearch = phoneSearch == null
+        ? null
+        : (phoneSearch.isEmpty ? null : phoneSearch);
     final newCreatedAtFrom = createdAtFrom;
     final newCreatedAtTo = createdAtTo;
 
@@ -85,14 +100,19 @@ class CustomerListNotifier extends StateNotifier<AsyncValue<List<Customer>>> {
     // Debug logları
     print("🔍 CustomerListNotifier.filter: _initialized=$_initialized");
     print("   newOverdue=$newOverdue, _hasOverduePayment=$_hasOverduePayment");
-    print("   newMaintenance=$newMaintenance, _hasUpcomingMaintenance=$_hasUpcomingMaintenance");
+    print(
+      "   newMaintenance=$newMaintenance, _hasUpcomingMaintenance=$_hasUpcomingMaintenance",
+    );
     print("   newSearch=$newSearch, _search=$_search");
     print("   newPhoneSearch=$newPhoneSearch, _phoneSearch=$_phoneSearch");
-    print("   newCreatedAtFrom=$newCreatedAtFrom, _createdAtFrom=$_createdAtFrom");
+    print(
+      "   newCreatedAtFrom=$newCreatedAtFrom, _createdAtFrom=$_createdAtFrom",
+    );
     print("   newCreatedAtTo=$newCreatedAtTo, _createdAtTo=$_createdAtTo");
 
     // İlk yüklemede veya filtre değiştiğinde refresh yap
-    final shouldRefresh = !_initialized ||
+    final shouldRefresh =
+        !_initialized ||
         newOverdue != _hasOverduePayment ||
         newMaintenance != _hasUpcomingMaintenance ||
         newInstallment != _hasOverdueInstallment ||
@@ -121,10 +141,31 @@ class CustomerListNotifier extends StateNotifier<AsyncValue<List<Customer>>> {
       // Sadece ilk yüklemede veya manuel refresh'te loading göster
       // Arama değişikliklerinde mevcut data'yı koru, loading gösterme
       await refresh(showLoading: !wasInitialized && !hasExistingData);
-      
-      print("✅ Refresh tamamlandı, müşteri sayısı: ${state.valueOrNull?.length ?? 0}");
+
+      print(
+        "✅ Refresh tamamlandı, müşteri sayısı: ${state.valueOrNull?.length ?? 0}",
+      );
     } else {
       print("⏭️ Filter değişmedi, refresh atlandı");
     }
+  }
+
+  void _listenSocket() {
+    _ref.listen<sio.Socket?>(socketClientProvider, (previous, next) {
+      previous?.off("customer-update", _handleCustomerUpdate);
+      previous?.off("job-status", _handleJobStatus);
+      next?.on("customer-update", _handleCustomerUpdate);
+      next?.on("job-status", _handleJobStatus);
+    });
+  }
+
+  void _handleCustomerUpdate(dynamic data) {
+    // Refresh customer list when customer is updated (e.g., payment status, maintenance)
+    refresh(showLoading: false);
+  }
+
+  void _handleJobStatus(dynamic data) {
+    // Refresh customer list when job status changes (affects customer filters)
+    refresh(showLoading: false);
   }
 }

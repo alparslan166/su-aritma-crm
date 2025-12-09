@@ -76,6 +76,7 @@ const createSchema = z
 
 const updateSchema = createSchema.partial().extend({
   remainingDebtAmount: z.number().nonnegative().optional(),
+  nextMaintenanceDate: z.string().datetime().optional(),
 });
 
 export const listCustomersHandler = async (req: Request, res: Response, next: NextFunction) => {
@@ -94,6 +95,16 @@ export const getCustomerHandler = async (req: Request, res: Response, next: Next
     const adminId = getAdminId(req);
     const { id } = req.params;
     const data = await customerService.getById(adminId, id);
+
+    // Debug: Dönen customer'da debtPaymentHistory var mı kontrol et
+    console.log("🟢 Backend getById - Dönen customer:");
+    console.log(`   - debtPaymentHistory: ${data.debtPaymentHistory?.length ?? 0} adet`);
+    if (data.debtPaymentHistory && data.debtPaymentHistory.length > 0) {
+      for (const payment of data.debtPaymentHistory) {
+        console.log(`   - ${payment.amount} TL - ${payment.paidAt}`);
+      }
+    }
+
     res.json({ success: true, data });
   } catch (error) {
     next(error as Error);
@@ -178,6 +189,16 @@ export const payDebtHandler = async (req: Request, res: Response, next: NextFunc
       })
       .parse(req.body);
     const data = await customerService.payDebt(adminId, id, amount, installmentCount);
+
+    // Debug: Dönen customer'da debtPaymentHistory var mı kontrol et
+    console.log("🔵 Backend payDebt - Dönen customer:");
+    console.log(`   - debtPaymentHistory: ${data.debtPaymentHistory?.length ?? 0} adet`);
+    if (data.debtPaymentHistory && data.debtPaymentHistory.length > 0) {
+      for (const payment of data.debtPaymentHistory) {
+        console.log(`   - ${payment.amount} TL - ${payment.paidAt}`);
+      }
+    }
+
     res.json({ success: true, data });
   } catch (error) {
     next(error as Error);

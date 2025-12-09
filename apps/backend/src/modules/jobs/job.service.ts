@@ -3,6 +3,7 @@ import {
   JobNoteAuthorType,
   JobStatus,
   MaintenanceStatus,
+  PaymentStatus,
   PersonnelStatus,
   Prisma,
   PrismaClient,
@@ -255,8 +256,9 @@ class JobService {
           logger.debug("✅ Job created:", job.id);
 
           // Add materials if provided
+          // NOTE: Stock is NOT deducted here - it will be deducted when personnel delivers the job
           if (payload.materialIds?.length) {
-            logger.debug("🔄 Adding materials...");
+            logger.debug("🔄 Adding materials (no stock deduction at job creation)...");
             for (const material of payload.materialIds) {
               const item = await tx.inventoryItem.findFirst({
                 where: { id: material.inventoryItemId, adminId },
@@ -264,9 +266,7 @@ class JobService {
               if (!item) {
                 throw new AppError(`Inventory item ${material.inventoryItemId} not found`, 404);
               }
-              if (item.stockQty < material.quantity) {
-                throw new AppError(`Insufficient stock for ${item.name}`, 400);
-              }
+              // No stock check or deduction here - stock will be checked and deducted at delivery time
               await tx.jobMaterial.create({
                 data: {
                   jobId: job.id,
@@ -276,7 +276,7 @@ class JobService {
                 },
               });
             }
-            logger.debug("✅ Materials added");
+            logger.debug("✅ Materials added (stock will be deducted at delivery)");
           }
 
           if (payload.personnelIds?.length) {
@@ -518,7 +518,7 @@ class JobService {
 
   async delete(adminId: string, jobId: string) {
     await this.ensureJob(adminId, jobId);
-    
+
     // MaintenanceReminder will be automatically deleted due to CASCADE
     await prisma.job.delete({
       where: { id: jobId },
@@ -688,12 +688,35 @@ class JobService {
           ? addMonths(now, payload.maintenanceIntervalMonths)
           : assignment.job.maintenanceDueAt;
 
+      // Calculate payment status based on collected amount and price
+      let paymentStatus: PaymentStatus | undefined = undefined;
+      if (payload.collectedAmount !== undefined) {
+        const collectedAmount = new Prisma.Decimal(payload.collectedAmount);
+        const jobPrice = assignment.job.price;
+
+        if (jobPrice && jobPrice.gt(0)) {
+          if (collectedAmount.gte(jobPrice)) {
+            paymentStatus = PaymentStatus.PAID;
+          } else if (collectedAmount.gt(0)) {
+            paymentStatus = PaymentStatus.PARTIAL;
+          } else {
+            paymentStatus = PaymentStatus.NOT_PAID;
+          }
+        } else if (collectedAmount.gt(0)) {
+          // If no price set but amount collected, mark as PAID
+          paymentStatus = PaymentStatus.PAID;
+        } else {
+          paymentStatus = PaymentStatus.NOT_PAID;
+        }
+      }
+
       await tx.job.update({
         where: { id: jobId },
         data: {
           collectedAmount: payload.collectedAmount
             ? new Prisma.Decimal(payload.collectedAmount)
             : undefined,
+          paymentStatus: paymentStatus,
           deliveryNote: payload.note,
           deliveryMediaUrls: (payload.photoUrls ?? []) as Prisma.InputJsonValue,
           maintenanceDueAt: maintenanceDate ?? assignment.job.maintenanceDueAt,
@@ -743,6 +766,13 @@ class JobService {
         },
         tx,
       );
+
+      // Emit customer update event to refresh customer list in admin panel
+      // This ensures payment status, maintenance dates, etc. are updated in real-time
+      realtimeGateway.emitToAdmin(adminId, "customer-update", {
+        customerId: assignment.job.customerId,
+        jobId: jobId,
+      });
 
       return updatedJob;
     });

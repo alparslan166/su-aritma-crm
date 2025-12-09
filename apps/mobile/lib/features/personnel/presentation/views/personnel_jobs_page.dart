@@ -28,9 +28,7 @@ class PersonnelJobsPage extends ConsumerWidget {
             addRepaintBoundaries: true,
             itemBuilder: (context, index) {
               final job = jobs[index];
-              return RepaintBoundary(
-                child: _JobTile(job: job),
-              );
+              return RepaintBoundary(child: _JobTile(job: job));
             },
           ),
         ),
@@ -109,7 +107,11 @@ class _JobTile extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.person_outline, size: 16, color: Colors.grey.shade600),
+                    Icon(
+                      Icons.person_outline,
+                      size: 16,
+                      color: Colors.grey.shade600,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -122,7 +124,10 @@ class _JobTile extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
@@ -131,7 +136,11 @@ class _JobTile extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.calendar_today, size: 12, color: Colors.grey.shade600),
+                          Icon(
+                            Icons.calendar_today,
+                            size: 12,
+                            color: Colors.grey.shade600,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             scheduled,
@@ -165,7 +174,7 @@ class _JobTile extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        "Teslim sonrası görüntüleme modu",
+                        "          Teslim sonrası görüntüleme",
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.red.shade700,

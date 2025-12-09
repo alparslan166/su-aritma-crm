@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/middleware/error-handler";
+import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
 
 // Telefon numarasını normalize et (boşlukları ve özel karakterleri temizle)
 function normalizePhoneNumber(phone: string): string {
@@ -29,6 +30,7 @@ type CreateCustomerPayload = {
 
 type UpdateCustomerPayload = Partial<CreateCustomerPayload> & {
   remainingDebtAmount?: number;
+  nextMaintenanceDate?: string;
 };
 
 type CustomerListFilters = {
@@ -50,6 +52,9 @@ class CustomerService {
           include: {
             maintenanceReminders: true,
           },
+        },
+        debtPaymentHistory: {
+          orderBy: { paidAt: "desc" },
         },
       },
     });
@@ -432,10 +437,58 @@ class CustomerService {
       updateData.paidDebtAmount = null;
     }
 
-    return prisma.customer.update({
+    // Update maintenance date for customer's nearest job if provided
+    if (payload.nextMaintenanceDate) {
+      const maintenanceDate = new Date(payload.nextMaintenanceDate);
+      // Find the customer's nearest job (by maintenanceDueAt)
+      const customerJobs = await prisma.job.findMany({
+        where: {
+          customerId,
+          adminId,
+          status: { not: "ARCHIVED" },
+        },
+        orderBy: {
+          maintenanceDueAt: "asc",
+        },
+        take: 1,
+      });
+
+      if (customerJobs.length > 0) {
+        // Update the nearest job's maintenance date
+        const updatedJob = await prisma.job.update({
+          where: { id: customerJobs[0].id },
+          data: { maintenanceDueAt: maintenanceDate },
+        });
+
+        // Update or create maintenance reminder
+        await prisma.maintenanceReminder.upsert({
+          where: { jobId: customerJobs[0].id },
+          update: { dueAt: maintenanceDate },
+          create: {
+            jobId: customerJobs[0].id,
+            dueAt: maintenanceDate,
+          },
+        });
+
+        // Emit real-time events
+        realtimeGateway.emitJobStatus(customerJobs[0].id, updatedJob);
+        realtimeGateway.emitToAdmin(adminId, "customer-update", {
+          customerId,
+        });
+      }
+    }
+
+    const updatedCustomer = await prisma.customer.update({
       where: { id: customerId },
       data: updateData,
     });
+
+    // Emit customer update event
+    realtimeGateway.emitToAdmin(adminId, "customer-update", {
+      customerId,
+    });
+
+    return updatedCustomer;
   }
 
   async markInstallmentOverdue(adminId: string, customerId: string) {
@@ -513,15 +566,50 @@ class CustomerService {
       updatedInstallmentCount = null;
     }
 
-    return prisma.customer.update({
-      where: { id: customerId },
-      data: {
-        paidDebtAmount: newPaid,
-        remainingDebtAmount: finalRemaining,
-        hasDebt,
-        nextDebtDate,
-        installmentCount: updatedInstallmentCount,
-      },
+    // Record payment history
+    return prisma.$transaction(async (tx) => {
+      // Create payment history record
+      const newPayment = await tx.debtPaymentHistory.create({
+        data: {
+          customerId,
+          amount: paymentAmount,
+          paidAt: new Date(),
+        },
+      });
+
+      console.log("🔵 Backend payDebt - Yeni ödeme kaydı oluşturuldu:");
+      console.log(`   - id: ${newPayment.id}`);
+      console.log(`   - amount: ${newPayment.amount}`);
+      console.log(`   - paidAt: ${newPayment.paidAt}`);
+
+      // Update customer
+      const updatedCustomer = await tx.customer.update({
+        where: { id: customerId },
+        data: {
+          paidDebtAmount: newPaid,
+          remainingDebtAmount: finalRemaining,
+          hasDebt,
+          nextDebtDate,
+          installmentCount: updatedInstallmentCount,
+        },
+        include: {
+          debtPaymentHistory: {
+            orderBy: { paidAt: "desc" },
+          },
+        },
+      });
+
+      console.log("🟢 Backend payDebt - Güncellenmiş customer:");
+      console.log(
+        `   - debtPaymentHistory: ${updatedCustomer.debtPaymentHistory?.length ?? 0} adet`,
+      );
+      if (updatedCustomer.debtPaymentHistory && updatedCustomer.debtPaymentHistory.length > 0) {
+        for (const payment of updatedCustomer.debtPaymentHistory) {
+          console.log(`   - ${payment.amount} TL - ${payment.paidAt}`);
+        }
+      }
+
+      return updatedCustomer;
     });
   }
 

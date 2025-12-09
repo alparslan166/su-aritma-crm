@@ -1,6 +1,9 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
 import "package:flutter_map/flutter_map.dart";
 import "package:geocoding/geocoding.dart";
+import "package:geolocator/geolocator.dart";
 import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
@@ -43,10 +46,13 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
   String? _highlightedCustomerId; // Popup gösterilecek müşteri ID'si
   bool _isSheetExpanded = false; // Sheet'in açık/kapalı durumu
   bool _isToggling = false; // Toggle işlemi devam ediyor mu?
+  LatLng? _userLocation; // Kullanıcının konumu
 
   @override
   void initState() {
     super.initState();
+    // Kullanıcının konumunu al
+    _getUserLocation();
     // Initialize customer and personnel lists when map view is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -62,6 +68,48 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
         });
       }
     });
+  }
+
+  Future<void> _getUserLocation() async {
+    try {
+      // Konum izni kontrolü
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return; // Konum servisleri kapalı, sessizce devam et
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          return; // İzin reddedildi, sessizce devam et
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        return; // İzin kalıcı olarak reddedilmiş, sessizce devam et
+      }
+
+      // Mevcut konumu al
+      final position =
+          await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.medium,
+          ).timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              throw TimeoutException("Konum alınamadı");
+            },
+          );
+
+      if (mounted) {
+        setState(() {
+          _userLocation = LatLng(position.latitude, position.longitude);
+        });
+      }
+    } catch (e) {
+      debugPrint("Kullanıcı konumu alınamadı: $e");
+      // Hata durumunda sessizce devam et, varsayılan konum kullanılacak
+    }
   }
 
   void _toggleSheet() {
@@ -266,8 +314,12 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
       }),
     ];
 
-    // Always show map with default center (Istanbul) if no data
-    final center = _initialCenter(visibleCustomers, visiblePersonnel);
+    // Always show map with default center (user location or Istanbul) if no data
+    final center = _initialCenter(
+      visibleCustomers,
+      visiblePersonnel,
+      _userLocation,
+    );
 
     return Scaffold(
       appBar: const AdminAppBar(title: Text("Harita")),
@@ -297,8 +349,14 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                     final target = _initialCenter(
                       visibleCustomers,
                       visiblePersonnel,
+                      _userLocation,
                     );
                     _mapController.move(target, 11.0);
+                  });
+                } else if (_userLocation != null) {
+                  // Kullanıcı konumu varsa ama marker yoksa, kullanıcı konumuna odaklan
+                  Future.delayed(const Duration(milliseconds: 300), () {
+                    _mapController.move(_userLocation!, 12.0);
                   });
                 }
               },
@@ -357,9 +415,10 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                 final target = _initialCenter(
                   visibleCustomers,
                   visiblePersonnel,
+                  _userLocation,
                 );
                 final zoom = markers.isEmpty
-                    ? 10.0
+                    ? (_userLocation != null ? 12.0 : 10.0)
                     : _mapController.camera.zoom;
                 _mapController.move(target, zoom);
               },
@@ -492,30 +551,12 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                                     ),
                                     const SizedBox(height: 8),
                                     ...visibleCustomers.map((customer) {
-                                      // Müşteri iş durumuna göre renk belirleme
-                                      Color markerColor = Colors.blue;
-                                      String statusText = "Tamamlandı";
-
-                                      if (customer.jobs != null &&
-                                          customer.jobs!.isNotEmpty) {
-                                        // PENDING (beklemede) veya IN_PROGRESS (işlenen) işleri kontrol et
-                                        final hasPending = customer.jobs!.any(
-                                          (job) => job.status == "PENDING",
-                                        );
-                                        final hasInProgress = customer.jobs!
-                                            .any(
-                                              (job) =>
-                                                  job.status == "IN_PROGRESS",
-                                            );
-
-                                        if (hasPending) {
-                                          markerColor = Colors.red;
-                                          statusText = "Beklemede";
-                                        } else if (hasInProgress) {
-                                          markerColor = Colors.orange;
-                                          statusText = "İşleniyor";
-                                        }
-                                      }
+                                      // Müşteri durumuna göre renk belirleme
+                                      final markerInfo = _getCustomerMarkerInfo(
+                                        customer,
+                                      );
+                                      final markerColor = markerInfo.color;
+                                      final statusText = markerInfo.statusText;
 
                                       return ListTile(
                                         contentPadding: EdgeInsets.zero,
@@ -774,25 +815,10 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
   }
 
   void _showCustomerInfoSheet(BuildContext context, Customer customer) {
-    // Müşteri iş durumuna göre renk belirleme
-    Color markerColor = Colors.blue; // Varsayılan: tamamlanan işler
-    String statusText = "Tamamlandı";
-
-    if (customer.jobs != null && customer.jobs!.isNotEmpty) {
-      // PENDING (beklemede) veya IN_PROGRESS (işlenen) işleri kontrol et
-      final hasPending = customer.jobs!.any((job) => job.status == "PENDING");
-      final hasInProgress = customer.jobs!.any(
-        (job) => job.status == "IN_PROGRESS",
-      );
-
-      if (hasPending) {
-        markerColor = Colors.red;
-        statusText = "Beklemede";
-      } else if (hasInProgress) {
-        markerColor = Colors.orange;
-        statusText = "İşleniyor";
-      }
-    }
+    // Müşteri durumuna göre renk belirleme
+    final markerInfo = _getCustomerMarkerInfo(customer);
+    final markerColor = markerInfo.color;
+    final statusText = markerInfo.statusText;
 
     showModalBottomSheet(
       context: context,
@@ -958,8 +984,17 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
   }
 }
 
-LatLng _initialCenter(List<Customer> customers, List<Personnel> personnel) {
-  // If we have customers with locations, use first customer
+LatLng _initialCenter(
+  List<Customer> customers,
+  List<Personnel> personnel,
+  LatLng? userLocation,
+) {
+  // Öncelik 1: Kullanıcının konumu
+  if (userLocation != null) {
+    return userLocation;
+  }
+
+  // Öncelik 2: Müşteri konumları
   if (customers.isNotEmpty) {
     final firstCustomer = customers.first;
     if (firstCustomer.location != null) {
@@ -967,13 +1002,43 @@ LatLng _initialCenter(List<Customer> customers, List<Personnel> personnel) {
       return LatLng(location.latitude, location.longitude);
     }
   }
-  // If we have personnel with locations, use first personnel
+
+  // Öncelik 3: Personel konumları
   if (personnel.isNotEmpty && personnel.first.lastKnownLocation != null) {
     final loc = personnel.first.lastKnownLocation!;
     return LatLng(loc.lat, loc.lng);
   }
-  // Default: Istanbul center - always show map even with no data
+
+  // Son çare: Istanbul center - always show map even with no data
   return const LatLng(41.015137, 28.97953);
+}
+
+// Müşteri durumuna göre renk ve durum metni döndüren helper fonksiyon
+({Color color, String statusText}) _getCustomerMarkerInfo(Customer customer) {
+  // 1. Bakımı gelen → Turuncu (en yüksek öncelik)
+  if (customer.hasUpcomingMaintenance) {
+    return (color: Colors.orange, statusText: "Bakımı Gelen");
+  }
+
+  // 2. Mevcut iş olan (PENDING veya IN_PROGRESS) → Mavi
+  final hasCurrentJob =
+      customer.jobs?.any(
+        (job) => job.status == "PENDING" || job.status == "IN_PROGRESS",
+      ) ??
+      false;
+  if (hasCurrentJob) {
+    return (color: Colors.blue, statusText: "Mevcut İş");
+  }
+
+  // 3. Aktif (status ACTIVE ve işleri var) → Yeşil
+  if (customer.status == "ACTIVE" &&
+      customer.jobs != null &&
+      customer.jobs!.isNotEmpty) {
+    return (color: Colors.green, statusText: "Aktif");
+  }
+
+  // 4. Pasif (diğer durumlar) → Gri
+  return (color: Colors.grey, statusText: "Pasif");
 }
 
 Marker _customerMarker(
@@ -983,22 +1048,9 @@ Marker _customerMarker(
   VoidCallback onTap, {
   bool isHighlighted = false,
 }) {
-  // Müşteri iş durumuna göre renk belirleme
-  Color markerColor = Colors.blue; // Varsayılan: tamamlanan işler
-
-  if (customer.jobs != null && customer.jobs!.isNotEmpty) {
-    // PENDING (beklemede) veya IN_PROGRESS (işlenen) işleri kontrol et
-    final hasPending = customer.jobs!.any((job) => job.status == "PENDING");
-    final hasInProgress = customer.jobs!.any(
-      (job) => job.status == "IN_PROGRESS",
-    );
-
-    if (hasPending) {
-      markerColor = Colors.red; // Beklemede olanlar kırmızı
-    } else if (hasInProgress) {
-      markerColor = Colors.orange; // İşlenen işler turuncu
-    }
-  }
+  // Müşteri durumuna göre renk belirleme
+  final markerInfo = _getCustomerMarkerInfo(customer);
+  final markerColor = markerInfo.color;
 
   return Marker(
     point: location,

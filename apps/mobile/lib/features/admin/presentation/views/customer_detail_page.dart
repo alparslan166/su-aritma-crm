@@ -1,6 +1,7 @@
 import "dart:async";
 
 import "package:dio/dio.dart";
+import "package:flutter/foundation.dart" show debugPrint;
 import "package:flutter/material.dart";
 import "package:flutter_map/flutter_map.dart";
 import "package:geocoding/geocoding.dart";
@@ -129,11 +130,12 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
               ),
             ],
           ),
-          if (customer.nextMaintenanceDate != null) ...[
-            const SizedBox(height: 24),
-            _Section(
-              title: "Bakım Bilgileri",
-              children: [
+          // Bakım Bilgileri - Her zaman göster
+          const SizedBox(height: 24),
+          _Section(
+            title: "Bakım Bilgileri",
+            children: [
+              if (customer.nextMaintenanceDate != null) ...[
                 _Row(
                   "Sonraki Bakım Tarihi",
                   DateFormat(
@@ -154,9 +156,16 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                         ? Colors.orange
                         : null,
                   ),
+              ] else ...[
+                _Row(
+                  "Sonraki Bakım Tarihi",
+                  "Henüz belirlenmedi",
+                  valueColor: Colors.grey.shade600,
+                ),
+                _Row("Kalan Süre", "-", valueColor: Colors.grey.shade600),
               ],
-            ),
-          ],
+            ],
+          ),
           if (customer.hasDebt) ...[
             const SizedBox(height: 24),
             _Section(
@@ -204,6 +213,91 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                 ],
               ],
             ),
+          ],
+          // Borç Ödeme Geçmişi - Borç Ödeme bölümünün üzerinde (her zaman göster)
+          const SizedBox(height: 24),
+          _Section(
+            title: "Borç Ödeme Geçmişi",
+            children: [
+              if (customer.debtPaymentHistory != null &&
+                  customer.debtPaymentHistory!.isNotEmpty) ...[
+                ...customer.debtPaymentHistory!.map((payment) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    "${payment.amount.toStringAsFixed(2)} TL",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Color(0xFF10B981),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "ödedi",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 14,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    DateFormat(
+                                      "dd MMM yyyy",
+                                    ).format(payment.paidAt),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.check_circle, color: Colors.green, size: 24),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ] else ...[
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: Text(
+                      "Henüz ödeme yapılmadı",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          // Borç Ödeme formu - sadece borç varsa göster
+          if (customer.hasDebt) ...[
             const SizedBox(height: 24),
             Card(
               color: const Color(0xFF10B981).withValues(alpha: 0.05),
@@ -271,10 +365,10 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           .read(adminRepositoryProvider)
           .updateCustomer(id: customer.id, status: newStatus);
       ref.invalidate(customerDetailProvider(customer.id));
-      
+
       // Tüm filter type'lar için provider'ları refresh et
       ref.read(customerListProvider.notifier).refresh(showLoading: false);
-      
+
       // Tüm filter type'lar için ayrı ayrı refresh et
       for (final filterType in [
         CustomerFilterType.all,
@@ -330,7 +424,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
     if (confirm != true) return;
     try {
       await ref.read(adminRepositoryProvider).deleteCustomer(customer.id);
-      
+
       // Tüm filter type'lar için provider'ları refresh et
       ref.read(customerListProvider.notifier).refresh(showLoading: false);
       for (final filterType in [
@@ -345,7 +439,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
         );
         notifier.refresh(showLoading: false);
       }
-      
+
       navigator.pop();
       messenger.showSnackBar(
         SnackBar(content: Text("${customer.name} silindi")),
@@ -401,7 +495,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
     try {
       await ref.read(adminRepositoryProvider).deleteJob(job.id);
       ref.invalidate(customerDetailProvider(customerId));
-      
+
       // Tüm filter type'lar için provider'ları refresh et
       ref.read(customerListProvider.notifier).refresh(showLoading: false);
       for (final filterType in [
@@ -416,7 +510,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
         );
         notifier.refresh(showLoading: false);
       }
-      
+
       ref.invalidate(jobListProvider);
       if (context.mounted) {
         messenger.showSnackBar(SnackBar(content: Text("${job.title} silindi")));
@@ -590,7 +684,8 @@ class _PayDebtFormState extends ConsumerState<_PayDebtForm> {
           ? int.tryParse(_installmentCountController.text)
           : null;
 
-      await ref
+      // Ödeme yap (backend'den dönen customer'da debtPaymentHistory dahil)
+      final updatedCustomer = await ref
           .read(adminRepositoryProvider)
           .payCustomerDebt(
             id: widget.customerId,
@@ -598,11 +693,35 @@ class _PayDebtFormState extends ConsumerState<_PayDebtForm> {
             installmentCount: installmentCount,
           );
 
-      // Refresh customer detail and wait for it to complete
-      // Invalidate to trigger rebuild, then wait for data to load
+      // Debug: Dönen customer'da debtPaymentHistory var mı kontrol et
+      debugPrint("🔵 Ödeme sonrası dönen customer:");
+      debugPrint(
+        "   - debtPaymentHistory: ${updatedCustomer.debtPaymentHistory?.length ?? 0} adet",
+      );
+      if (updatedCustomer.debtPaymentHistory != null) {
+        for (final payment in updatedCustomer.debtPaymentHistory!) {
+          debugPrint("   - ${payment.amount} TL - ${payment.paidAt}");
+        }
+      }
+
+      // Customer detail provider'ı invalidate et ve güncel veriyi yükle
+      // Bu sayede ödeme geçmişi bölümü otomatik olarak güncellenir
       ref.invalidate(customerDetailProvider(widget.customerId));
-      // Wait for the provider to reload so UI updates immediately
-      await ref.read(customerDetailProvider(widget.customerId).future);
+      // Provider'ın yeniden yüklenmesini bekle - ödeme geçmişi dahil tüm veriler güncellenir
+      final refreshedCustomer = await ref.read(
+        customerDetailProvider(widget.customerId).future,
+      );
+
+      // Debug: Refresh sonrası customer'da debtPaymentHistory var mı kontrol et
+      debugPrint("🟢 Refresh sonrası customer:");
+      debugPrint(
+        "   - debtPaymentHistory: ${refreshedCustomer.debtPaymentHistory?.length ?? 0} adet",
+      );
+      if (refreshedCustomer.debtPaymentHistory != null) {
+        for (final payment in refreshedCustomer.debtPaymentHistory!) {
+          debugPrint("   - ${payment.amount} TL - ${payment.paidAt}");
+        }
+      }
 
       // Also refresh customer list to update filters (invalidate yerine refresh kullan)
       // Bu sayede loading state'ine düşmez, sadece liste güncellenir

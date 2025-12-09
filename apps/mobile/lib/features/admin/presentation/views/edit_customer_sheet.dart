@@ -41,6 +41,8 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
   DateTime? _installmentStartDate;
   bool _submitting = false;
   LatLng? _currentLocation; // Konum bilgisi
+  DateTime _lastMaintenanceDate = DateTime.now(); // Son bakım tarihi
+  double _nextMaintenanceMonths = 0.0; // Sonraki bakım ayı (0-12 arası)
 
   @override
   void initState() {
@@ -66,6 +68,16 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     _createdAt = customer.createdAt;
     _nextDebtDate = customer.nextDebtDate;
     _installmentStartDate = customer.installmentStartDate;
+    // Bakım tarihi - varsayılan olarak bugün veya müşterinin nextMaintenanceDate'i
+    try {
+      final nextMaintenance = customer.nextMaintenanceDate;
+      if (nextMaintenance != null) {
+        _lastMaintenanceDate = nextMaintenance;
+      }
+    } catch (e) {
+      // Hata durumunda bugünü kullan
+      _lastMaintenanceDate = DateTime.now();
+    }
 
     // Mevcut müşterinin konum bilgisini yükle
     if (customer.location != null) {
@@ -167,6 +179,14 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
         }
       }
 
+      // Hesaplanan bakım tarihi - sadece slider değeri 0'dan büyükse gönder
+      DateTime? calculatedMaintenanceDate;
+      if (_nextMaintenanceMonths > 0) {
+        calculatedMaintenanceDate = _lastMaintenanceDate.add(
+          Duration(days: (_nextMaintenanceMonths * 30).toInt()),
+        );
+      }
+
       // Update customer
       await ref
           .read(adminRepositoryProvider)
@@ -188,13 +208,18 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
             nextDebtDate: _nextDebtDate,
             installmentStartDate: _installmentStartDate,
             installmentIntervalDays: installmentIntervalDays,
+            nextMaintenanceDate: calculatedMaintenanceDate,
           );
 
       // Tüm filter type'lar için provider'ları refresh et
       // Böylece hangi sayfada olursa olsun müşteri listesi otomatik güncellenir
       // Mevcut filtreleri koruyarak refresh et (showLoading=false)
-      ref.read(customerListProvider.notifier).refresh(showLoading: false);
-      
+      try {
+        ref.read(customerListProvider.notifier).refresh(showLoading: false);
+      } catch (e) {
+        // Provider henüz initialize edilmemiş olabilir, hata yok say
+      }
+
       // Tüm filter type'lar için ayrı ayrı refresh et
       for (final filterType in [
         CustomerFilterType.all,
@@ -202,16 +227,22 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
         CustomerFilterType.upcomingMaintenance,
         CustomerFilterType.overdueInstallment,
       ]) {
-        final filterTypeKey = filterType.toString();
-        final notifier = ref.read(
-          customerListProviderForFilter(filterTypeKey).notifier,
-        );
-        // Mevcut filtreleri koruyarak refresh et (showLoading=false)
-        notifier.refresh(showLoading: false);
+        try {
+          final filterTypeKey = filterType.toString();
+          final notifier = ref.read(
+            customerListProviderForFilter(filterTypeKey).notifier,
+          );
+          // Mevcut filtreleri koruyarak refresh et (showLoading=false)
+          notifier.refresh(showLoading: false);
+        } catch (e) {
+          // Provider henüz initialize edilmemiş olabilir, hata yok say
+        }
       }
-      
+
       // Invalidate customer detail provider to refresh the detail page
       ref.invalidate(customerDetailProvider(widget.customer.id));
+      // Also refresh to ensure immediate update
+      await ref.read(customerDetailProvider(widget.customer.id).future);
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(
@@ -566,6 +597,99 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                     ),
                   ),
                 ],
+                // Bakım Bilgileri
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                Text(
+                  "Bakım Bilgileri",
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 16),
+                // Son bakım tarihi
+                TextFormField(
+                  readOnly: true,
+                  controller: TextEditingController(
+                    text: DateFormat("dd.MM.yyyy").format(_lastMaintenanceDate),
+                  ),
+                  decoration: InputDecoration(
+                    labelText: "Son bakım tarihi",
+                    hintText: "Tarih seçin",
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _lastMaintenanceDate,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _lastMaintenanceDate = picked;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Sonraki Bakım Tarihi Slider
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Sonraki Bakım Tarihi ?",
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        Text(
+                          "${_nextMaintenanceMonths.toInt()} ay",
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF2563EB),
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Slider(
+                      value: _nextMaintenanceMonths,
+                      min: 0,
+                      max: 12,
+                      divisions: 12,
+                      label: "${_nextMaintenanceMonths.toInt()} ay",
+                      onChanged: (value) {
+                        setState(() {
+                          _nextMaintenanceMonths = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Bakım Zamanı (Hesaplanan)
+                TextFormField(
+                  readOnly: true,
+                  controller: TextEditingController(
+                    text: DateFormat("dd.MM.yyyy").format(
+                      _lastMaintenanceDate.add(
+                        Duration(days: (_nextMaintenanceMonths * 30).toInt()),
+                      ),
+                    ),
+                  ),
+                  decoration: InputDecoration(
+                    labelText: "Bakım Zamanı",
+                    hintText: "Tarih hesaplanacak",
+                    suffixIcon: const Icon(Icons.calendar_today),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                  ),
+                  style: const TextStyle(color: Colors.black),
+                ),
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),
@@ -706,7 +830,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                               width: _debtHasInstallment ? 2 : 1,
                             ),
                           ),
-                          child: const Text("Taksit Var"),
+                          child: const Text("Taksitli Satış Var"),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -731,7 +855,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                               width: !_debtHasInstallment ? 2 : 1,
                             ),
                           ),
-                          child: const Text("Taksit Yok"),
+                          child: const Text("Taksitli Satış Yok"),
                         ),
                       ),
                     ],

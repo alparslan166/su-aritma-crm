@@ -418,7 +418,7 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                                   width: _debtHasInstallment ? 2 : 1,
                                 ),
                               ),
-                              child: const Text("Taksit Var"),
+                              child: const Text("Taksitli Satış Var"),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -445,7 +445,7 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                                   width: !_debtHasInstallment ? 2 : 1,
                                 ),
                               ),
-                              child: const Text("Taksit Yok"),
+                              child: const Text("Taksitli Satış Yok"),
                             ),
                           ),
                         ],
@@ -455,7 +455,7 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                         TextFormField(
                           controller: _installmentCountController,
                           decoration: const InputDecoration(
-                            labelText: "Taksit Sayısı",
+                            labelText: "Kaç taksit olacak?",
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.numbers),
                           ),

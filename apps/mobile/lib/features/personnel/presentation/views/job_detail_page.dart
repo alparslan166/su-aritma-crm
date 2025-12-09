@@ -309,12 +309,6 @@ class _DeliverySheet extends HookConsumerWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: amountController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: "Alınan Ücret (₺)"),
-          ),
-          const SizedBox(height: 12),
           DropdownMenu<int>(
             initialSelection: interval.value,
             label: const Text("Bakım süresi"),
@@ -494,6 +488,16 @@ class _DeliverySheet extends HookConsumerWidget {
               );
             }),
           ],
+          const SizedBox(height: 16),
+          // Alınan Ücret alanı - Kullanılan ürün altına eklendi
+          TextField(
+            controller: amountController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: "Alınan Ücret (₺)",
+              prefixIcon: Icon(Icons.attach_money),
+            ),
+          ),
           const SizedBox(height: 16),
           Row(
             children: [

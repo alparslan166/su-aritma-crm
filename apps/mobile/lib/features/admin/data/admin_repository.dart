@@ -494,6 +494,7 @@ class AdminRepository {
     DateTime? installmentStartDate,
     int? installmentIntervalDays,
     double? remainingDebtAmount,
+    DateTime? nextMaintenanceDate,
   }) async {
     final data = <String, dynamic>{};
     if (name != null) data["name"] = name;
@@ -521,6 +522,11 @@ class AdminRepository {
     }
     if (remainingDebtAmount != null)
       data["remainingDebtAmount"] = remainingDebtAmount;
+    if (nextMaintenanceDate != null) {
+      data["nextMaintenanceDate"] = nextMaintenanceDate
+          .toUtc()
+          .toIso8601String();
+    }
     final response = await _client.put("/customers/$id", data: data);
     return Customer.fromJson(response.data["data"] as Map<String, dynamic>);
   }
@@ -697,12 +703,18 @@ class AdminRepository {
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout) {
         debugPrint("❌ Subscription API timeout: ${e.message}");
-        debugPrint("⚠️ Backend'e bağlanılamıyor. Backend çalışıyor mu kontrol edin.");
+        debugPrint(
+          "⚠️ Backend'e bağlanılamıyor. Backend çalışıyor mu kontrol edin.",
+        );
       } else if (e.type == DioExceptionType.connectionError) {
         debugPrint("❌ Subscription API connection error: ${e.message}");
-        debugPrint("⚠️ Backend'e bağlanılamıyor. API URL doğru mu kontrol edin: ${_client.options.baseUrl}");
+        debugPrint(
+          "⚠️ Backend'e bağlanılamıyor. API URL doğru mu kontrol edin: ${_client.options.baseUrl}",
+        );
       } else if (e.response?.statusCode == 404) {
-        debugPrint("⚠️ Subscription not found (404) - Admin'in subscription'ı yok");
+        debugPrint(
+          "⚠️ Subscription not found (404) - Admin'in subscription'ı yok",
+        );
         return null;
       } else {
         debugPrint("❌ Subscription API error: ${e.type} - ${e.message}");

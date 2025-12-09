@@ -10,12 +10,8 @@ import "package:intl/intl.dart";
 import "package:flutter_map/flutter_map.dart";
 import "package:latlong2/latlong.dart";
 
-import "../../../../features/auth/domain/auth_role.dart";
-import "../../../../core/session/session_provider.dart";
 import "../../application/customer_list_notifier.dart";
-import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
-import "../../data/models/personnel.dart";
 import "../../data/models/inventory_item.dart";
 import "customers_view.dart"; // CustomerFilterType enum'ı için
 
@@ -32,7 +28,6 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _addressController = TextEditingController();
-  final _jobTitleController = TextEditingController();
   final _debtAmountController = TextEditingController();
   final _installmentCountController = TextEditingController();
   final _installmentIntervalDaysController = TextEditingController();
@@ -42,19 +37,18 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
   DateTime? _nextDebtDate;
   DateTime? _installmentStartDate;
   bool _submitting = false;
-  List<Personnel> _selectedPersonnel = [];
   final Map<String, int> _selectedMaterials = {}; // Seçilen malzemeler
   List<InventoryItem> _inventoryList =
       []; // Stok listesi (malzeme isimleri için)
   LatLng? _currentLocation; // Konum bilgisi
+  late DateTime _lastTransactionDate; // Son işlem tarihi
+  double _filterChangeMonths = 0.0; // Filtre değişim ayı (0-12 arası)
 
   @override
   void initState() {
     super.initState();
     _createdAt = DateTime.now();
-    _jobTitleController.addListener(() {
-      setState(() {}); // Buton durumunu güncelle
-    });
+    _lastTransactionDate = DateTime.now(); // Varsayılan olarak bugün
   }
 
   @override
@@ -63,7 +57,6 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
     _phoneController.dispose();
     _emailController.dispose();
     _addressController.dispose();
-    _jobTitleController.dispose();
     _debtAmountController.dispose();
     _installmentCountController.dispose();
     _installmentIntervalDaysController.dispose();
@@ -252,7 +245,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
           : null;
 
       // Create customer
-      final customer = await ref
+      await ref
           .read(adminRepositoryProvider)
           .createCustomer(
             name: _nameController.text.trim(),
@@ -271,53 +264,6 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
             installmentStartDate: _installmentStartDate,
             installmentIntervalDays: installmentIntervalDays,
           );
-
-      // If job title is provided, create a job for this customer
-      final jobTitle = _jobTitleController.text.trim();
-      if (jobTitle.isNotEmpty) {
-        try {
-          // Geocode address to get location
-          Location? location;
-          try {
-            final locations = await locationFromAddress(
-              _addressController.text.trim(),
-            );
-            if (locations.isNotEmpty) {
-              location = locations.first;
-            }
-          } catch (e) {
-            // Geocoding failed, continue without location
-          }
-
-          // Prepare material IDs from selected materials
-          final materialIds = _selectedMaterials.entries
-              .map((e) => {"inventoryItemId": e.key, "quantity": e.value})
-              .toList();
-
-          await ref
-              .read(adminRepositoryProvider)
-              .createJobForCustomer(
-                customerId: customer.id,
-                title: jobTitle,
-                latitude: location?.latitude,
-                longitude: location?.longitude,
-                locationDescription: _addressController.text.trim(),
-                personnelIds: _selectedPersonnel.isNotEmpty
-                    ? _selectedPersonnel.map((p) => p.id).toList()
-                    : null,
-                materialIds: materialIds.isNotEmpty ? materialIds : null,
-              );
-        } catch (e) {
-          // Job creation failed, but customer was created successfully
-          // Show warning but don't fail the whole operation
-          if (mounted) {
-            ErrorHandler.showWarning(
-              context,
-              "Müşteri eklendi ancak iş oluşturulamadı. ${ErrorHandler.getUserFriendlyMessage(e)}",
-            );
-          }
-        }
-      }
 
       // Tüm filter type'lar için provider'ları refresh et
       // Böylece hangi sayfada olursa olsun müşteri listesi otomatik güncellenir
@@ -341,13 +287,9 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
 
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            jobTitle.isNotEmpty ? "Müşteri ve iş eklendi" : "Müşteri eklendi",
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Müşteri eklendi")));
     } catch (error) {
       if (!mounted) return;
       ErrorHandler.showError(context, error);
@@ -380,54 +322,8 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
     }
   }
 
-  Future<void> _showPersonnelSelection() async {
-    final personnelState = ref.read(personnelListProvider);
-    List<Personnel> personnelList = [];
-
-    if (personnelState.hasValue) {
-      personnelList = personnelState.value!;
-    } else {
-      // Personel listesi yüklenmemişse, yükle
-      final asyncValue = await ref.read(personnelListProvider.future);
-      personnelList = asyncValue;
-    }
-
-    if (personnelList.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Personel bulunamadı"),
-          backgroundColor: Color(0xFFEF4444),
-        ),
-      );
-      return;
-    }
-
-    if (!mounted) return;
-    final selected = await showModalBottomSheet<List<Personnel>>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => _PersonnelSelectionSheet(
-        personnelList: personnelList,
-        initialSelection: _selectedPersonnel,
-      ),
-    );
-
-    if (selected != null && mounted) {
-      setState(() {
-        _selectedPersonnel = selected;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final session = ref.watch(authSessionProvider);
-    final isAdmin = session?.role == AuthRole.admin;
-
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -636,7 +532,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                     icon: const Icon(Icons.inventory_2),
                     label: Text(
                       _selectedMaterials.isEmpty
-                          ? "Yapılacak İşlem - Malzeme Seç"
+                          ? "Kullanılan Ürün Bilgisi"
                           : "${_selectedMaterials.length} malzeme seçildi",
                     ),
                     style: OutlinedButton.styleFrom(
@@ -695,119 +591,99 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                     }).toList(),
                   ),
                 ],
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _jobTitleController,
-                  decoration: const InputDecoration(
-                    labelText: "Yapılacak işlem bilgisi (Opsiyonel)",
-                    hintText: "Yapılacak işlem hakkında not",
-                  ),
-                  maxLines: 3,
+                // Filtre Değişim Tarihi Bölümü
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                Text(
+                  "Filtre Değişim Bilgileri",
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                if (isAdmin) ...[
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: Colors.grey.shade200, width: 1),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _jobTitleController.text.trim().isEmpty
-                              ? null
-                              : _showPersonnelSelection,
-                          borderRadius: BorderRadius.circular(16),
-                          child: Opacity(
-                            opacity: _jobTitleController.text.trim().isEmpty
-                                ? 0.5
-                                : 1.0,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 18,
-                              ),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                gradient: LinearGradient(
-                                  colors: [
-                                    const Color(
-                                      0xFF10B981,
-                                    ).withValues(alpha: 0.1),
-                                    const Color(
-                                      0xFF10B981,
-                                    ).withValues(alpha: 0.05),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF10B981,
-                                      ).withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Icon(
-                                      Icons.person_add,
-                                      color: Color(0xFF10B981),
-                                      size: 22,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    _selectedPersonnel.isEmpty
-                                        ? "Personel Ata"
-                                        : "${_selectedPersonnel.length} Personel Seçildi",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey.shade900,
-                                      letterSpacing: -0.2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                const SizedBox(height: 16),
+                // Son işlem tarihi
+                TextFormField(
+                  readOnly: true,
+                  controller: TextEditingController(
+                    text: DateFormat("dd.MM.yyyy").format(_lastTransactionDate),
+                  ),
+                  decoration: InputDecoration(
+                    labelText: "Son işlem tarihi",
+                    hintText: "Tarih seçin",
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _lastTransactionDate,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _lastTransactionDate = picked;
+                          });
+                        }
+                      },
                     ),
                   ),
-                  if (_selectedPersonnel.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _selectedPersonnel.map((personnel) {
-                        return Chip(
-                          label: Text(personnel.name),
-                          onDeleted: () {
-                            setState(() {
-                              _selectedPersonnel.remove(personnel);
-                            });
-                          },
-                          deleteIcon: const Icon(Icons.close, size: 18),
-                          backgroundColor: const Color(
-                            0xFF10B981,
-                          ).withValues(alpha: 0.1),
-                          labelStyle: const TextStyle(
-                            color: Color(0xFF10B981),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        );
-                      }).toList(),
+                ),
+                const SizedBox(height: 24),
+                // Sonraki Filtre Değişim Tarihi Slider
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Sonraki Filtre Değişim Tarihi ?",
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        Text(
+                          "${_filterChangeMonths.toInt()} ay",
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF2563EB),
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Slider(
+                      value: _filterChangeMonths,
+                      min: 0,
+                      max: 12,
+                      divisions: 12,
+                      label: "${_filterChangeMonths.toInt()} ay",
+                      onChanged: (value) {
+                        setState(() {
+                          _filterChangeMonths = value;
+                        });
+                      },
                     ),
                   ],
-                ],
+                ),
+                const SizedBox(height: 16),
+                // Filtre Değişim Zamanı (Hesaplanan)
+                TextFormField(
+                  readOnly: true,
+                  controller: TextEditingController(
+                    text: DateFormat("dd.MM.yyyy").format(
+                      _lastTransactionDate.add(
+                        Duration(days: (_filterChangeMonths * 30).toInt()),
+                      ),
+                    ),
+                  ),
+                  decoration: InputDecoration(
+                    labelText: "Filtre Değişim Zamanı",
+                    hintText: "Tarih hesaplanacak",
+                    suffixIcon: const Icon(Icons.calendar_today),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                  ),
+                  style: const TextStyle(color: Colors.black),
+                ),
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),
@@ -948,7 +824,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                               width: _debtHasInstallment ? 2 : 1,
                             ),
                           ),
-                          child: const Text("Taksit Var"),
+                          child: const Text("Taksitli Satış Var"),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -973,7 +849,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                               width: !_debtHasInstallment ? 2 : 1,
                             ),
                           ),
-                          child: const Text("Taksit Yok"),
+                          child: const Text("Taksitli Satış Yok"),
                         ),
                       ),
                     ],
@@ -983,7 +859,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                     TextFormField(
                       controller: _installmentCountController,
                       decoration: const InputDecoration(
-                        labelText: "Taksit Sayısı",
+                        labelText: "Kaç taksit olacak?",
                         prefixIcon: Icon(Icons.numbers),
                       ),
                       keyboardType: TextInputType.number,
@@ -1079,151 +955,6 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _PersonnelSelectionSheet extends ConsumerStatefulWidget {
-  const _PersonnelSelectionSheet({
-    required this.personnelList,
-    required this.initialSelection,
-  });
-
-  final List<Personnel> personnelList;
-  final List<Personnel> initialSelection;
-
-  @override
-  ConsumerState<_PersonnelSelectionSheet> createState() =>
-      _PersonnelSelectionSheetState();
-}
-
-class _PersonnelSelectionSheetState
-    extends ConsumerState<_PersonnelSelectionSheet> {
-  late Set<String> _selectedIds;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedIds = widget.initialSelection.map((p) => p.id).toSet();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Drag handle
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Personel Seç",
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              if (_selectedIds.isNotEmpty)
-                Text(
-                  "${_selectedIds.length} seçildi",
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Flexible(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: widget.personnelList.length,
-              itemBuilder: (context, index) {
-                final personnel = widget.personnelList[index];
-                final isSelected = _selectedIds.contains(personnel.id);
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: isSelected
-                          ? const Color(0xFF2563EB)
-                          : Colors.grey.shade200,
-                      width: isSelected ? 2 : 1,
-                    ),
-                  ),
-                  child: CheckboxListTile(
-                    value: isSelected,
-                    onChanged: (value) {
-                      setState(() {
-                        if (value == true) {
-                          _selectedIds.add(personnel.id);
-                        } else {
-                          _selectedIds.remove(personnel.id);
-                        }
-                      });
-                    },
-                    title: Text(
-                      personnel.name,
-                      style: TextStyle(
-                        fontWeight: isSelected
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    subtitle: Text(personnel.phone),
-                    secondary: CircleAvatar(
-                      backgroundColor: isSelected
-                          ? const Color(0xFF2563EB).withValues(alpha: 0.1)
-                          : Colors.grey.shade200,
-                      child: Text(
-                        personnel.name.isNotEmpty
-                            ? personnel.name[0].toUpperCase()
-                            : "P",
-                        style: TextStyle(
-                          color: isSelected
-                              ? const Color(0xFF2563EB)
-                              : Colors.grey.shade600,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () {
-                final selected = widget.personnelList
-                    .where((p) => _selectedIds.contains(p.id))
-                    .toList();
-                Navigator.of(context).pop(selected);
-              },
-              child: const Text("Tamam"),
-            ),
-          ),
-          SizedBox(height: MediaQuery.of(context).padding.bottom),
-        ],
       ),
     );
   }

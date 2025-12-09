@@ -1,4 +1,3 @@
-
 class Customer {
   Customer({
     required this.id,
@@ -8,6 +7,7 @@ class Customer {
     this.email,
     this.location,
     this.jobs,
+    this.debtPaymentHistory,
     this.createdAt,
     this.status = "ACTIVE",
     this.hasDebt = false,
@@ -28,6 +28,7 @@ class Customer {
   final String address;
   final CustomerLocation? location;
   final List<CustomerJob>? jobs;
+  final List<DebtPaymentHistory>? debtPaymentHistory;
   final DateTime? createdAt;
   final String status;
   final bool hasDebt;
@@ -42,14 +43,22 @@ class Customer {
 
   factory Customer.fromJson(Map<String, dynamic> json) {
     final jobsList = json["jobs"] as List<dynamic>?;
+    final debtPaymentHistoryList = json["debtPaymentHistory"] as List<dynamic>?;
     return Customer(
       id: json["id"] as String,
       name: json["name"] as String? ?? "-",
       phone: json["phone"] as String? ?? "",
       email: json["email"] as String?,
       address: json["address"] as String? ?? "",
-      location: CustomerLocation.maybeFromJson(json["location"] as Map<String, dynamic>?),
-      jobs: jobsList?.map((e) => CustomerJob.fromJson(e as Map<String, dynamic>)).toList(),
+      location: CustomerLocation.maybeFromJson(
+        json["location"] as Map<String, dynamic>?,
+      ),
+      jobs: jobsList
+          ?.map((e) => CustomerJob.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      debtPaymentHistory: debtPaymentHistoryList
+          ?.map((e) => DebtPaymentHistory.fromJson(e as Map<String, dynamic>))
+          .toList(),
       createdAt: json["createdAt"] != null
           ? DateTime.tryParse(json["createdAt"] as String)
           : null,
@@ -78,6 +87,7 @@ class Customer {
     String? address,
     CustomerLocation? location,
     List<CustomerJob>? jobs,
+    List<DebtPaymentHistory>? debtPaymentHistory,
     DateTime? createdAt,
     String? status,
     bool? hasDebt,
@@ -98,6 +108,7 @@ class Customer {
       address: address ?? this.address,
       location: location ?? this.location,
       jobs: jobs ?? this.jobs,
+      debtPaymentHistory: debtPaymentHistory ?? this.debtPaymentHistory,
       createdAt: createdAt ?? this.createdAt,
       status: status ?? this.status,
       hasDebt: hasDebt ?? this.hasDebt,
@@ -106,7 +117,8 @@ class Customer {
       installmentCount: installmentCount ?? this.installmentCount,
       nextDebtDate: nextDebtDate ?? this.nextDebtDate,
       installmentStartDate: installmentStartDate ?? this.installmentStartDate,
-      installmentIntervalDays: installmentIntervalDays ?? this.installmentIntervalDays,
+      installmentIntervalDays:
+          installmentIntervalDays ?? this.installmentIntervalDays,
       remainingDebtAmount: remainingDebtAmount ?? this.remainingDebtAmount,
       paidDebtAmount: paidDebtAmount ?? this.paidDebtAmount,
     );
@@ -130,7 +142,7 @@ class Customer {
         }
       }
     }
-    
+
     // 2. Job'lardaki ödeme durumunu kontrol et
     if (jobs != null && jobs!.isNotEmpty) {
       final hasUnpaidJob = jobs!.any((job) {
@@ -139,13 +151,14 @@ class Customer {
         final remaining = job.price! - collected;
         // Borç varsa ve ödeme durumu NOT_PAID veya PARTIAL ise
         if (remaining > 0) {
-          return job.paymentStatus == "NOT_PAID" || job.paymentStatus == "PARTIAL";
+          return job.paymentStatus == "NOT_PAID" ||
+              job.paymentStatus == "PARTIAL";
         }
         return false;
       });
       if (hasUnpaidJob) return true;
     }
-    
+
     return false;
   }
 
@@ -182,7 +195,7 @@ class Customer {
     final now = DateTime.now();
     final difference = nextDate.difference(now);
     final totalDays = difference.inDays;
-    
+
     if (totalDays < 0) {
       // Geçmiş
       final overdueDays = -totalDays;
@@ -193,7 +206,7 @@ class Customer {
       }
       return "$days gün geçti";
     }
-    
+
     final months = totalDays ~/ 30;
     final days = totalDays % 30;
     if (months > 0) {
@@ -260,7 +273,9 @@ class CustomerJob {
     if (reminders.isNotEmpty) {
       final reminder = reminders[0] as Map<String, dynamic>?;
       if (reminder != null) {
-        maintenanceDueAt = DateTime.tryParse(reminder["dueAt"] as String? ?? "");
+        maintenanceDueAt = DateTime.tryParse(
+          reminder["dueAt"] as String? ?? "",
+        );
       }
     }
     return CustomerJob(
@@ -275,6 +290,28 @@ class CustomerJob {
   }
 }
 
+class DebtPaymentHistory {
+  DebtPaymentHistory({
+    required this.id,
+    required this.amount,
+    required this.paidAt,
+  });
+
+  final String id;
+  final double amount;
+  final DateTime paidAt;
+
+  factory DebtPaymentHistory.fromJson(Map<String, dynamic> json) {
+    return DebtPaymentHistory(
+      id: json["id"] as String,
+      amount: _parseDouble(json["amount"]) ?? 0.0,
+      paidAt: json["paidAt"] != null
+          ? DateTime.tryParse(json["paidAt"] as String) ?? DateTime.now()
+          : DateTime.now(),
+    );
+  }
+}
+
 double? _parseDouble(dynamic value) {
   if (value == null) return null;
   if (value is double) return value;
@@ -285,4 +322,3 @@ double? _parseDouble(dynamic value) {
   }
   return null;
 }
-

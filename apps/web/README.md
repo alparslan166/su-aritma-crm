@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ana Admin Paneli
 
-## Getting Started
+Su Arıtma CRM sisteminin ana admin web paneli.
 
-First, run the development server:
+## Gereksinimler
+
+1. **ANA rolünde bir admin hesabı** (veritabanında)
+2. **Backend API'nin çalışıyor olması**
+3. **API URL'inin ayarlanması**
+
+## Kurulum
+
+### 1. ANA Admin Hesabı Oluşturma
+
+#### Yöntem 1: Railway Dashboard'dan DATABASE_URL ile (Önerilen)
+
+1. Railway Dashboard → PostgreSQL servisi → Variables → `DATABASE_URL`'i kopyalayın
+2. `apps/backend/.env` dosyasına ekleyin:
+   ```bash
+   DATABASE_URL="postgresql://..."
+   ```
+3. Script'i çalıştırın:
+   ```bash
+   cd apps/backend
+   npm run create:ana-admin alp84202@gmail.com 123456 "Alparslan"
+   ```
+
+#### Yöntem 2: Railway CLI ile
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Railway projesine bağlan (eğer bağlı değilse)
+cd apps/backend
+railway link
+
+# Servis seç (backend servisini seçin)
+railway service
+
+# Railway'de script'i çalıştır
+railway run npm run create:ana-admin alp84202@gmail.com 123456 "Alparslan"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+#### Yöntem 3: Varsayılan bilgilerle
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd apps/backend
+npm run create:ana-admin
+# Email: ana@admin.com
+# Password: admin123
+# Name: Ana Admin
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Not:** 
+- Yöntem 1 en kolay ve hızlı yöntemdir
+- Railway CLI kullanmak için önce `railway link` ve `railway service` ile servis seçmeniz gerekebilir
 
-## Learn More
+### 2. Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+Web uygulaması için `.env.local` dosyası oluşturun:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+cd apps/web
+echo "NEXT_PUBLIC_API_URL=http://localhost:3001/api" > .env.local
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Production için:**
+```bash
+echo "NEXT_PUBLIC_API_URL=https://your-railway-app.railway.app/api" > .env.local
+```
 
-## Deploy on Vercel
+### 3. Uygulamayı Çalıştırma
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+cd apps/web
+npm install
+npm run dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Uygulama `http://localhost:3000` adresinde çalışacak.
+
+## Giriş
+
+1. Tarayıcıda `http://localhost:3000/login` adresine gidin
+2. ANA admin hesabınızın email ve şifresini girin
+3. Giriş yaptıktan sonra admin listesi sayfasına yönlendirileceksiniz
+
+## Özellikler
+
+- ✅ Tüm adminleri listeleme
+- ✅ Admin detaylarını görüntüleme
+- ✅ ALT adminleri silme (ANA admin silinemez)
+- ✅ Abonelik durumlarını görüntüleme
+
+## Notlar
+
+- Sadece **ANA** rolündeki adminler web paneline giriş yapabilir
+- ALT adminler mobil uygulama üzerinden giriş yapabilir
+- Token localStorage'da saklanır
