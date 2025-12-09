@@ -61,7 +61,7 @@ class CustomerListNotifier extends StateNotifier<AsyncValue<List<Customer>>> {
         hasUpcomingMaintenance: _hasUpcomingMaintenance,
         hasOverdueInstallment: _hasOverdueInstallment,
       );
-      print("✅ fetchCustomers başarılı, ${customers.length} müşteri döndü");
+      // print("✅ fetchCustomers başarılı, ${customers.length} müşteri döndü");
       state = AsyncValue.data(customers);
     } catch (error, stackTrace) {
       print("❌ fetchCustomers hatası: $error");

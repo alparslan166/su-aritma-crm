@@ -94,18 +94,18 @@ final apiClientProvider = Provider<Dio>((ref) {
     ),
   );
 
-  // Logger sadece debug mode'da aktif
-  if (kDebugMode) {
-    dio.interceptors.add(
-      PrettyDioLogger(
-        requestHeader: false,
-        requestBody: true,
-        responseHeader: false,
-        responseBody: true,
-        compact: true,
-      ),
-    );
-  }
+  // Logger devre dışı (kullanıcı isteği üzerine kapatıldı)
+  // if (kDebugMode) {
+  //   dio.interceptors.add(
+  //     PrettyDioLogger(
+  //       requestHeader: false,
+  //       requestBody: true,
+  //       responseHeader: false,
+  //       responseBody: true,
+  //       compact: true,
+  //     ),
+  //   );
+  // }
 
   return dio;
 });
