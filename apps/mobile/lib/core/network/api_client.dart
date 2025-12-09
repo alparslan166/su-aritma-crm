@@ -1,7 +1,7 @@
 import "package:dio/dio.dart";
 import "package:flutter/foundation.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
-import "package:pretty_dio_logger/pretty_dio_logger.dart";
+// import "package:pretty_dio_logger/pretty_dio_logger.dart"; // Devre dışı
 
 import "../../features/auth/domain/auth_role.dart";
 import "../constants/app_config.dart";
