@@ -185,6 +185,14 @@ export const updateCustomerHandler = async (req: Request, res: Response, next: N
       "🔵 Backend Controller - payload.nextMaintenanceDate:",
       payload.nextMaintenanceDate,
     );
+    logger.debug(
+      "🔵 Backend Controller - payload.nextMaintenanceDate type:",
+      typeof payload.nextMaintenanceDate,
+    );
+    logger.debug(
+      "🔵 Backend Controller - payload.nextMaintenanceDate !== undefined:",
+      payload.nextMaintenanceDate !== undefined,
+    );
     const data = await customerService.update(adminId, id, {
       ...payload,
       email: payload.email === "" ? undefined : payload.email,
