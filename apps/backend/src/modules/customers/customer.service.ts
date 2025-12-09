@@ -528,13 +528,32 @@ class CustomerService {
       "🔵 Backend Service - updateData.nextMaintenanceDate:",
       updateData.nextMaintenanceDate,
     );
+    logger.debug(
+      "🔵 Backend Service - updateData (full):",
+      JSON.stringify(updateData, null, 2),
+    );
     const updatedCustomer = await prisma.customer.update({
       where: { id: customerId },
       data: updateData,
+      include: {
+        debtPaymentHistory: true,
+      },
     });
     logger.debug(
       "🔵 Backend Service - updatedCustomer.nextMaintenanceDate:",
       updatedCustomer.nextMaintenanceDate,
+    );
+    logger.debug(
+      "🔵 Backend Service - updatedCustomer (full):",
+      JSON.stringify(
+        {
+          id: updatedCustomer.id,
+          name: updatedCustomer.name,
+          nextMaintenanceDate: updatedCustomer.nextMaintenanceDate,
+        },
+        null,
+        2,
+      ),
     );
 
     // Emit customer update event
