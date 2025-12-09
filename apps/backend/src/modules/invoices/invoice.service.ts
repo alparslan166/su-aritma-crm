@@ -86,6 +86,11 @@ class InvoiceService {
     // Get job date (deliveredAt or scheduledAt or createdAt)
     const jobDate = job.deliveredAt ?? job.scheduledAt ?? job.createdAt ?? new Date();
 
+    // Customer bilgileri - job.customer nullable olabilir
+    if (!job.customer) {
+      throw new AppError("Job must have a customer to create an invoice", 400);
+    }
+
     // Create invoice
     const invoice = await prisma.invoice.create({
       data: {
