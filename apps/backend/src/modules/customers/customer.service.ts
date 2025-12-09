@@ -31,7 +31,7 @@ type CreateCustomerPayload = {
 
 type UpdateCustomerPayload = Partial<CreateCustomerPayload> & {
   remainingDebtAmount?: number;
-  nextMaintenanceDate?: string;
+  nextMaintenanceDate?: string | null;
 };
 
 type CustomerListFilters = {

@@ -77,7 +77,7 @@ const createSchema = z
 
 const updateSchema = createSchema.partial().extend({
   remainingDebtAmount: z.number().nonnegative().optional(),
-  nextMaintenanceDate: z.string().datetime().optional(),
+  nextMaintenanceDate: z.string().datetime().nullable().optional(),
 });
 
 export const listCustomersHandler = async (req: Request, res: Response, next: NextFunction) => {
