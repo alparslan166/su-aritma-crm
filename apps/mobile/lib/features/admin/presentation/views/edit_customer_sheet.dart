@@ -218,55 +218,29 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
 
       // Update customer
       // nextMaintenanceDate sadece kullanıcı değişiklik yaptıysa gönder
-      if (_maintenanceDateChanged) {
-        // Kullanıcı değişiklik yaptıysa, nextMaintenanceDate'i gönder
-        await ref
-            .read(adminRepositoryProvider)
-            .updateCustomer(
-              id: widget.customer.id,
-              name: _nameController.text.trim(),
-              phone: _phoneController.text.trim(),
-              address: _addressController.text.trim(),
-              email: _emailController.text.trim().isEmpty
-                  ? null
-                  : _emailController.text.trim(),
-              location: locationData, // GPS konumunu direkt kullan
-              createdAt: _createdAt,
-              hasDebt: hasDebt,
-              debtAmount: debtAmount,
-              remainingDebtAmount: remainingDebtAmount,
-              hasInstallment: hasInstallment,
-              installmentCount: installmentCount,
-              nextDebtDate: _nextDebtDate,
-              installmentStartDate: _installmentStartDate,
-              installmentIntervalDays: installmentIntervalDays,
-              nextMaintenanceDate: calculatedMaintenanceDate, // null veya tarih
-            );
-      } else {
-        // Kullanıcı değişiklik yapmadıysa, nextMaintenanceDate'i hiç gönderme (undefined)
-        await ref
-            .read(adminRepositoryProvider)
-            .updateCustomer(
-              id: widget.customer.id,
-              name: _nameController.text.trim(),
-              phone: _phoneController.text.trim(),
-              address: _addressController.text.trim(),
-              email: _emailController.text.trim().isEmpty
-                  ? null
-                  : _emailController.text.trim(),
-              location: locationData, // GPS konumunu direkt kullan
-              createdAt: _createdAt,
-              hasDebt: hasDebt,
-              debtAmount: debtAmount,
-              remainingDebtAmount: remainingDebtAmount,
-              hasInstallment: hasInstallment,
-              installmentCount: installmentCount,
-              nextDebtDate: _nextDebtDate,
-              installmentStartDate: _installmentStartDate,
-              installmentIntervalDays: installmentIntervalDays,
-              // nextMaintenanceDate parametresi hiç gönderilmiyor (undefined)
-            );
-      }
+      await ref
+          .read(adminRepositoryProvider)
+          .updateCustomer(
+            id: widget.customer.id,
+            name: _nameController.text.trim(),
+            phone: _phoneController.text.trim(),
+            address: _addressController.text.trim(),
+            email: _emailController.text.trim().isEmpty
+                ? null
+                : _emailController.text.trim(),
+            location: locationData, // GPS konumunu direkt kullan
+            createdAt: _createdAt,
+            hasDebt: hasDebt,
+            debtAmount: debtAmount,
+            remainingDebtAmount: remainingDebtAmount,
+            hasInstallment: hasInstallment,
+            installmentCount: installmentCount,
+            nextDebtDate: _nextDebtDate,
+            installmentStartDate: _installmentStartDate,
+            installmentIntervalDays: installmentIntervalDays,
+            nextMaintenanceDate: calculatedMaintenanceDate, // null veya tarih
+            sendNextMaintenanceDate: _maintenanceDateChanged, // Sadece değişiklik yapıldıysa gönder
+          );
 
       // Tüm filter type'lar için provider'ları refresh et
       // Böylece hangi sayfada olursa olsun müşteri listesi otomatik güncellenir

@@ -509,8 +509,8 @@ class AdminRepository {
     DateTime? installmentStartDate,
     int? installmentIntervalDays,
     double? remainingDebtAmount,
-    DateTime?
-    nextMaintenanceDate, // null gönderilirse temizlenir, undefined gönderilirse korunur
+    DateTime? nextMaintenanceDate, // null gönderilirse temizlenir, undefined gönderilirse korunur
+    bool sendNextMaintenanceDate = false, // nextMaintenanceDate gönderilmeli mi? (null olsa bile)
   }) async {
     final data = <String, dynamic>{};
     if (name != null) data["name"] = name;
@@ -539,25 +539,23 @@ class AdminRepository {
     if (remainingDebtAmount != null)
       data["remainingDebtAmount"] = remainingDebtAmount;
     // nextMaintenanceDate gönder
-    // Eğer null ise, backend'de undefined kontrolü yapıldığı için
-    // null göndermek için özel bir işaret kullanıyoruz
-    // Backend'de "CLEAR_MAINTENANCE_DATE" string'i null olarak algılanacak
-    // Şimdilik, null göndermek için özel bir işaret kullanmıyoruz
-    // Eğer null gönderilmek isteniyorsa, backend'de undefined kontrolü yapıldığı için
-    // null göndermek için özel bir işaret kullanmamız gerekiyor
-    // Şimdilik, null göndermeyi denemiyoruz
-    // NOT: nextMaintenanceDate sadece değişiklik yapıldığında gönderilmeli
+    // NOT: nextMaintenanceDate parametresi sadece değişiklik yapıldığında gönderilir
     // Eğer null gönderilirse, backend'de null olarak set edilir (temizlenir)
     // Eğer hiç gönderilmezse (undefined), backend'de mevcut değer korunur
-    if (nextMaintenanceDate != null) {
-      data["nextMaintenanceDate"] = nextMaintenanceDate
-          .toUtc()
-          .toIso8601String();
+    // sendNextMaintenanceDate flag'i true ise, null olsa bile gönderilmeli
+    if (sendNextMaintenanceDate) {
+      if (nextMaintenanceDate != null) {
+        data["nextMaintenanceDate"] = nextMaintenanceDate
+            .toUtc()
+            .toIso8601String();
+      } else {
+        // Null göndermek için null olarak gönder
+        // Backend'de payload.nextMaintenanceDate !== undefined kontrolü var
+        // null gönderilirse !== undefined true olur ve işlenir (null olarak set edilir)
+        data["nextMaintenanceDate"] = null;
+      }
     }
-    // Eğer nextMaintenanceDate null ise ve gönderilmek isteniyorsa,
-    // backend'de undefined kontrolü yapıldığı için null göndermek için
-    // özel bir işaret kullanmamız gerekiyor
-    // Şimdilik, null göndermeyi denemiyoruz
+    // Eğer sendNextMaintenanceDate false ise, nextMaintenanceDate hiç gönderilmez (undefined)
     final response = await _client.put("/customers/$id", data: data);
     return Customer.fromJson(response.data["data"] as Map<String, dynamic>);
   }
