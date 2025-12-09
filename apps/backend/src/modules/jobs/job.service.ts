@@ -219,8 +219,9 @@ class JobService {
         try {
           logger.debug("🔄 Transaction started");
 
-          // Resolve customer
+          // Resolve customer (opsiyonel)
           let customer;
+          let customerId: string | null = null;
           if (payload.customerId) {
             customer = await tx.customer.findFirst({
               where: { id: payload.customerId, adminId },
@@ -228,18 +229,21 @@ class JobService {
             if (!customer) {
               throw new AppError("Customer not found", 404);
             }
+            customerId = customer.id;
             logger.debug("✅ Customer found by ID:", customer.id);
           } else if (payload.customer) {
             customer = await this.resolveCustomer(adminId, payload.customer, tx);
+            customerId = customer.id;
             logger.debug("✅ Customer resolved:", customer.id);
           } else {
-            throw new AppError("Customer or customerId is required", 400);
+            // Customer opsiyonel - müşteri seçilmeden de iş oluşturulabilir
+            logger.debug("ℹ️ No customer provided - creating job without customer");
           }
 
           logger.debug("🔄 Creating job...");
           const jobData = {
             adminId,
-            customerId: customer.id,
+            customerId: customerId,
             title: payload.title,
             scheduledAt: payload.scheduledAt,
             location: payload.location as Prisma.InputJsonValue,

@@ -24,10 +24,9 @@ const customerSchema = z.object({
   address: z.string().min(3),
 });
 
-const jobBaseSchema = z
-  .object({
+const jobBaseSchema = z.object({
   title: z.string().min(2),
-    customer: customerSchema.optional(),
+  customer: customerSchema.optional(),
   customerId: z.string().optional(),
   scheduledAt: z.string().datetime().optional(),
   location: z.record(z.string(), z.any()).refine((val) => Object.keys(val).length > 0, {
@@ -46,11 +45,8 @@ const jobBaseSchema = z
       }),
     )
     .optional(),
-  })
-  .refine((data) => data.customer || data.customerId, {
-    message: "Either customer or customerId must be provided",
-    path: ["customer"],
 });
+// Customer artık opsiyonel - müşteri seçilmeden de iş oluşturulabilir
 
 const jobUpdateSchema = jobBaseSchema.partial().extend({
   status: z.nativeEnum(JobStatus).optional(),

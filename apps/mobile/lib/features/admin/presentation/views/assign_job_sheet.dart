@@ -103,40 +103,50 @@ class _AssignJobSheetState extends ConsumerState<AssignJobSheet> {
       );
       return;
     }
-    if (_selectedCustomer == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Lütfen müşteri seçin")));
-      return;
-    }
+    // Müşteri seçimi artık opsiyonel
 
     setState(() {
       _submitting = true;
     });
 
     try {
-      // Geocode address to get location
-      Location? location;
-      try {
-        final locations = await locationFromAddress(_selectedCustomer!.address);
-        if (locations.isNotEmpty) {
-          location = locations.first;
-        }
-      } catch (e) {
-        // Geocoding failed, continue without location
-      }
-
-      await ref
-          .read(adminRepositoryProvider)
-          .createJobForCustomer(
-            customerId: _selectedCustomer!.id,
-            title: _titleController.text.trim(),
-            personnelIds: _selectedPersonnelList.map((p) => p.id).toList(),
-            latitude: location?.latitude,
-            longitude: location?.longitude,
-            locationDescription: _selectedCustomer!.address,
-            materialIds: null,
+      if (_selectedCustomer != null) {
+        // Müşteri seçilmişse, mevcut müşteriye iş ata
+        // Geocode address to get location
+        Location? location;
+        try {
+          final locations = await locationFromAddress(
+            _selectedCustomer!.address,
           );
+          if (locations.isNotEmpty) {
+            location = locations.first;
+          }
+        } catch (e) {
+          // Geocoding failed, continue without location
+        }
+
+        await ref
+            .read(adminRepositoryProvider)
+            .createJobForCustomer(
+              customerId: _selectedCustomer!.id,
+              title: _titleController.text.trim(),
+              personnelIds: _selectedPersonnelList.map((p) => p.id).toList(),
+              latitude: location?.latitude,
+              longitude: location?.longitude,
+              locationDescription: _selectedCustomer!.address,
+              materialIds: null,
+            );
+      } else {
+        // Müşteri seçilmemişse, müşteri olmadan iş oluştur
+        await ref
+            .read(adminRepositoryProvider)
+            .createJob(
+              title: _titleController.text.trim(),
+              // Customer bilgileri gönderilmiyor - backend'de opsiyonel
+              personnelIds: _selectedPersonnelList.map((p) => p.id).toList(),
+              materialIds: null,
+            );
+      }
 
       // Refresh lists
       ref.invalidate(personnelListProvider);

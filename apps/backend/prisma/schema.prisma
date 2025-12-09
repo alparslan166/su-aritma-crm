@@ -195,8 +195,8 @@ model Job {
   title                         String
   admin                         Admin                  @relation(fields: [adminId], references: [id])
   adminId                       String
-  customer                      Customer               @relation(fields: [customerId], references: [id])
-  customerId                    String
+  customer                      Customer?              @relation(fields: [customerId], references: [id])
+  customerId                    String?
   operation                     Operation?             @relation(fields: [operationId], references: [id])
   operationId                   String?
   operations                    JobOperation[]

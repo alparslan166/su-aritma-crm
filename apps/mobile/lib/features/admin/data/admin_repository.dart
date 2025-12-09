@@ -296,9 +296,9 @@ class AdminRepository {
 
   Future<void> createJob({
     required String title,
-    required String customerName,
-    required String customerPhone,
-    required String customerAddress,
+    String? customerName,
+    String? customerPhone,
+    String? customerAddress,
     String? customerEmail,
     DateTime? scheduledAt,
     String? notes,
@@ -316,26 +316,38 @@ class AdminRepository {
     if (locationDescription != null && locationDescription.isNotEmpty) {
       location["address"] = locationDescription;
     }
-    if (location.isEmpty) {
+    if (location.isEmpty &&
+        customerAddress != null &&
+        customerAddress.isNotEmpty) {
       location["address"] = customerAddress;
     }
-
-    final customerData = <String, dynamic>{
-      "name": customerName,
-      "phone": customerPhone,
-      "address": customerAddress,
-    };
-
-    // Only include email if it's not empty and is a valid email
-    if (customerEmail != null && customerEmail.trim().isNotEmpty) {
-      customerData["email"] = customerEmail.trim();
+    // Location boşsa default bir değer ekle (backend zorunlu kılıyor)
+    if (location.isEmpty) {
+      location["address"] = "Konum bilgisi yok";
     }
 
-    final requestData = <String, dynamic>{
-      "title": title,
-      "customer": customerData,
-      "location": location,
-    };
+    final requestData = <String, dynamic>{"title": title, "location": location};
+
+    // Customer bilgileri sadece sağlanmışsa ekle
+    if (customerName != null &&
+        customerName.isNotEmpty &&
+        customerPhone != null &&
+        customerPhone.isNotEmpty &&
+        customerAddress != null &&
+        customerAddress.isNotEmpty) {
+      final customerData = <String, dynamic>{
+        "name": customerName,
+        "phone": customerPhone,
+        "address": customerAddress,
+      };
+
+      // Only include email if it's not empty and is a valid email
+      if (customerEmail != null && customerEmail.trim().isNotEmpty) {
+        customerData["email"] = customerEmail.trim();
+      }
+
+      requestData["customer"] = customerData;
+    }
 
     // Only include optional fields if they have values
     if (scheduledAt != null) {
