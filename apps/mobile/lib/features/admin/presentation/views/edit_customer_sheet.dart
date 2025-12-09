@@ -192,31 +192,25 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       }
 
       // Hesaplanan bakım tarihi - sadece kullanıcı değişiklik yaptıysa gönder
-      // Eğer kullanıcı hiçbir değişiklik yapmadıysa, mevcut değer korunur (undefined gönderilmez)
+      // Her zaman calculatedMaintenanceDate'i hesapla
+      // Eğer slider 0 ise null gönder (bakım tarihini temizle)
+      // Eğer slider > 0 ise hesaplanan tarihi gönder
       DateTime? calculatedMaintenanceDate;
-      if (_maintenanceDateChanged) {
-        // Kullanıcı değişiklik yaptıysa, slider değerine göre hesapla
-        if (_nextMaintenanceMonths > 0) {
-          calculatedMaintenanceDate = _lastMaintenanceDate.add(
-            Duration(days: (_nextMaintenanceMonths * 30).toInt()),
-          );
-        } else {
-          // Slider 0 ise bakım tarihini temizle (null gönder)
-          calculatedMaintenanceDate = null;
-        }
-        debugPrint(
-          "🔵 Frontend - Bakım tarihi değiştirildi: _maintenanceDateChanged=$_maintenanceDateChanged, _nextMaintenanceMonths=$_nextMaintenanceMonths, _lastMaintenanceDate=$_lastMaintenanceDate, calculatedMaintenanceDate=$calculatedMaintenanceDate",
+      if (_nextMaintenanceMonths > 0) {
+        calculatedMaintenanceDate = _lastMaintenanceDate.add(
+          Duration(days: (_nextMaintenanceMonths * 30).toInt()),
         );
       } else {
-        debugPrint(
-          "🔵 Frontend - Bakım tarihi değiştirilmedi: _maintenanceDateChanged=$_maintenanceDateChanged, _nextMaintenanceMonths=$_nextMaintenanceMonths",
-        );
+        // Slider 0 ise bakım tarihini temizle (null gönder)
+        calculatedMaintenanceDate = null;
       }
-      // Eğer _maintenanceDateChanged false ise, calculatedMaintenanceDate undefined kalır
-      // ve backend'de mevcut değer korunur
 
       debugPrint(
-        "🔵 Frontend - updateCustomer çağrılıyor: sendNextMaintenanceDate=$_maintenanceDateChanged, nextMaintenanceDate=$calculatedMaintenanceDate",
+        "🔵 Frontend - Bakım tarihi hesaplandı: _maintenanceDateChanged=$_maintenanceDateChanged, _nextMaintenanceMonths=$_nextMaintenanceMonths, _lastMaintenanceDate=$_lastMaintenanceDate, calculatedMaintenanceDate=$calculatedMaintenanceDate",
+      );
+
+      debugPrint(
+        "🔵 Frontend - updateCustomer çağrılıyor: sendNextMaintenanceDate=true, nextMaintenanceDate=$calculatedMaintenanceDate",
       );
 
       // GPS konumunu location formatına çevir
@@ -252,7 +246,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
             installmentIntervalDays: installmentIntervalDays,
             nextMaintenanceDate: calculatedMaintenanceDate, // null veya tarih
             sendNextMaintenanceDate:
-                _maintenanceDateChanged, // Sadece değişiklik yapıldıysa gönder
+                true, // Her zaman gönder (null veya tarih)
           );
 
       // Tüm filter type'lar için provider'ları refresh et
