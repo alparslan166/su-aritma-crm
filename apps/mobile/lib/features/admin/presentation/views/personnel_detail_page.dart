@@ -61,9 +61,7 @@ class _AdminPersonnelDetailPageState
       ),
       error: (error, _) => Scaffold(
         appBar: const AdminAppBar(title: Text("Personel Detayı")),
-        body: Center(
-          child: Text(ErrorHandler.getUserFriendlyMessage(error)),
-        ),
+        body: Center(child: Text(ErrorHandler.getUserFriendlyMessage(error))),
       ),
     );
   }
@@ -660,8 +658,8 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
             loginCode: _loginCodeController.text.trim().isEmpty
                 ? "" // Empty string triggers backend to generate new code
                 : _loginCodeController.text.trim() != widget.personnel.loginCode
-                    ? _loginCodeController.text.trim()
-                    : null, // null means keep existing
+                ? _loginCodeController.text.trim()
+                : null, // null means keep existing
           );
       ref.invalidate(personnelDetailProvider(widget.personnelId));
       ref.invalidate(personnelListProvider);
@@ -684,7 +682,6 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final dateText = DateFormat("dd MMM yyyy").format(_hireDate);
     return Padding(
       padding: const EdgeInsets.all(24),
       child: SingleChildScrollView(
@@ -813,17 +810,28 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
                   helperText: "Boş bırakılırsa yeni kod otomatik oluşturulur",
                 ),
                 maxLength: 20,
-                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                buildCounter:
+                    (
+                      context, {
+                      required currentLength,
+                      required isFocused,
+                      maxLength,
+                    }) => null,
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: Text("İşe giriş tarihi: $dateText")),
-                  TextButton(
+              TextFormField(
+                readOnly: true,
+                controller: TextEditingController(
+                  text: DateFormat("dd.MM.yyyy").format(_hireDate),
+                ),
+                decoration: InputDecoration(
+                  labelText: "İşe Giriş Tarihi",
+                  hintText: "Tarih seçin",
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.calendar_today),
                     onPressed: _pickDate,
-                    child: const Text("Tarih seç"),
                   ),
-                ],
+                ),
               ),
               const SizedBox(height: 12),
               DropdownMenu<String>(

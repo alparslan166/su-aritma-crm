@@ -423,14 +423,18 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                             : null,
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              "Planlanan tarih: ${scheduledAt != null ? DateFormat("dd MMM yyyy").format(scheduledAt!) : "Seçilmedi"}",
-                            ),
-                          ),
-                          TextButton(
+                      TextFormField(
+                        readOnly: true,
+                        controller: TextEditingController(
+                          text: scheduledAt != null
+                              ? DateFormat("dd.MM.yyyy").format(scheduledAt!)
+                              : "",
+                        ),
+                        decoration: InputDecoration(
+                          labelText: "Planlanan Tarih",
+                          hintText: "Tarih seçin",
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.calendar_today),
                             onPressed: () async {
                               final picked = await showDatePicker(
                                 context: context,
@@ -448,9 +452,8 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                                 });
                               }
                             },
-                            child: const Text("Seç"),
                           ),
-                        ],
+                        ),
                       ),
                       const SizedBox(height: 12),
                       TextFormField(

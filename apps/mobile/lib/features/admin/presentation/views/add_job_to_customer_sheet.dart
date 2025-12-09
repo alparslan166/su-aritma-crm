@@ -157,9 +157,6 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final dateText = _scheduledAt != null
-        ? DateFormat("dd MMM yyyy").format(_scheduledAt!)
-        : "Tarih seç";
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -250,14 +247,21 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                       },
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(child: Text("Planlanan Tarih: $dateText")),
-                        TextButton(
+                    TextFormField(
+                      readOnly: true,
+                      controller: TextEditingController(
+                        text: _scheduledAt != null
+                            ? DateFormat("dd.MM.yyyy").format(_scheduledAt!)
+                            : "",
+                      ),
+                      decoration: InputDecoration(
+                        labelText: "Planlanan Tarih",
+                        hintText: "Tarih seçin",
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.calendar_today),
                           onPressed: _pickDate,
-                          child: const Text("Tarih seç"),
                         ),
-                      ],
+                      ),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
@@ -476,15 +480,20 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                         ),
                         const SizedBox(height: 12),
                         // Taksit Başlama Tarihi
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                "Taksit Başlama Tarihi: ${_installmentStartDate != null ? DateFormat("dd MMM yyyy").format(_installmentStartDate!) : "Seçilmedi"}",
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ),
-                            TextButton.icon(
+                        TextFormField(
+                          readOnly: true,
+                          controller: TextEditingController(
+                            text: _installmentStartDate != null
+                                ? DateFormat(
+                                    "dd.MM.yyyy",
+                                  ).format(_installmentStartDate!)
+                                : "",
+                          ),
+                          decoration: InputDecoration(
+                            labelText: "Taksit Başlama Tarihi",
+                            hintText: "Tarih seçin",
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.calendar_today),
                               onPressed: () async {
                                 final picked = await showDatePicker(
                                   context: context,
@@ -501,10 +510,8 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                                   });
                                 }
                               },
-                              icon: const Icon(Icons.calendar_today, size: 18),
-                              label: const Text("Tarih Seç"),
                             ),
-                          ],
+                          ),
                         ),
                         const SizedBox(height: 12),
                         // Ödeme Tekrar Günü

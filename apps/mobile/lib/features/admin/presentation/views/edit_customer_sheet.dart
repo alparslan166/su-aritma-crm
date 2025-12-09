@@ -43,6 +43,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
   LatLng? _currentLocation; // Konum bilgisi
   DateTime _lastMaintenanceDate = DateTime.now(); // Son bakım tarihi
   double _nextMaintenanceMonths = 0.0; // Sonraki bakım ayı (0-12 arası)
+  bool _maintenanceDateChanged = false; // Bakım tarihi değiştirildi mi?
 
   @override
   void initState() {
@@ -72,11 +73,21 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     try {
       final nextMaintenance = customer.nextMaintenanceDate;
       if (nextMaintenance != null) {
+        // Eğer nextMaintenanceDate varsa, bunu son bakım tarihi olarak kullan
         _lastMaintenanceDate = nextMaintenance;
+        // Slider değerini 0 olarak başlat (kullanıcı değiştirebilir)
+        _nextMaintenanceMonths = 0.0;
+      } else {
+        // Eğer nextMaintenanceDate yoksa, bugünü kullan
+        _lastMaintenanceDate = DateTime.now();
+        _nextMaintenanceMonths = 0.0;
       }
+      _maintenanceDateChanged = false; // Başlangıçta değişiklik yok
     } catch (e) {
       // Hata durumunda bugünü kullan
       _lastMaintenanceDate = DateTime.now();
+      _nextMaintenanceMonths = 0.0;
+      _maintenanceDateChanged = false;
     }
 
     // Mevcut müşterinin konum bilgisini yükle
@@ -179,15 +190,34 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
         }
       }
 
-      // Hesaplanan bakım tarihi - sadece slider değeri 0'dan büyükse gönder
+      // Hesaplanan bakım tarihi - sadece kullanıcı değişiklik yaptıysa gönder
+      // Eğer kullanıcı hiçbir değişiklik yapmadıysa, mevcut değer korunur (undefined gönderilmez)
       DateTime? calculatedMaintenanceDate;
-      if (_nextMaintenanceMonths > 0) {
-        calculatedMaintenanceDate = _lastMaintenanceDate.add(
-          Duration(days: (_nextMaintenanceMonths * 30).toInt()),
-        );
+      if (_maintenanceDateChanged) {
+        // Kullanıcı değişiklik yaptıysa, slider değerine göre hesapla
+        if (_nextMaintenanceMonths > 0) {
+          calculatedMaintenanceDate = _lastMaintenanceDate.add(
+            Duration(days: (_nextMaintenanceMonths * 30).toInt()),
+          );
+        } else {
+          // Slider 0 ise bakım tarihini temizle (null gönder)
+          calculatedMaintenanceDate = null;
+        }
+      }
+      // Eğer _maintenanceDateChanged false ise, calculatedMaintenanceDate undefined kalır
+      // ve backend'de mevcut değer korunur
+
+      // GPS konumunu location formatına çevir
+      Map<String, dynamic>? locationData;
+      if (_currentLocation != null) {
+        locationData = {
+          "latitude": _currentLocation!.latitude,
+          "longitude": _currentLocation!.longitude,
+        };
       }
 
       // Update customer
+      // nextMaintenanceDate sadece kullanıcı değişiklik yaptıysa gönder
       await ref
           .read(adminRepositoryProvider)
           .updateCustomer(
@@ -198,7 +228,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
             email: _emailController.text.trim().isEmpty
                 ? null
                 : _emailController.text.trim(),
-            location: null,
+            location: locationData, // GPS konumunu direkt kullan
             createdAt: _createdAt,
             hasDebt: hasDebt,
             debtAmount: debtAmount,
@@ -208,7 +238,9 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
             nextDebtDate: _nextDebtDate,
             installmentStartDate: _installmentStartDate,
             installmentIntervalDays: installmentIntervalDays,
-            nextMaintenanceDate: calculatedMaintenanceDate,
+            nextMaintenanceDate: _maintenanceDateChanged
+                ? calculatedMaintenanceDate
+                : null, // Değişiklik yoksa undefined gönder (mevcut değer korunur)
           );
 
       // Tüm filter type'lar için provider'ları refresh et
@@ -414,36 +446,43 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
-                // Kayıt Tarihi
-                if (_createdAt != null)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          "Kayıt Tarihi: ${DateFormat("dd MMM yyyy").format(_createdAt!)}",
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: _createdAt!,
-                            firstDate: DateTime.now().subtract(
-                              const Duration(days: 3650),
-                            ),
-                            lastDate: DateTime.now(),
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _createdAt = picked;
-                            });
-                          }
-                        },
-                        child: const Text("Tarih Seç"),
-                      ),
-                    ],
+                // Kayıt Bilgileri
+                Text(
+                  "Kayıt Bilgileri",
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  readOnly: true,
+                  controller: TextEditingController(
+                    text: _createdAt != null
+                        ? DateFormat("dd.MM.yyyy").format(_createdAt!)
+                        : "",
                   ),
-                if (_createdAt != null) const SizedBox(height: 12),
+                  decoration: InputDecoration(
+                    labelText: "Kayıt Tarihi",
+                    hintText: "Tarih seçin",
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _createdAt ?? DateTime.now(),
+                          firstDate: DateTime.now().subtract(
+                            const Duration(days: 3650),
+                          ),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _createdAt = picked;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(labelText: "İsim"),
@@ -627,6 +666,8 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                         if (picked != null) {
                           setState(() {
                             _lastMaintenanceDate = picked;
+                            _maintenanceDateChanged =
+                                true; // Kullanıcı tarihi değiştirdi
                           });
                         }
                       },
@@ -665,6 +706,8 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       onChanged: (value) {
                         setState(() {
                           _nextMaintenanceMonths = value;
+                          _maintenanceDateChanged =
+                              true; // Kullanıcı slider'ı değiştirdi
                         });
                       },
                     ),
@@ -777,15 +820,18 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                   // Ödeme Tarihi - Sadece taksit yoksa göster
                   if (!_debtHasInstallment) ...[
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            "Ödeme Tarihi: ${_nextDebtDate != null ? DateFormat("dd MMM yyyy").format(_nextDebtDate!) : "Seçilmedi"}",
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ),
-                        TextButton.icon(
+                    TextFormField(
+                      readOnly: true,
+                      controller: TextEditingController(
+                        text: _nextDebtDate != null
+                            ? DateFormat("dd.MM.yyyy").format(_nextDebtDate!)
+                            : "",
+                      ),
+                      decoration: InputDecoration(
+                        labelText: "Ödeme Tarihi",
+                        hintText: "Tarih seçin",
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.calendar_today),
                           onPressed: () async {
                             final picked = await showDatePicker(
                               context: context,
@@ -801,10 +847,8 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                               });
                             }
                           },
-                          icon: const Icon(Icons.calendar_today, size: 18),
-                          label: const Text("Tarih Seç"),
                         ),
-                      ],
+                      ),
                     ),
                   ],
                   const SizedBox(height: 12),
@@ -885,15 +929,20 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                     ),
                     const SizedBox(height: 12),
                     // Taksit Başlama Tarihi
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            "Taksit Başlama Tarihi: ${_installmentStartDate != null ? DateFormat("dd MMM yyyy").format(_installmentStartDate!) : "Seçilmedi"}",
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ),
-                        TextButton.icon(
+                    TextFormField(
+                      readOnly: true,
+                      controller: TextEditingController(
+                        text: _installmentStartDate != null
+                            ? DateFormat(
+                                "dd.MM.yyyy",
+                              ).format(_installmentStartDate!)
+                            : "",
+                      ),
+                      decoration: InputDecoration(
+                        labelText: "Taksit Başlama Tarihi",
+                        hintText: "Tarih seçin",
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.calendar_today),
                           onPressed: () async {
                             final picked = await showDatePicker(
                               context: context,
@@ -910,10 +959,8 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                               });
                             }
                           },
-                          icon: const Icon(Icons.calendar_today, size: 18),
-                          label: const Text("Tarih Seç"),
                         ),
-                      ],
+                      ),
                     ),
                     const SizedBox(height: 12),
                     // Ödeme Tekrar Günü

@@ -274,6 +274,14 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                             ],
                           ),
                         ),
+                        IconButton(
+                          onPressed: () {
+                            // TODO: Fatura oluşturma işlevi eklenecek
+                          },
+                          icon: const Icon(Icons.receipt),
+                          color: const Color(0xFF2563EB), // Mavi renk
+                          tooltip: "Fatura Oluştur",
+                        ),
                         Icon(Icons.check_circle, color: Colors.green, size: 24),
                       ],
                     ),

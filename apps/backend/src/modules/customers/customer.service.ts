@@ -26,6 +26,7 @@ type CreateCustomerPayload = {
   nextDebtDate?: string;
   installmentStartDate?: string;
   installmentIntervalDays?: number;
+  nextMaintenanceDate?: string;
 };
 
 type UpdateCustomerPayload = Partial<CreateCustomerPayload> & {
@@ -291,6 +292,9 @@ class CustomerService {
     const installmentStartDate = payload.installmentStartDate
       ? new Date(payload.installmentStartDate)
       : null;
+    const nextMaintenanceDate = payload.nextMaintenanceDate
+      ? new Date(payload.nextMaintenanceDate)
+      : null;
 
     // Calculate remaining debt amount
     let remainingDebtAmount: Prisma.Decimal | null = null;
@@ -318,6 +322,7 @@ class CustomerService {
         installmentStartDate,
         installmentIntervalDays,
         remainingDebtAmount,
+        nextMaintenanceDate,
       },
     });
   }
@@ -437,44 +442,73 @@ class CustomerService {
       updateData.paidDebtAmount = null;
     }
 
-    // Update maintenance date for customer's nearest job if provided
-    if (payload.nextMaintenanceDate) {
-      const maintenanceDate = new Date(payload.nextMaintenanceDate);
-      // Find the customer's nearest job (by maintenanceDueAt)
-      const customerJobs = await prisma.job.findMany({
-        where: {
-          customerId,
-          adminId,
-          status: { not: "ARCHIVED" },
-        },
-        orderBy: {
-          maintenanceDueAt: "asc",
-        },
-        take: 1,
-      });
+    // Update maintenance date for customer and jobs if provided
+    if (payload.nextMaintenanceDate !== undefined) {
+      const maintenanceDate = payload.nextMaintenanceDate
+        ? new Date(payload.nextMaintenanceDate)
+        : null;
 
-      if (customerJobs.length > 0) {
-        // Update the nearest job's maintenance date
-        const updatedJob = await prisma.job.update({
-          where: { id: customerJobs[0].id },
-          data: { maintenanceDueAt: maintenanceDate },
+      // Update customer's nextMaintenanceDate field
+      updateData.nextMaintenanceDate = maintenanceDate;
+
+      // Also update the customer's nearest job if maintenance date is provided
+      if (maintenanceDate) {
+        // Find the customer's nearest job (by maintenanceDueAt)
+        const customerJobs = await prisma.job.findMany({
+          where: {
+            customerId,
+            adminId,
+            status: { not: "ARCHIVED" },
+          },
+          orderBy: {
+            maintenanceDueAt: "asc",
+          },
+          take: 1,
         });
 
-        // Update or create maintenance reminder
-        await prisma.maintenanceReminder.upsert({
-          where: { jobId: customerJobs[0].id },
-          update: { dueAt: maintenanceDate },
-          create: {
-            jobId: customerJobs[0].id,
-            dueAt: maintenanceDate,
+        if (customerJobs.length > 0) {
+          // Update the nearest job's maintenance date
+          const updatedJob = await prisma.job.update({
+            where: { id: customerJobs[0].id },
+            data: { maintenanceDueAt: maintenanceDate },
+          });
+
+          // Update or create maintenance reminder
+          await prisma.maintenanceReminder.upsert({
+            where: { jobId: customerJobs[0].id },
+            update: { dueAt: maintenanceDate },
+            create: {
+              jobId: customerJobs[0].id,
+              dueAt: maintenanceDate,
+            },
+          });
+
+          // Emit real-time events
+          realtimeGateway.emitJobStatus(customerJobs[0].id, updatedJob);
+          realtimeGateway.emitToAdmin(adminId, "customer-update", {
+            customerId,
+          });
+        }
+      } else {
+        // If maintenance date is null, also clear job maintenance dates
+        const customerJobs = await prisma.job.findMany({
+          where: {
+            customerId,
+            adminId,
+            status: { not: "ARCHIVED" },
           },
         });
 
-        // Emit real-time events
-        realtimeGateway.emitJobStatus(customerJobs[0].id, updatedJob);
-        realtimeGateway.emitToAdmin(adminId, "customer-update", {
-          customerId,
-        });
+        for (const job of customerJobs) {
+          await prisma.job.update({
+            where: { id: job.id },
+            data: { maintenanceDueAt: null },
+          });
+          // Delete maintenance reminders for this job
+          await prisma.maintenanceReminder.deleteMany({
+            where: { jobId: job.id },
+          });
+        }
       }
     }
 

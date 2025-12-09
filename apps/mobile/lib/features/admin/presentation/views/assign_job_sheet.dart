@@ -188,7 +188,7 @@ class _AssignJobSheetState extends ConsumerState<AssignJobSheet> {
                   label: Text(
                     _selectedCustomer != null
                         ? _selectedCustomer!.name
-                        : "Müşteri Seç",
+                        : "Müşteri Seç (Opsiyonel)",
                   ),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.all(16),

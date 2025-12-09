@@ -90,12 +90,12 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
         return; // İzin kalıcı olarak reddedilmiş, sessizce devam et
       }
 
-      // Mevcut konumu al
+      // Mevcut konumu al - yüksek doğruluk kullan
       final position =
           await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.medium,
+            desiredAccuracy: LocationAccuracy.high, // medium yerine high kullan
           ).timeout(
-            const Duration(seconds: 5),
+            const Duration(seconds: 10), // timeout süresini artır
             onTimeout: () {
               throw TimeoutException("Konum alınamadı");
             },

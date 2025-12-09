@@ -901,7 +901,6 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final dateText = DateFormat("dd MMM yyyy").format(_hireDate);
     return Padding(
       padding: const EdgeInsets.all(24),
       child: SingleChildScrollView(
@@ -1021,21 +1020,33 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
                 key: const Key("personnel-logincode-field"),
                 controller: _loginCodeController,
                 decoration: const InputDecoration(
-                  labelText: "Giriş Kodu (opsiyonel - boş bırakılırsa otomatik oluşturulur)",
+                  labelText:
+                      "Giriş Kodu (opsiyonel - boş bırakılırsa otomatik oluşturulur)",
                   helperText: "Personel girişi için kullanılacak kod",
                 ),
                 maxLength: 20,
-                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                buildCounter:
+                    (
+                      context, {
+                      required currentLength,
+                      required isFocused,
+                      maxLength,
+                    }) => null,
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: Text("İşe giriş tarihi: $dateText")),
-                  TextButton(
+              TextFormField(
+                readOnly: true,
+                controller: TextEditingController(
+                  text: DateFormat("dd.MM.yyyy").format(_hireDate),
+                ),
+                decoration: InputDecoration(
+                  labelText: "İşe Giriş Tarihi",
+                  hintText: "Tarih seçin",
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.calendar_today),
                     onPressed: _pickDate,
-                    child: const Text("Tarih seç"),
                   ),
-                ],
+                ),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
