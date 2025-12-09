@@ -542,20 +542,22 @@ class AdminRepository {
     // Eğer null ise, backend'de undefined kontrolü yapıldığı için
     // null göndermek için özel bir işaret kullanıyoruz
     // Backend'de "CLEAR_MAINTENANCE_DATE" string'i null olarak algılanacak
+    // Şimdilik, null göndermek için özel bir işaret kullanmıyoruz
+    // Eğer null gönderilmek isteniyorsa, backend'de undefined kontrolü yapıldığı için
+    // null göndermek için özel bir işaret kullanmamız gerekiyor
+    // Şimdilik, null göndermeyi denemiyoruz
+    // NOT: nextMaintenanceDate sadece değişiklik yapıldığında gönderilmeli
+    // Eğer null gönderilirse, backend'de null olarak set edilir (temizlenir)
+    // Eğer hiç gönderilmezse (undefined), backend'de mevcut değer korunur
     if (nextMaintenanceDate != null) {
       data["nextMaintenanceDate"] = nextMaintenanceDate
           .toUtc()
           .toIso8601String();
-    } else if (nextMaintenanceDate == null) {
-      // Null göndermek için özel bir işaret kullanıyoruz
-      // Backend'de "CLEAR_MAINTENANCE_DATE" string'i null olarak algılanacak
-      // Ama şimdilik, null göndermeyi denemiyoruz
-      // Çünkü backend undefined kontrolü yapıyor ve null gönderilirse işlenir
-      // Bu yüzden null göndermek için özel bir işaret kullanmıyoruz
-      // Eğer null gönderilmek isteniyorsa, backend'de undefined kontrolü yapıldığı için
-      // null göndermek için özel bir işaret kullanmamız gerekiyor
-      // Şimdilik, null göndermeyi denemiyoruz
     }
+    // Eğer nextMaintenanceDate null ise ve gönderilmek isteniyorsa,
+    // backend'de undefined kontrolü yapıldığı için null göndermek için
+    // özel bir işaret kullanmamız gerekiyor
+    // Şimdilik, null göndermeyi denemiyoruz
     final response = await _client.put("/customers/$id", data: data);
     return Customer.fromJson(response.data["data"] as Map<String, dynamic>);
   }
