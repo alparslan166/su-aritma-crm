@@ -206,11 +206,28 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       }
 
       debugPrint(
-        "🔵 Frontend - Bakım tarihi hesaplandı: _maintenanceDateChanged=$_maintenanceDateChanged, _nextMaintenanceMonths=$_nextMaintenanceMonths, _lastMaintenanceDate=$_lastMaintenanceDate, calculatedMaintenanceDate=$calculatedMaintenanceDate",
+        "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
-
       debugPrint(
-        "🔵 Frontend - updateCustomer çağrılıyor: sendNextMaintenanceDate=true, nextMaintenanceDate=$calculatedMaintenanceDate",
+        "🔵🔵🔵 Frontend - Bakım Tarihi Hesaplama 🔵🔵🔵",
+      );
+      debugPrint(
+        "   _maintenanceDateChanged: $_maintenanceDateChanged",
+      );
+      debugPrint(
+        "   _nextMaintenanceMonths: $_nextMaintenanceMonths",
+      );
+      debugPrint(
+        "   _lastMaintenanceDate: $_lastMaintenanceDate",
+      );
+      debugPrint(
+        "   calculatedMaintenanceDate: $calculatedMaintenanceDate",
+      );
+      debugPrint(
+        "   sendNextMaintenanceDate: true (her zaman gönderiliyor)",
+      );
+      debugPrint(
+        "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
 
       // GPS konumunu location formatına çevir

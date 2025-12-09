@@ -546,14 +546,26 @@ class AdminRepository {
     // Eğer hiç gönderilmezse (undefined), backend'de mevcut değer korunur
     // sendNextMaintenanceDate flag'i true ise, null olsa bile gönderilmeli
     debugPrint(
-      "🔵 Frontend Repository - sendNextMaintenanceDate=$sendNextMaintenanceDate, nextMaintenanceDate=$nextMaintenanceDate",
+      "═══════════════════════════════════════════════════════════════════════════════════════════",
+    );
+    debugPrint(
+      "🔵🔵🔵 Frontend Repository - updateCustomer BAŞLADI 🔵🔵🔵",
+    );
+    debugPrint(
+      "   Customer ID: $id",
+    );
+    debugPrint(
+      "   sendNextMaintenanceDate: $sendNextMaintenanceDate",
+    );
+    debugPrint(
+      "   nextMaintenanceDate (raw): $nextMaintenanceDate",
     );
     if (sendNextMaintenanceDate) {
       if (nextMaintenanceDate != null) {
         final dateString = nextMaintenanceDate.toUtc().toIso8601String();
         data["nextMaintenanceDate"] = dateString;
         debugPrint(
-          "🔵 Frontend Repository - nextMaintenanceDate gönderiliyor: $dateString",
+          "   ✅ nextMaintenanceDate gönderiliyor: $dateString",
         );
       } else {
         // Null göndermek için null olarak gönder
@@ -561,17 +573,36 @@ class AdminRepository {
         // null gönderilirse !== undefined true olur ve işlenir (null olarak set edilir)
         data["nextMaintenanceDate"] = null;
         debugPrint(
-          "🔵 Frontend Repository - nextMaintenanceDate null olarak gönderiliyor",
+          "   ✅ nextMaintenanceDate null olarak gönderiliyor (temizlenecek)",
         );
       }
     } else {
       debugPrint(
-        "🔵 Frontend Repository - nextMaintenanceDate gönderilmiyor (undefined)",
+        "   ⚠️ nextMaintenanceDate gönderilmiyor (undefined - mevcut değer korunacak)",
       );
     }
+    debugPrint(
+      "   Gönderilecek data: ${data.toString()}",
+    );
+    debugPrint(
+      "═══════════════════════════════════════════════════════════════════════════════════════════",
+    );
     // Eğer sendNextMaintenanceDate false ise, nextMaintenanceDate hiç gönderilmez (undefined)
     final response = await _client.put("/customers/$id", data: data);
-    return Customer.fromJson(response.data["data"] as Map<String, dynamic>);
+    final updatedCustomer = Customer.fromJson(response.data["data"] as Map<String, dynamic>);
+    debugPrint(
+      "═══════════════════════════════════════════════════════════════════════════════════════════",
+    );
+    debugPrint(
+      "🔵🔵🔵 Frontend Repository - updateCustomer TAMAMLANDI 🔵🔵🔵",
+    );
+    debugPrint(
+      "   Response nextMaintenanceDate: ${updatedCustomer.nextMaintenanceDate}",
+    );
+    debugPrint(
+      "═══════════════════════════════════════════════════════════════════════════════════════════",
+    );
+    return updatedCustomer;
   }
 
   Future<Customer> payCustomerDebt({
