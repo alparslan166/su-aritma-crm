@@ -1,6 +1,7 @@
 import "dart:async";
 
 import "package:flutter/material.dart";
+import "package:flutter/foundation.dart" show debugPrint;
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 import "package:geocoding/geocoding.dart";
@@ -203,6 +204,13 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
           // Slider 0 ise bakım tarihini temizle (null gönder)
           calculatedMaintenanceDate = null;
         }
+        debugPrint(
+          "🔵 Frontend - Bakım tarihi değiştirildi: _maintenanceDateChanged=$_maintenanceDateChanged, _nextMaintenanceMonths=$_nextMaintenanceMonths, calculatedMaintenanceDate=$calculatedMaintenanceDate",
+        );
+      } else {
+        debugPrint(
+          "🔵 Frontend - Bakım tarihi değiştirilmedi: _maintenanceDateChanged=$_maintenanceDateChanged",
+        );
       }
       // Eğer _maintenanceDateChanged false ise, calculatedMaintenanceDate undefined kalır
       // ve backend'de mevcut değer korunur
@@ -239,7 +247,8 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
             installmentStartDate: _installmentStartDate,
             installmentIntervalDays: installmentIntervalDays,
             nextMaintenanceDate: calculatedMaintenanceDate, // null veya tarih
-            sendNextMaintenanceDate: _maintenanceDateChanged, // Sadece değişiklik yapıldıysa gönder
+            sendNextMaintenanceDate:
+                _maintenanceDateChanged, // Sadece değişiklik yapıldıysa gönder
           );
 
       // Tüm filter type'lar için provider'ları refresh et

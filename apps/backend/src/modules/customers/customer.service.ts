@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import { AppError } from "@/middleware/error-handler";
 import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
 
@@ -26,7 +27,7 @@ type CreateCustomerPayload = {
   nextDebtDate?: string;
   installmentStartDate?: string;
   installmentIntervalDays?: number;
-  nextMaintenanceDate?: string;
+  nextMaintenanceDate?: string | null;
 };
 
 type UpdateCustomerPayload = Partial<CreateCustomerPayload> & {
@@ -443,10 +444,15 @@ class CustomerService {
     }
 
     // Update maintenance date for customer and jobs if provided
+    logger.debug("🔵 Backend Service - payload.nextMaintenanceDate:", payload.nextMaintenanceDate);
+    logger.debug("🔵 Backend Service - payload.nextMaintenanceDate !== undefined:", payload.nextMaintenanceDate !== undefined);
     if (payload.nextMaintenanceDate !== undefined) {
       const maintenanceDate = payload.nextMaintenanceDate
         ? new Date(payload.nextMaintenanceDate)
         : null;
+
+      logger.debug("🔵 Backend Service - maintenanceDate:", maintenanceDate);
+      logger.debug("🔵 Backend Service - updateData.nextMaintenanceDate set ediliyor:", maintenanceDate);
 
       // Update customer's nextMaintenanceDate field
       updateData.nextMaintenanceDate = maintenanceDate;
@@ -512,10 +518,12 @@ class CustomerService {
       }
     }
 
+    logger.debug("🔵 Backend Service - updateData.nextMaintenanceDate:", updateData.nextMaintenanceDate);
     const updatedCustomer = await prisma.customer.update({
       where: { id: customerId },
       data: updateData,
     });
+    logger.debug("🔵 Backend Service - updatedCustomer.nextMaintenanceDate:", updatedCustomer.nextMaintenanceDate);
 
     // Emit customer update event
     realtimeGateway.emitToAdmin(adminId, "customer-update", {

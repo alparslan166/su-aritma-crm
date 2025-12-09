@@ -509,8 +509,10 @@ class AdminRepository {
     DateTime? installmentStartDate,
     int? installmentIntervalDays,
     double? remainingDebtAmount,
-    DateTime? nextMaintenanceDate, // null gönderilirse temizlenir, undefined gönderilirse korunur
-    bool sendNextMaintenanceDate = false, // nextMaintenanceDate gönderilmeli mi? (null olsa bile)
+    DateTime?
+    nextMaintenanceDate, // null gönderilirse temizlenir, undefined gönderilirse korunur
+    bool sendNextMaintenanceDate =
+        false, // nextMaintenanceDate gönderilmeli mi? (null olsa bile)
   }) async {
     final data = <String, dynamic>{};
     if (name != null) data["name"] = name;
@@ -543,17 +545,23 @@ class AdminRepository {
     // Eğer null gönderilirse, backend'de null olarak set edilir (temizlenir)
     // Eğer hiç gönderilmezse (undefined), backend'de mevcut değer korunur
     // sendNextMaintenanceDate flag'i true ise, null olsa bile gönderilmeli
+    debugPrint(
+      "🔵 Frontend Repository - sendNextMaintenanceDate=$sendNextMaintenanceDate, nextMaintenanceDate=$nextMaintenanceDate",
+    );
     if (sendNextMaintenanceDate) {
       if (nextMaintenanceDate != null) {
-        data["nextMaintenanceDate"] = nextMaintenanceDate
-            .toUtc()
-            .toIso8601String();
+        final dateString = nextMaintenanceDate.toUtc().toIso8601String();
+        data["nextMaintenanceDate"] = dateString;
+        debugPrint("🔵 Frontend Repository - nextMaintenanceDate gönderiliyor: $dateString");
       } else {
         // Null göndermek için null olarak gönder
         // Backend'de payload.nextMaintenanceDate !== undefined kontrolü var
         // null gönderilirse !== undefined true olur ve işlenir (null olarak set edilir)
         data["nextMaintenanceDate"] = null;
+        debugPrint("🔵 Frontend Repository - nextMaintenanceDate null olarak gönderiliyor");
       }
+    } else {
+      debugPrint("🔵 Frontend Repository - nextMaintenanceDate gönderilmiyor (undefined)");
     }
     // Eğer sendNextMaintenanceDate false ise, nextMaintenanceDate hiç gönderilmez (undefined)
     final response = await _client.put("/customers/$id", data: data);
