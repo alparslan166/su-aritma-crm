@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { getAdminId, getPersonnelId } from "@/lib/tenant";
 import { notificationService } from "@/modules/notifications/notification.service";
 
+import { customerService } from "./customer.service";
+
 const listQuerySchema = z.object({
   search: z.string().optional(),
   phoneSearch: z.string().optional(),
@@ -168,15 +170,27 @@ export const updateCustomerHandler = async (req: Request, res: Response, next: N
   try {
     const adminId = getAdminId(req);
     const { id } = req.params;
-    logger.debug("🔵 Backend Controller - updateCustomer request body:", JSON.stringify(req.body, null, 2));
+    logger.debug(
+      "🔵 Backend Controller - updateCustomer request body:",
+      JSON.stringify(req.body, null, 2),
+    );
     const payload = updateSchema.parse(req.body);
-    logger.debug("🔵 Backend Controller - updateCustomer parsed payload:", JSON.stringify(payload, null, 2));
-    logger.debug("🔵 Backend Controller - payload.nextMaintenanceDate:", payload.nextMaintenanceDate);
+    logger.debug(
+      "🔵 Backend Controller - updateCustomer parsed payload:",
+      JSON.stringify(payload, null, 2),
+    );
+    logger.debug(
+      "🔵 Backend Controller - payload.nextMaintenanceDate:",
+      payload.nextMaintenanceDate,
+    );
     const data = await customerService.update(adminId, id, {
       ...payload,
       email: payload.email === "" ? undefined : payload.email,
     });
-    logger.debug("🔵 Backend Controller - updateCustomer response data.nextMaintenanceDate:", data.nextMaintenanceDate);
+    logger.debug(
+      "🔵 Backend Controller - updateCustomer response data.nextMaintenanceDate:",
+      data.nextMaintenanceDate,
+    );
     res.json({ success: true, data });
   } catch (error) {
     next(error as Error);
