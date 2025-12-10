@@ -76,12 +76,17 @@ const createSchema = z
     },
   );
 
-const updateSchema = createSchema.partial().extend({
+// Update schema: createSchema'dan nextMaintenanceDate'i çıkar, sonra extend ile ekle
+const updateSchemaBase = createSchema.omit({ nextMaintenanceDate: true }).partial();
+const updateSchema = updateSchemaBase.extend({
   remainingDebtAmount: z.number().nonnegative().optional(),
   nextMaintenanceDate: z
     .union([z.string().datetime(), z.null(), z.literal("")])
     .optional()
-    .transform((val) => (val === "" || val === null ? null : val)),
+    .transform((val) => {
+      if (val === "" || val === null) return null;
+      return val; // String datetime değerini olduğu gibi döndür
+    }),
 });
 
 export const listCustomersHandler = async (req: Request, res: Response, next: NextFunction) => {

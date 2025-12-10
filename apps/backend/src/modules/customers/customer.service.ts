@@ -331,13 +331,24 @@ class CustomerService {
   async update(adminId: string, customerId: string, payload: UpdateCustomerPayload) {
     const existing = await this.ensureCustomer(adminId, customerId);
 
-    const updateData: Prisma.CustomerUpdateInput = {
-      name: payload.name,
-      phone: payload.phone ? normalizePhoneNumber(payload.phone) : undefined,
-      email: payload.email,
-      address: payload.address,
-      location: payload.location as Prisma.InputJsonValue | undefined,
-    };
+    const updateData: Prisma.CustomerUpdateInput = {};
+    
+    // Only set fields that are explicitly provided (not undefined)
+    if (payload.name !== undefined) {
+      updateData.name = payload.name;
+    }
+    if (payload.phone !== undefined) {
+      updateData.phone = payload.phone ? normalizePhoneNumber(payload.phone) : null;
+    }
+    if (payload.email !== undefined) {
+      updateData.email = payload.email === "" ? null : payload.email;
+    }
+    if (payload.address !== undefined) {
+      updateData.address = payload.address;
+    }
+    if (payload.location !== undefined) {
+      updateData.location = payload.location as Prisma.InputJsonValue;
+    }
 
     if (payload.status !== undefined) {
       updateData.status = payload.status;
