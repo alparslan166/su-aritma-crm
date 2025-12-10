@@ -189,33 +189,56 @@ export const updateCustomerHandler = async (req: Request, res: Response, next: N
     const adminId = getAdminId(req);
     const { id } = req.params;
     logger.debug(
-      "🔵 Backend Controller - updateCustomer request body:",
+      "═══════════════════════════════════════════════════════════════════════════════════════════",
+    );
+    logger.debug(
+      "🔵🔵🔵 Backend Controller - updateCustomer BAŞLADI 🔵🔵🔵",
+    );
+    logger.debug("   Customer ID:", id);
+    logger.debug(
+      "   Request body (raw):",
       JSON.stringify(req.body, null, 2),
     );
-    const payload = updateSchema.parse(req.body);
+    
+    let payload;
+    try {
+      payload = updateSchema.parse(req.body);
+    } catch (parseError) {
+      logger.debug("   ❌ Zod parse hatası:", parseError);
+      throw parseError;
+    }
+    
     logger.debug(
-      "🔵 Backend Controller - updateCustomer parsed payload:",
+      "   Parsed payload:",
       JSON.stringify(payload, null, 2),
     );
     logger.debug(
-      "🔵 Backend Controller - payload.nextMaintenanceDate:",
+      "   payload.nextMaintenanceDate:",
       payload.nextMaintenanceDate,
     );
     logger.debug(
-      "🔵 Backend Controller - payload.nextMaintenanceDate type:",
+      "   payload.nextMaintenanceDate type:",
       typeof payload.nextMaintenanceDate,
     );
     logger.debug(
-      "🔵 Backend Controller - payload.nextMaintenanceDate !== undefined:",
+      "   payload.nextMaintenanceDate !== undefined:",
       payload.nextMaintenanceDate !== undefined,
     );
+    
     const data = await customerService.update(adminId, id, {
       ...payload,
       email: payload.email === "" ? undefined : payload.email,
     });
+    
     logger.debug(
-      "🔵 Backend Controller - updateCustomer response data.nextMaintenanceDate:",
+      "   Response data.nextMaintenanceDate:",
       data.nextMaintenanceDate,
+    );
+    logger.debug(
+      "🔵🔵🔵 Backend Controller - updateCustomer TAMAMLANDI 🔵🔵🔵",
+    );
+    logger.debug(
+      "═══════════════════════════════════════════════════════════════════════════════════════════",
     );
     res.json({ success: true, data });
   } catch (error) {
