@@ -332,7 +332,7 @@ class CustomerService {
     const existing = await this.ensureCustomer(adminId, customerId);
 
     const updateData: Prisma.CustomerUpdateInput = {};
-    
+
     // Only set fields that are explicitly provided (not undefined)
     if (payload.name !== undefined) {
       updateData.name = payload.name;
@@ -541,10 +541,7 @@ class CustomerService {
       "🔵 Backend Service - updateData.nextMaintenanceDate:",
       updateData.nextMaintenanceDate,
     );
-    logger.debug(
-      "🔵 Backend Service - updateData (full):",
-      JSON.stringify(updateData, null, 2),
-    );
+    logger.debug("🔵 Backend Service - updateData (full):", JSON.stringify(updateData, null, 2));
     const updatedCustomer = await prisma.customer.update({
       where: { id: customerId },
       data: updateData,

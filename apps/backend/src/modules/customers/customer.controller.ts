@@ -80,12 +80,23 @@ const createSchema = z
 const updateSchemaBase = createSchema.omit({ nextMaintenanceDate: true }).partial();
 const updateSchema = updateSchemaBase.extend({
   remainingDebtAmount: z.number().nonnegative().optional(),
+  // nextMaintenanceDate: string datetime, null, veya undefined olabilir
+  // Zod'un nullable() ve optional() kombinasyonu doğru çalışmıyor, manuel kontrol yapıyoruz
   nextMaintenanceDate: z
-    .union([z.string().datetime(), z.null(), z.literal("")])
+    .union([
+      z.string().datetime(),
+      z.null(),
+      z.literal(""),
+      z.undefined(),
+    ])
     .optional()
     .transform((val) => {
-      if (val === "" || val === null) return null;
-      return val; // String datetime değerini olduğu gibi döndür
+      // undefined ise undefined döndür (field gönderilmemiş demektir)
+      if (val === undefined) return undefined;
+      // null veya "" ise null döndür (field temizlenecek demektir)
+      if (val === null || val === "") return null;
+      // String datetime değerini olduğu gibi döndür
+      return val;
     }),
 });
 
