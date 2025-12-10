@@ -127,7 +127,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     );
     debugPrint("🔵🔵🔵 Frontend - _submit BAŞLADI 🔵🔵🔵");
     debugPrint("   Customer ID: ${widget.customer.id}");
-    
+
     if (!_formKey.currentState!.validate()) {
       debugPrint("   ❌ Form validation başarısız!");
       debugPrint(
@@ -136,7 +136,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       return;
     }
     debugPrint("   ✅ Form validation başarılı");
-    
+
     setState(() {
       _submitting = true;
     });
@@ -222,24 +222,12 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       debugPrint(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
-      debugPrint(
-        "🔵🔵🔵 Frontend - Bakım Tarihi Hesaplama 🔵🔵🔵",
-      );
-      debugPrint(
-        "   _maintenanceDateChanged: $_maintenanceDateChanged",
-      );
-      debugPrint(
-        "   _nextMaintenanceMonths: $_nextMaintenanceMonths",
-      );
-      debugPrint(
-        "   _lastMaintenanceDate: $_lastMaintenanceDate",
-      );
-      debugPrint(
-        "   calculatedMaintenanceDate: $calculatedMaintenanceDate",
-      );
-      debugPrint(
-        "   sendNextMaintenanceDate: true (her zaman gönderiliyor)",
-      );
+      debugPrint("🔵🔵🔵 Frontend - Bakım Tarihi Hesaplama 🔵🔵🔵");
+      debugPrint("   _maintenanceDateChanged: $_maintenanceDateChanged");
+      debugPrint("   _nextMaintenanceMonths: $_nextMaintenanceMonths");
+      debugPrint("   _lastMaintenanceDate: $_lastMaintenanceDate");
+      debugPrint("   calculatedMaintenanceDate: $calculatedMaintenanceDate");
+      debugPrint("   sendNextMaintenanceDate: true (her zaman gönderiliyor)");
       debugPrint(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
@@ -265,7 +253,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       debugPrint(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
-      
+
       await ref
           .read(adminRepositoryProvider)
           .updateCustomer(
@@ -287,10 +275,9 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
             installmentStartDate: _installmentStartDate,
             installmentIntervalDays: installmentIntervalDays,
             nextMaintenanceDate: calculatedMaintenanceDate, // null veya tarih
-            sendNextMaintenanceDate:
-                true, // Her zaman gönder (null veya tarih)
+            sendNextMaintenanceDate: true, // Her zaman gönder (null veya tarih)
           );
-      
+
       debugPrint(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
@@ -328,9 +315,18 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       }
 
       // Invalidate customer detail provider to refresh the detail page
+      // Borç ödeme geçmişi için yaptığımız gibi, provider'ı invalidate et ve refresh et
       ref.invalidate(customerDetailProvider(widget.customer.id));
-      // Also refresh to ensure immediate update
-      await ref.read(customerDetailProvider(widget.customer.id).future);
+      // Provider'ın yeniden yüklenmesini bekle - nextMaintenanceDate dahil tüm veriler güncellenir
+      final refreshedCustomer = await ref.read(
+        customerDetailProvider(widget.customer.id).future,
+      );
+      
+      // Debug: Refresh sonrası customer'da nextMaintenanceDate var mı kontrol et
+      debugPrint("🟢 Refresh sonrası customer:");
+      debugPrint(
+        "   - nextMaintenanceDate: ${refreshedCustomer.nextMaintenanceDate}",
+      );
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(
@@ -1049,7 +1045,19 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: _submitting ? null : _submit,
+                    onPressed: _submitting
+                        ? null
+                        : () {
+                            debugPrint(
+                              "═══════════════════════════════════════════════════════════════════════════════════════════",
+                            );
+                            debugPrint("🔵🔵🔵 Frontend - Güncelle BUTONUNA BASILDI 🔵🔵🔵");
+                            debugPrint("   Customer ID: ${widget.customer.id}");
+                            debugPrint(
+                              "═══════════════════════════════════════════════════════════════════════════════════════════",
+                            );
+                            _submit();
+                          },
                     child: _submitting
                         ? const SizedBox(
                             width: 18,
