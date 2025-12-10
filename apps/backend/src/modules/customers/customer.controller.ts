@@ -83,12 +83,7 @@ const updateSchema = updateSchemaBase.extend({
   // nextMaintenanceDate: string datetime, null, veya undefined olabilir
   // Zod'un nullable() ve optional() kombinasyonu doğru çalışmıyor, manuel kontrol yapıyoruz
   nextMaintenanceDate: z
-    .union([
-      z.string().datetime(),
-      z.null(),
-      z.literal(""),
-      z.undefined(),
-    ])
+    .union([z.string().datetime(), z.null(), z.literal(""), z.undefined()])
     .optional()
     .transform((val) => {
       // undefined ise undefined döndür (field gönderilmemiş demektir)
@@ -191,15 +186,10 @@ export const updateCustomerHandler = async (req: Request, res: Response, next: N
     logger.debug(
       "═══════════════════════════════════════════════════════════════════════════════════════════",
     );
-    logger.debug(
-      "🔵🔵🔵 Backend Controller - updateCustomer BAŞLADI 🔵🔵🔵",
-    );
+    logger.debug("🔵🔵🔵 Backend Controller - updateCustomer BAŞLADI 🔵🔵🔵");
     logger.debug("   Customer ID:", id);
-    logger.debug(
-      "   Request body (raw):",
-      JSON.stringify(req.body, null, 2),
-    );
-    
+    logger.debug("   Request body (raw):", JSON.stringify(req.body, null, 2));
+
     let payload;
     try {
       payload = updateSchema.parse(req.body);
@@ -207,36 +197,22 @@ export const updateCustomerHandler = async (req: Request, res: Response, next: N
       logger.debug("   ❌ Zod parse hatası:", parseError);
       throw parseError;
     }
-    
-    logger.debug(
-      "   Parsed payload:",
-      JSON.stringify(payload, null, 2),
-    );
-    logger.debug(
-      "   payload.nextMaintenanceDate:",
-      payload.nextMaintenanceDate,
-    );
-    logger.debug(
-      "   payload.nextMaintenanceDate type:",
-      typeof payload.nextMaintenanceDate,
-    );
+
+    logger.debug("   Parsed payload:", JSON.stringify(payload, null, 2));
+    logger.debug("   payload.nextMaintenanceDate:", payload.nextMaintenanceDate);
+    logger.debug("   payload.nextMaintenanceDate type:", typeof payload.nextMaintenanceDate);
     logger.debug(
       "   payload.nextMaintenanceDate !== undefined:",
       payload.nextMaintenanceDate !== undefined,
     );
-    
+
     const data = await customerService.update(adminId, id, {
       ...payload,
       email: payload.email === "" ? undefined : payload.email,
     });
-    
-    logger.debug(
-      "   Response data.nextMaintenanceDate:",
-      data.nextMaintenanceDate,
-    );
-    logger.debug(
-      "🔵🔵🔵 Backend Controller - updateCustomer TAMAMLANDI 🔵🔵🔵",
-    );
+
+    logger.debug("   Response data.nextMaintenanceDate:", data.nextMaintenanceDate);
+    logger.debug("🔵🔵🔵 Backend Controller - updateCustomer TAMAMLANDI 🔵🔵🔵");
     logger.debug(
       "═══════════════════════════════════════════════════════════════════════════════════════════",
     );
