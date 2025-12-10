@@ -338,9 +338,11 @@ class CustomerService {
       updateData.name = payload.name;
     }
     if (payload.phone !== undefined) {
-      updateData.phone = payload.phone ? normalizePhoneNumber(payload.phone) : null;
+      // Prisma doesn't accept null for string fields, use undefined or set to empty string
+      updateData.phone = payload.phone ? normalizePhoneNumber(payload.phone) : undefined;
     }
     if (payload.email !== undefined) {
+      // Prisma accepts null for optional fields
       updateData.email = payload.email === "" ? null : payload.email;
     }
     if (payload.address !== undefined) {
