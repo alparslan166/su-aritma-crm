@@ -122,7 +122,21 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    debugPrint(
+      "═══════════════════════════════════════════════════════════════════════════════════════════",
+    );
+    debugPrint("🔵🔵🔵 Frontend - _submit BAŞLADI 🔵🔵🔵");
+    debugPrint("   Customer ID: ${widget.customer.id}");
+    
+    if (!_formKey.currentState!.validate()) {
+      debugPrint("   ❌ Form validation başarısız!");
+      debugPrint(
+        "═══════════════════════════════════════════════════════════════════════════════════════════",
+      );
+      return;
+    }
+    debugPrint("   ✅ Form validation başarılı");
+    
     setState(() {
       _submitting = true;
     });
@@ -241,6 +255,17 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
 
       // Update customer
       // nextMaintenanceDate sadece kullanıcı değişiklik yaptıysa gönder
+      debugPrint(
+        "═══════════════════════════════════════════════════════════════════════════════════════════",
+      );
+      debugPrint("🔵🔵🔵 Frontend - updateCustomer ÇAĞRILIYOR 🔵🔵🔵");
+      debugPrint("   Customer ID: ${widget.customer.id}");
+      debugPrint("   nextMaintenanceDate: $calculatedMaintenanceDate");
+      debugPrint("   sendNextMaintenanceDate: true");
+      debugPrint(
+        "═══════════════════════════════════════════════════════════════════════════════════════════",
+      );
+      
       await ref
           .read(adminRepositoryProvider)
           .updateCustomer(
@@ -265,6 +290,14 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
             sendNextMaintenanceDate:
                 true, // Her zaman gönder (null veya tarih)
           );
+      
+      debugPrint(
+        "═══════════════════════════════════════════════════════════════════════════════════════════",
+      );
+      debugPrint("✅ Frontend - updateCustomer TAMAMLANDI (await sonrası)");
+      debugPrint(
+        "═══════════════════════════════════════════════════════════════════════════════════════════",
+      );
 
       // Tüm filter type'lar için provider'ları refresh et
       // Böylece hangi sayfada olursa olsun müşteri listesi otomatik güncellenir

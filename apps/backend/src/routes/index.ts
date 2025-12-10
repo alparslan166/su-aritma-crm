@@ -80,4 +80,3 @@ router.use("/personnel", personnelRouter);
 router.use("/subscriptions", subscriptionRouter);
 
 export const apiRouter = router;
-
