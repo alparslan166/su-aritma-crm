@@ -218,6 +218,34 @@ export const updateCustomerHandler = async (req: Request, res: Response, next: N
     );
     res.json({ success: true, data });
   } catch (error) {
+    // Controller'da error'u detaylı logla
+    logger.error(
+      "═══════════════════════════════════════════════════════════════════════════════════════════",
+    );
+    logger.error("❌❌❌ Backend Controller - updateCustomer ERROR ❌❌❌");
+    logger.error("   Customer ID:", req.params.id);
+    logger.error("   Error type:", error?.constructor?.name);
+    logger.error("   Error message:", error instanceof Error ? error.message : String(error));
+    logger.error("   Request body:", JSON.stringify(req.body, null, 2));
+    if (error instanceof z.ZodError) {
+      logger.error("   Zod Error Issues:", JSON.stringify(error.issues, null, 2));
+      error.issues.forEach((issue, index) => {
+        logger.error(`   Issue ${index + 1}:`);
+        logger.error(`     Path: ${issue.path.join(".")}`);
+        logger.error(`     Message: ${issue.message}`);
+        logger.error(`     Code: ${issue.code}`);
+        if (issue.path.includes("nextMaintenanceDate")) {
+          logger.error(`     ⚠️ nextMaintenanceDate validation hatası!`);
+          logger.error(`     Received value: ${JSON.stringify(req.body?.nextMaintenanceDate)}`);
+        }
+      });
+    }
+    if (error instanceof Error && error.stack) {
+      logger.error("   Stack:", error.stack);
+    }
+    logger.error(
+      "═══════════════════════════════════════════════════════════════════════════════════════════",
+    );
     next(error as Error);
   }
 };

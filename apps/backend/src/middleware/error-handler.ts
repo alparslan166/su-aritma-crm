@@ -36,30 +36,47 @@ export const errorHandler = (
 ) => {
   const isDevelopment = config.nodeEnv === "development";
 
-  // Production'da sadece temel hata bilgileri, development'ta detaylı
-  logger.error("🛑 ERROR HANDLER:");
-  logger.error("Error type:", error?.constructor?.name);
-  logger.error("Error message:", error?.message);
-  logger.error("Request URL:", req.originalUrl);
-  logger.error("Request method:", req.method);
+  // Detaylı error logging - her zaman logla (production'da da)
+  logger.error(
+    "═══════════════════════════════════════════════════════════════════════════════════════════",
+  );
+  logger.error("🛑🛑🛑 ERROR HANDLER - Hata Yakalandı 🛑🛑🛑");
+  logger.error("   Error type:", error?.constructor?.name);
+  logger.error("   Error message:", error?.message);
+  logger.error("   Request URL:", req.originalUrl);
+  logger.error("   Request method:", req.method);
+  logger.error("   Request path:", req.path);
+  logger.error("   Request params:", JSON.stringify(req.params, null, 2));
+  logger.error("   Request body:", JSON.stringify(req.body, null, 2));
+  logger.error("   Request headers:", JSON.stringify(req.headers, null, 2));
 
-  // Hassas bilgiler sadece development'ta loglanır
-  if (isDevelopment) {
-    logger.error("Request body:", JSON.stringify(req.body, null, 2));
-    logger.error("Request headers:", JSON.stringify(req.headers, null, 2));
-    logger.error("Stack:", error?.stack);
-  } else {
-    // Production'da sadece stack trace (hassas bilgi içermeyen)
-    if (error?.stack) {
-      logger.error("Stack:", error.stack);
-    }
+  // Stack trace her zaman logla
+  if (error?.stack) {
+    logger.error("   Stack:", error.stack);
   }
 
-  // Handle Zod validation errors
+  // Handle Zod validation errors - özellikle detaylı logla
   if (error instanceof z.ZodError) {
+    logger.error("   ❌ ZOD VALIDATION ERROR:");
+    logger.error("   Issues:", JSON.stringify(error.issues, null, 2));
+    error.issues.forEach((issue, index) => {
+      logger.error(`   Issue ${index + 1}:`);
+      logger.error(`     Path: ${issue.path.join(".")}`);
+      logger.error(`     Message: ${issue.message}`);
+      logger.error(`     Code: ${issue.code}`);
+      if (issue.path.includes("nextMaintenanceDate")) {
+        logger.error(`     ⚠️ nextMaintenanceDate validation hatası!`);
+        logger.error(`     Received value: ${JSON.stringify(req.body?.nextMaintenanceDate)}`);
+      }
+    });
+
     const firstIssue = error.issues[0];
     const message = firstIssue?.message || "Geçersiz veri";
     const statusCode = 400;
+
+    logger.error(
+      "═══════════════════════════════════════════════════════════════════════════════════════════",
+    );
 
     return res.status(statusCode).json({
       success: false,
@@ -72,6 +89,10 @@ export const errorHandler = (
       }),
     });
   }
+
+  logger.error(
+    "═══════════════════════════════════════════════════════════════════════════════════════════",
+  );
 
   const statusCode = error instanceof AppError ? error.statusCode : 500;
   const response = {

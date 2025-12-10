@@ -1,4 +1,6 @@
-import { Router } from "express";
+import { NextFunction, Request, Response, Router } from "express";
+
+import { logger } from "@/lib/logger";
 
 import { adminRouter } from "@/modules/admins/admin.router";
 import { authRouter } from "@/modules/auth/auth.router";
@@ -43,7 +45,30 @@ router.get("/", (req, res) => {
 router.use("/health", healthRouter);
 router.use("/auth", authRouter);
 router.use("/admins", adminRouter);
-router.use("/customers", customerRouter);
+
+// API Router - /customers route logging middleware
+router.use(
+  "/customers",
+  (req: Request, res: Response, next: NextFunction) => {
+    if (req.method === "PUT") {
+      logger.debug(
+        "═══════════════════════════════════════════════════════════════════════════════════════════",
+      );
+      logger.debug("🔵🔵🔵 API Router - /customers Route Match Edildi 🔵🔵🔵");
+      logger.debug("   Method:", req.method);
+      logger.debug("   URL:", req.originalUrl);
+      logger.debug("   Path:", req.path);
+      logger.debug("   Params:", JSON.stringify(req.params, null, 2));
+      logger.debug("   Headers:", JSON.stringify(req.headers, null, 2));
+      logger.debug("   Body:", JSON.stringify(req.body, null, 2));
+      logger.debug(
+        "═══════════════════════════════════════════════════════════════════════════════════════════",
+      );
+    }
+    next();
+  },
+  customerRouter,
+);
 router.use("/inventory", inventoryRouter);
 router.use("/invoices", invoiceRouter);
 router.use("/jobs", jobRouter);

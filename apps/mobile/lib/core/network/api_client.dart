@@ -35,9 +35,62 @@ final apiClientProvider = Provider<Dio>((ref) {
             options.headers["x-personnel-id"] = session.identifier;
           }
         }
+        
+        // Detaylı request logging
+        if (kDebugMode) {
+          debugPrint(
+            "═══════════════════════════════════════════════════════════════════════════════════════════",
+          );
+          debugPrint("🔵🔵🔵 Frontend - Dio Request 🔵🔵🔵");
+          debugPrint("   Method: ${options.method}");
+          debugPrint("   URL: ${options.uri}");
+          debugPrint("   Headers: ${options.headers}");
+          debugPrint("   Body: ${options.data}");
+          debugPrint(
+            "═══════════════════════════════════════════════════════════════════════════════════════════",
+          );
+        }
+        
         handler.next(options);
       },
+      onResponse: (response, handler) {
+        // Detaylı response logging
+        if (kDebugMode) {
+          debugPrint(
+            "═══════════════════════════════════════════════════════════════════════════════════════════",
+          );
+          debugPrint("✅ Frontend - Dio Response");
+          debugPrint("   Status: ${response.statusCode}");
+          debugPrint("   URL: ${response.requestOptions.uri}");
+          debugPrint("   Data: ${response.data}");
+          debugPrint(
+            "═══════════════════════════════════════════════════════════════════════════════════════════",
+          );
+        }
+        handler.next(response);
+      },
       onError: (error, handler) async {
+        // Detaylı error logging
+        if (kDebugMode) {
+          debugPrint(
+            "═══════════════════════════════════════════════════════════════════════════════════════════",
+          );
+          debugPrint("❌ Frontend - Dio Error");
+          debugPrint("   Type: ${error.type}");
+          debugPrint("   Message: ${error.message}");
+          debugPrint("   URL: ${error.requestOptions.uri}");
+          debugPrint("   Method: ${error.requestOptions.method}");
+          debugPrint("   Headers: ${error.requestOptions.headers}");
+          debugPrint("   Body: ${error.requestOptions.data}");
+          if (error.response != null) {
+            debugPrint("   Response Status: ${error.response?.statusCode}");
+            debugPrint("   Response Data: ${error.response?.data}");
+          }
+          debugPrint(
+            "═══════════════════════════════════════════════════════════════════════════════════════════",
+          );
+        }
+        
         // Connection timeout için retry mekanizması
         if (error.type == DioExceptionType.connectionTimeout ||
             error.type == DioExceptionType.receiveTimeout ||

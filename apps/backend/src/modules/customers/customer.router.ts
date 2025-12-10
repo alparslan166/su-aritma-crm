@@ -42,4 +42,3 @@ router.post("/:id/mark-installment-overdue", markInstallmentOverdueHandler);
 router.delete("/:id", deleteCustomerHandler);
 
 export const customerRouter = router;
-

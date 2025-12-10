@@ -1,9 +1,10 @@
 import cors from "cors";
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 
 import { config } from "@/config/env";
+import { logger } from "@/lib/logger";
 import { errorHandler, notFoundHandler } from "@/middleware/error-handler";
 import { apiRouter } from "@/routes";
 
@@ -25,6 +26,26 @@ export const createApp = () => {
   );
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true }));
+
+  // Global request logging middleware - tüm gelen request'leri logla
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    // Sadece /api/customers PUT request'lerini detaylı logla
+    if (req.path.startsWith("/api/customers") && req.method === "PUT") {
+      logger.debug(
+        "═══════════════════════════════════════════════════════════════════════════════════════════",
+      );
+      logger.debug("🔵🔵🔵 Backend Global - Request Alındı 🔵🔵🔵");
+      logger.debug("   Method:", req.method);
+      logger.debug("   URL:", req.originalUrl);
+      logger.debug("   Path:", req.path);
+      logger.debug("   Headers:", JSON.stringify(req.headers, null, 2));
+      logger.debug("   Body:", JSON.stringify(req.body, null, 2));
+      logger.debug(
+        "═══════════════════════════════════════════════════════════════════════════════════════════",
+      );
+    }
+    next();
+  });
 
   // Morgan logger: production'da sadece hata logları, development'ta detaylı
   if (config.nodeEnv === "production") {
