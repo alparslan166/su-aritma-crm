@@ -34,6 +34,14 @@ class PushNotificationService {
 
   Future<void> initialize() async {
     try {
+      // Check if Firebase is initialized
+      try {
+        Firebase.app();
+      } catch (e) {
+        debugPrint("Firebase not initialized, skipping push notifications");
+        return;
+      }
+      
       _messaging = FirebaseMessaging.instance;
 
       // Request permissions
