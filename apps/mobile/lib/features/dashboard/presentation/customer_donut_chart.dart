@@ -166,9 +166,6 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                         final totalChars = characters.length;
                         final typewriterProgress = _typewriterAnimation!.value;
                         
-                        // Kaç karakter görünecek
-                        final visibleChars = (totalChars * typewriterProgress).ceil();
-                        
                         // Smooth animasyon değeri kullan (CurvedAnimation)
                         final animationValue = _gradientAnimation!.value;
                         
@@ -197,31 +194,31 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                                     children: characters.asMap().entries.map((entry) {
                                       final index = entry.key;
                                       final char = entry.value;
-                                      final isVisible = index < visibleChars;
                                       
-                                      return TweenAnimationBuilder<double>(
-                                        tween: Tween(begin: 0.0, end: isVisible ? 1.0 : 0.0),
-                                        duration: const Duration(milliseconds: 150),
-                                        curve: Curves.easeOut,
-                                        builder: (context, value, child) {
-                                          return Opacity(
-                                            opacity: value,
-                                            child: Transform.translate(
-                                              offset: Offset(0, (1 - value) * 10), // Yukarıdan aşağıya slide
-                                              child: Text(
-                                                char,
-                                                style: TextStyle(
-                                                  fontSize: 24,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontStyle: FontStyle.italic,
-                                                  color: Colors.black87,
-                                                  letterSpacing: 0.5,
-                                                  height: 1.2,
-                                                ),
-                                              ),
+                                      // Her harf için animasyon progress'i hesapla
+                                      final charProgress = math.max(0.0, math.min(1.0, 
+                                        (typewriterProgress * totalChars - index).clamp(0.0, 1.0)
+                                      ));
+                                      
+                                      // Yumuşak geçiş için easeOut curve uygula
+                                      final easedProgress = 1.0 - math.pow(1.0 - charProgress, 3);
+                                      
+                                      return Opacity(
+                                        opacity: easedProgress,
+                                        child: Transform.translate(
+                                          offset: Offset(0, (1 - easedProgress) * 10), // Yukarıdan aşağıya slide
+                                          child: Text(
+                                            char,
+                                            style: TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                              fontStyle: FontStyle.italic,
+                                              color: Colors.black87,
+                                              letterSpacing: 0.5,
+                                              height: 1.2,
                                             ),
-                                          );
-                                        },
+                                          ),
+                                        ),
                                       );
                                     }).toList(),
                                   ),
@@ -261,31 +258,31 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                                                       children: characters.asMap().entries.map((entry) {
                                                         final index = entry.key;
                                                         final char = entry.value;
-                                                        final isVisible = index < visibleChars;
                                                         
-                                                        return TweenAnimationBuilder<double>(
-                                                          tween: Tween(begin: 0.0, end: isVisible ? 1.0 : 0.0),
-                                                          duration: const Duration(milliseconds: 150),
-                                                          curve: Curves.easeOut,
-                                                          builder: (context, value, child) {
-                                                            return Opacity(
-                                                              opacity: value,
-                                                              child: Transform.translate(
-                                                                offset: Offset(0, (1 - value) * 10),
-                                                                child: Text(
-                                                                  char,
-                                                                  style: TextStyle(
-                                                                    fontSize: 24,
-                                                                    fontWeight: FontWeight.bold,
-                                                                    fontStyle: FontStyle.italic,
-                                                                    color: Colors.white,
-                                                                    letterSpacing: 0.5,
-                                                                    height: 1.2,
-                                                                  ),
-                                                                ),
+                                                        // Her harf için animasyon progress'i hesapla
+                                                        final charProgress = math.max(0.0, math.min(1.0, 
+                                                          (typewriterProgress * totalChars - index).clamp(0.0, 1.0)
+                                                        ));
+                                                        
+                                                        // Yumuşak geçiş için easeOut curve uygula
+                                                        final easedProgress = 1.0 - math.pow(1.0 - charProgress, 3);
+                                                        
+                                                        return Opacity(
+                                                          opacity: easedProgress,
+                                                          child: Transform.translate(
+                                                            offset: Offset(0, (1 - easedProgress) * 10),
+                                                            child: Text(
+                                                              char,
+                                                              style: TextStyle(
+                                                                fontSize: 24,
+                                                                fontWeight: FontWeight.bold,
+                                                                fontStyle: FontStyle.italic,
+                                                                color: Colors.white,
+                                                                letterSpacing: 0.5,
+                                                                height: 1.2,
                                                               ),
-                                                            );
-                                                          },
+                                                            ),
+                                                          ),
                                                         );
                                                       }).toList(),
                                                     ),
