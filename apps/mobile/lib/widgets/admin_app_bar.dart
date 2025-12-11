@@ -86,12 +86,7 @@ class _AnimatedLogoButtonState extends State<_AnimatedLogoButton>
     _scaleAnimation = Tween<double>(
       begin: 1.0,
       end: 1.1,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut,
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     _controller.repeat(reverse: true);
   }

@@ -132,40 +132,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           ),
           // Bakım Bilgileri - Her zaman göster
           const SizedBox(height: 24),
-          _Section(
-            title: "Bakım Bilgileri",
-            children: [
-              if (customer.nextMaintenanceDate != null) ...[
-                _Row(
-                  "Sonraki Bakım Tarihi",
-                  DateFormat(
-                    "dd MMM yyyy",
-                  ).format(customer.nextMaintenanceDate!),
-                ),
-                if (customer.maintenanceTimeRemaining != null)
-                  _Row(
-                    "Kalan Süre",
-                    customer.maintenanceTimeRemaining!,
-                    valueColor:
-                        customer.nextMaintenanceDate!.isBefore(DateTime.now())
-                        ? Colors.red
-                        : customer.nextMaintenanceDate!
-                                  .difference(DateTime.now())
-                                  .inDays <=
-                              7
-                        ? Colors.orange
-                        : null,
-                  ),
-              ] else ...[
-                _Row(
-                  "Sonraki Bakım Tarihi",
-                  "Henüz belirlenmedi",
-                  valueColor: Colors.grey.shade600,
-                ),
-                _Row("Kalan Süre", "-", valueColor: Colors.grey.shade600),
-              ],
-            ],
-          ),
+          _MaintenanceSection(customer: customer),
           if (customer.hasDebt) ...[
             const SizedBox(height: 24),
             _Section(
@@ -604,6 +571,191 @@ class _Section extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(children: children),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MaintenanceSection extends StatelessWidget {
+  const _MaintenanceSection({required this.customer});
+
+  final Customer customer;
+
+  @override
+  Widget build(BuildContext context) {
+    final isOverdue = customer.nextMaintenanceDate != null &&
+        customer.nextMaintenanceDate!.isBefore(DateTime.now());
+    final isUrgent = customer.nextMaintenanceDate != null &&
+        !isOverdue &&
+        customer.nextMaintenanceDate!.difference(DateTime.now()).inDays <= 7;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Image.asset(
+                "assets/images/wrench.png",
+                width: 24,
+                height: 24,
+                color: const Color(0xFFF59E0B),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              "Bakım Bilgileri",
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFFF59E0B),
+                    letterSpacing: -0.3,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFFF59E0B).withValues(alpha: 0.08),
+                const Color(0xFFFCD34D).withValues(alpha: 0.05),
+                Colors.white,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                blurRadius: 12,
+                spreadRadius: 0,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                if (customer.nextMaintenanceDate != null) ...[
+                  _MaintenanceRow(
+                    icon: Icons.calendar_today,
+                    label: "Sonraki Bakım Tarihi",
+                    value: DateFormat("dd MMM yyyy")
+                        .format(customer.nextMaintenanceDate!),
+                    valueColor: isOverdue
+                        ? Colors.red.shade700
+                        : isUrgent
+                            ? Colors.orange.shade700
+                            : const Color(0xFF1F2937),
+                  ),
+                  const SizedBox(height: 16),
+                  if (customer.maintenanceTimeRemaining != null)
+                    _MaintenanceRow(
+                      icon: Icons.access_time,
+                      label: "Kalan Süre",
+                      value: customer.maintenanceTimeRemaining!,
+                      valueColor: isOverdue
+                          ? Colors.red.shade700
+                          : isUrgent
+                              ? Colors.orange.shade700
+                              : const Color(0xFF10B981),
+                      isBold: true,
+                    ),
+                ] else ...[
+                  _MaintenanceRow(
+                    icon: Icons.calendar_today,
+                    label: "Sonraki Bakım Tarihi",
+                    value: "Henüz belirlenmedi",
+                    valueColor: Colors.grey.shade600,
+                  ),
+                  const SizedBox(height: 16),
+                  _MaintenanceRow(
+                    icon: Icons.access_time,
+                    label: "Kalan Süre",
+                    value: "-",
+                    valueColor: Colors.grey.shade600,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MaintenanceRow extends StatelessWidget {
+  const _MaintenanceRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.isBold = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool isBold;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: const Color(0xFFF59E0B),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey.shade600,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+                  color: valueColor ?? const Color(0xFF1F2937),
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
           ),
         ),
       ],
