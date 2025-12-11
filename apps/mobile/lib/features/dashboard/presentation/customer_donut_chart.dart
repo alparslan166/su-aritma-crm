@@ -20,8 +20,10 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
   AnimationController? _rotationController;
   AnimationController? _gradientController;
   AnimationController? _fadeInController;
+  AnimationController? _typewriterController;
   Animation<double>? _gradientAnimation;
   Animation<double>? _fadeInAnimation;
+  Animation<double>? _typewriterAnimation;
 
   @override
   void initState() {
@@ -59,6 +61,18 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
       curve: Curves.easeIn,
     );
     _fadeInController!.forward(); // Fade-in'i başlat
+
+    // Typewriter animasyonu - harfler tek tek görünecek
+    _typewriterController = AnimationController(
+      duration: const Duration(milliseconds: 2000), // Toplam süre
+      vsync: this,
+    );
+
+    _typewriterAnimation = CurvedAnimation(
+      parent: _typewriterController!,
+      curve: Curves.easeOut,
+    );
+    _typewriterController!.forward(); // Typewriter animasyonunu başlat
   }
 
   @override
@@ -67,6 +81,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
     _rotationController?.dispose();
     _gradientController?.dispose();
     _fadeInController?.dispose();
+    _typewriterController?.dispose();
     super.dispose();
   }
 
@@ -130,6 +145,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                         _rotationController,
                         _gradientController,
                         _fadeInController,
+                        _typewriterController,
                       ].whereType<Listenable>(),
                     ),
                     builder: (context, child) {
@@ -139,11 +155,20 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
 
                       // Controller'lar initialize edilmediyse boş widget döndür
                       if (_gradientAnimation == null ||
-                          _fadeInAnimation == null) {
+                          _fadeInAnimation == null ||
+                          _typewriterAnimation == null) {
                         return const SizedBox.shrink();
                       }
 
                       try {
+                        // Typewriter animasyonu için karakter sayısını hesapla
+                        final characters = displayTitle.split('');
+                        final totalChars = characters.length;
+                        final typewriterProgress = _typewriterAnimation!.value;
+                        
+                        // Kaç karakter görünecek
+                        final visibleChars = (totalChars * typewriterProgress).ceil();
+                        
                         // Smooth animasyon değeri kullan (CurvedAnimation)
                         final animationValue = _gradientAnimation!.value;
                         
@@ -166,22 +191,41 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                               return Stack(
                                 alignment: Alignment.center,
                                 children: [
-                                  // Mat siyah yazı (arka plan)
-                                  Text(
-                                    displayTitle,
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      fontStyle: FontStyle.italic, // Hafif italik
-                                      color: Colors.black87, // Mat siyah
-                                      letterSpacing: 0.5,
-                                      height: 1.2,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                  // Mat siyah yazı (arka plan) - typewriter efekti ile
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: characters.asMap().entries.map((entry) {
+                                      final index = entry.key;
+                                      final char = entry.value;
+                                      final isVisible = index < visibleChars;
+                                      
+                                      return TweenAnimationBuilder<double>(
+                                        tween: Tween(begin: 0.0, end: isVisible ? 1.0 : 0.0),
+                                        duration: const Duration(milliseconds: 150),
+                                        curve: Curves.easeOut,
+                                        builder: (context, value, child) {
+                                          return Opacity(
+                                            opacity: value,
+                                            child: Transform.translate(
+                                              offset: Offset(0, (1 - value) * 10), // Yukarıdan aşağıya slide
+                                              child: Text(
+                                                char,
+                                                style: TextStyle(
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontStyle: FontStyle.italic,
+                                                  color: Colors.black87,
+                                                  letterSpacing: 0.5,
+                                                  height: 1.2,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    }).toList(),
                                   ),
-                                  // Lacivert ışık efekti (üstte)
+                                  // Lacivert ışık efekti (üstte) - sadece görünen harflere
                                   Positioned.fill(
                                     child: ClipRect(
                                       child: AnimatedBuilder(
@@ -202,29 +246,48 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                                                         end: Alignment.centerRight,
                                                         colors: [
                                                           Colors.transparent,
-                                                          const Color(0xFF1E3A8A).withOpacity(0.3), // Lacivert (hafif)
-                                                          const Color(0xFF2563EB), // Açık lacivert (parlak)
-                                                          const Color(0xFF3B82F6).withOpacity(0.9), // Daha açık
-                                                          const Color(0xFF2563EB), // Açık lacivert
-                                                          const Color(0xFF1E3A8A).withOpacity(0.3), // Lacivert (hafif)
+                                                          const Color(0xFF1E3A8A).withOpacity(0.3),
+                                                          const Color(0xFF2563EB),
+                                                          const Color(0xFF3B82F6).withOpacity(0.9),
+                                                          const Color(0xFF2563EB),
+                                                          const Color(0xFF1E3A8A).withOpacity(0.3),
                                                           Colors.transparent,
                                                         ],
                                                         stops: const [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0],
                                                       ).createShader(bounds);
                                                     },
-                                                    child: Text(
-                                                      displayTitle,
-                                                      style: TextStyle(
-                                                        fontSize: 24,
-                                                        fontWeight: FontWeight.bold,
-                                                        fontStyle: FontStyle.italic, // Hafif italik
-                                                        color: Colors.white,
-                                                        letterSpacing: 0.5,
-                                                        height: 1.2,
-                                                      ),
-                                                      textAlign: TextAlign.center,
-                                                      maxLines: 2,
-                                                      overflow: TextOverflow.ellipsis,
+                                                    child: Row(
+                                                      mainAxisAlignment: MainAxisAlignment.center,
+                                                      children: characters.asMap().entries.map((entry) {
+                                                        final index = entry.key;
+                                                        final char = entry.value;
+                                                        final isVisible = index < visibleChars;
+                                                        
+                                                        return TweenAnimationBuilder<double>(
+                                                          tween: Tween(begin: 0.0, end: isVisible ? 1.0 : 0.0),
+                                                          duration: const Duration(milliseconds: 150),
+                                                          curve: Curves.easeOut,
+                                                          builder: (context, value, child) {
+                                                            return Opacity(
+                                                              opacity: value,
+                                                              child: Transform.translate(
+                                                                offset: Offset(0, (1 - value) * 10),
+                                                                child: Text(
+                                                                  char,
+                                                                  style: TextStyle(
+                                                                    fontSize: 24,
+                                                                    fontWeight: FontWeight.bold,
+                                                                    fontStyle: FontStyle.italic,
+                                                                    color: Colors.white,
+                                                                    letterSpacing: 0.5,
+                                                                    height: 1.2,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            );
+                                                          },
+                                                        );
+                                                      }).toList(),
                                                     ),
                                                   ),
                                                 ),
@@ -246,7 +309,19 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                     },
                   ),
                 ),
-                const SizedBox(height: 32),
+                // Responsive boşluk - yazı ile grafik arası
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Ekran genişliğine göre responsive boşluk
+                    final screenWidth = MediaQuery.of(context).size.width;
+                    final spacing = screenWidth < 400 
+                        ? 40.0  // Küçük ekranlar için
+                        : screenWidth < 600
+                            ? 48.0  // Orta ekranlar için
+                            : 56.0; // Büyük ekranlar için
+                    return SizedBox(height: spacing);
+                  },
+                ),
                 SizedBox(
                   height: 180,
                   child: Stack(
