@@ -643,6 +643,14 @@ class _DebtSection extends StatelessWidget {
         customer.nextDebtDate!.isBefore(DateTime.now());
     final hasRemainingDebt = customer.remainingDebtAmount != null &&
         customer.remainingDebtAmount! > 0;
+    // Son ödeme tarihini bul (en son ödenen)
+    DateTime? latestPaymentDate;
+    if (customer.debtPaymentHistory != null &&
+        customer.debtPaymentHistory!.isNotEmpty) {
+      latestPaymentDate = customer.debtPaymentHistory!
+          .reduce((a, b) => a.paidAt.isAfter(b.paidAt) ? a : b)
+          .paidAt;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -740,6 +748,16 @@ class _DebtSection extends StatelessWidget {
                     valueColor: hasRemainingDebt
                         ? const Color(0xFFEF4444)
                         : const Color(0xFF10B981),
+                    isBold: true,
+                  ),
+                ],
+                if (latestPaymentDate != null) ...[
+                  const SizedBox(height: 16),
+                  _DebtRow(
+                    icon: Icons.event_available,
+                    label: "Son Ödeme Tarihi",
+                    value: DateFormat("dd MMM yyyy, HH:mm").format(latestPaymentDate),
+                    valueColor: const Color(0xFF10B981),
                     isBold: true,
                   ),
                 ],
@@ -1104,11 +1122,10 @@ class _DebtPaymentHistorySection extends StatelessWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row(this.label, this.value, {this.valueColor});
+  const _Row(this.label, this.value);
 
   final String label;
   final String value;
-  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1130,7 +1147,10 @@ class _Row extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: TextStyle(fontWeight: FontWeight.w500, color: valueColor),
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF1F2937),
+              ),
             ),
           ),
         ],
