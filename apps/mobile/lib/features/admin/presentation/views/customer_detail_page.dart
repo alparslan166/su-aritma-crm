@@ -135,51 +135,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           _MaintenanceSection(customer: customer),
           if (customer.hasDebt) ...[
             const SizedBox(height: 24),
-            _Section(
-              title: "Borç Bilgileri",
-              children: [
-                if (customer.debtAmount != null)
-                  _Row(
-                    "Toplam Borç",
-                    "${customer.debtAmount!.toStringAsFixed(2)} TL",
-                  ),
-                if (customer.paidDebtAmount != null &&
-                    customer.paidDebtAmount! > 0)
-                  _Row(
-                    "Ödenen Borç",
-                    "${customer.paidDebtAmount!.toStringAsFixed(2)} TL",
-                  ),
-                if (customer.hasInstallment &&
-                    customer.installmentCount != null)
-                  _Row("Taksit Sayısı", "${customer.installmentCount} taksit"),
-                if (customer.remainingDebtAmount != null)
-                  _Row(
-                    "Kalan Borç",
-                    "${customer.remainingDebtAmount!.toStringAsFixed(2)} TL",
-                  ),
-                if (customer.nextDebtDate != null) ...[
-                  _Row(
-                    "Sonraki Borç Tarihi",
-                    DateFormat("dd MMM yyyy").format(customer.nextDebtDate!),
-                  ),
-                  if (customer.nextDebtDate!.isBefore(DateTime.now())) ...[
-                    _Row(
-                      "Geçen Süre",
-                      _getOverdueDays(customer.nextDebtDate!),
-                      valueColor: Colors.red,
-                    ),
-                  ],
-                ],
-                // Borç durumu: Sadece müşteri seviyesinde borç varsa, kalan borç > 0 ise ve ödeme tarihi geçmişse göster
-                if (customer.hasDebt &&
-                    customer.remainingDebtAmount != null &&
-                    customer.remainingDebtAmount! > 0 &&
-                    customer.nextDebtDate != null &&
-                    customer.nextDebtDate!.isBefore(DateTime.now())) ...[
-                  _Row("Borç Durumu", "Ödeme gecikmiş", valueColor: Colors.red),
-                ],
-              ],
-            ),
+            _DebtSection(customer: customer),
           ],
           // Borç Ödeme Geçmişi - Borç Ödeme bölümünün üzerinde (her zaman göster)
           const SizedBox(height: 24),
@@ -729,6 +685,264 @@ class _MaintenanceRow extends StatelessWidget {
             icon,
             size: 20,
             color: const Color(0xFFF59E0B),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey.shade600,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+                  color: valueColor ?? const Color(0xFF1F2937),
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DebtSection extends StatelessWidget {
+  const _DebtSection({required this.customer});
+
+  final Customer customer;
+
+  @override
+  Widget build(BuildContext context) {
+    final isOverdue = customer.nextDebtDate != null &&
+        customer.nextDebtDate!.isBefore(DateTime.now());
+    final hasRemainingDebt = customer.remainingDebtAmount != null &&
+        customer.remainingDebtAmount! > 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.account_balance_wallet,
+                size: 24,
+                color: Color(0xFF2563EB),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              "Borç Bilgileri",
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF2563EB),
+                    letterSpacing: -0.3,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF2563EB).withValues(alpha: 0.08),
+                const Color(0xFF60A5FA).withValues(alpha: 0.05),
+                Colors.white,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: const Color(0xFF2563EB).withValues(alpha: 0.2),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                blurRadius: 12,
+                spreadRadius: 0,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                if (customer.debtAmount != null)
+                  _DebtRow(
+                    icon: Icons.receipt_long,
+                    label: "Toplam Borç",
+                    value: "${customer.debtAmount!.toStringAsFixed(2)} TL",
+                    valueColor: const Color(0xFF1F2937),
+                    isBold: true,
+                  ),
+                if (customer.paidDebtAmount != null &&
+                    customer.paidDebtAmount! > 0) ...[
+                  const SizedBox(height: 16),
+                  _DebtRow(
+                    icon: Icons.check_circle_outline,
+                    label: "Ödenen Borç",
+                    value: "${customer.paidDebtAmount!.toStringAsFixed(2)} TL",
+                    valueColor: const Color(0xFF10B981),
+                    isBold: true,
+                  ),
+                ],
+                if (customer.hasInstallment &&
+                    customer.installmentCount != null) ...[
+                  const SizedBox(height: 16),
+                  _DebtRow(
+                    icon: Icons.payment,
+                    label: "Taksit Sayısı",
+                    value: "${customer.installmentCount} taksit",
+                    valueColor: const Color(0xFF1F2937),
+                  ),
+                ],
+                if (customer.remainingDebtAmount != null) ...[
+                  const SizedBox(height: 16),
+                  _DebtRow(
+                    icon: Icons.account_balance_wallet,
+                    label: "Kalan Borç",
+                    value: "${customer.remainingDebtAmount!.toStringAsFixed(2)} TL",
+                    valueColor: hasRemainingDebt
+                        ? const Color(0xFFEF4444)
+                        : const Color(0xFF10B981),
+                    isBold: true,
+                  ),
+                ],
+                if (customer.nextDebtDate != null) ...[
+                  const SizedBox(height: 16),
+                  _DebtRow(
+                    icon: Icons.calendar_today,
+                    label: "Sonraki Borç Tarihi",
+                    value: DateFormat("dd MMM yyyy").format(customer.nextDebtDate!),
+                    valueColor: isOverdue
+                        ? Colors.red.shade700
+                        : const Color(0xFF1F2937),
+                  ),
+                  if (isOverdue) ...[
+                    const SizedBox(height: 16),
+                    _DebtRow(
+                      icon: Icons.warning_amber_rounded,
+                      label: "Geçen Süre",
+                      value: _getOverdueDays(customer.nextDebtDate!),
+                      valueColor: Colors.red.shade700,
+                      isBold: true,
+                    ),
+                  ],
+                ],
+                // Borç durumu: Sadece müşteri seviyesinde borç varsa, kalan borç > 0 ise ve ödeme tarihi geçmişse göster
+                if (customer.hasDebt &&
+                    customer.remainingDebtAmount != null &&
+                    customer.remainingDebtAmount! > 0 &&
+                    customer.nextDebtDate != null &&
+                    customer.nextDebtDate!.isBefore(DateTime.now())) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.red.shade200,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 20,
+                          color: Colors.red.shade700,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Ödeme gecikmiş",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red.shade700,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getOverdueDays(DateTime dueDate) {
+    final now = DateTime.now();
+    final difference = now.difference(dueDate);
+    final days = difference.inDays;
+
+    if (days == 0) {
+      return "Bugün geçti";
+    } else if (days == 1) {
+      return "1 gün geçti";
+    } else {
+      return "$days gün geçti";
+    }
+  }
+}
+
+class _DebtRow extends StatelessWidget {
+  const _DebtRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.isBold = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool isBold;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 20,
+            color: const Color(0xFF2563EB),
           ),
         ),
         const SizedBox(width: 12),
