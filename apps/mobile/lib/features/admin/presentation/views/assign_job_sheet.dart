@@ -152,7 +152,7 @@ class _AssignJobSheetState extends ConsumerState<AssignJobSheet> {
       // Refresh lists
       ref.invalidate(personnelListProvider);
       ref.invalidate(customerListProvider);
-      
+
       // Ana sayfa grafik ve istatistiklerini statik olarak yenile
       ref.invalidate(dashboardStatsProvider);
       ref.invalidate(customerCategoryDataProvider);

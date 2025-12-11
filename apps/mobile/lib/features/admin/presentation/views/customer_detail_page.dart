@@ -211,13 +211,13 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
         );
         notifier.refresh(showLoading: false);
       }
-      
+
       // Ana sayfa grafik ve istatistiklerini statik olarak yenile
       ref.invalidate(dashboardStatsProvider);
       ref.invalidate(customerCategoryDataProvider);
       ref.invalidate(overduePaymentsCustomersProvider);
       ref.invalidate(upcomingMaintenanceProvider);
-      
+
       if (context.mounted) {
         messenger.showSnackBar(
           SnackBar(
@@ -354,13 +354,13 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
       }
 
       ref.invalidate(jobListProvider);
-      
+
       // Ana sayfa grafik ve istatistiklerini statik olarak yenile
       ref.invalidate(dashboardStatsProvider);
       ref.invalidate(customerCategoryDataProvider);
       ref.invalidate(overduePaymentsCustomersProvider);
       ref.invalidate(upcomingMaintenanceProvider);
-      
+
       if (context.mounted) {
         messenger.showSnackBar(SnackBar(content: Text("${job.title} silindi")));
       }

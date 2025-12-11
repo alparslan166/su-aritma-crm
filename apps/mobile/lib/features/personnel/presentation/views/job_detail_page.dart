@@ -14,6 +14,7 @@ import "package:url_launcher/url_launcher.dart";
 import "../../../admin/application/inventory_list_notifier.dart";
 import "../../../admin/data/models/inventory_item.dart";
 import "../../../../core/network/api_client.dart" show apiClientProvider;
+import "../../../dashboard/presentation/home_page_provider.dart";
 import "../../application/delivery_payload.dart";
 import "../../application/job_detail_notifier.dart";
 import "../../application/personnel_jobs_notifier.dart";
@@ -233,6 +234,13 @@ class _ActionButtons extends HookConsumerWidget {
         if (!mounted()) return;
         await ref.read(personnelJobDetailProvider(jobId).notifier).refresh();
         ref.invalidate(personnelJobsProvider);
+        
+        // Ana sayfa grafik ve istatistiklerini statik olarak yenile
+        ref.invalidate(dashboardStatsProvider);
+        ref.invalidate(customerCategoryDataProvider);
+        ref.invalidate(overduePaymentsCustomersProvider);
+        ref.invalidate(upcomingMaintenanceProvider);
+        
         if (context.mounted && mounted()) {
           ScaffoldMessenger.of(
             context,
