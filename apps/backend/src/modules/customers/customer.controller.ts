@@ -112,9 +112,10 @@ export const getCustomerHandler = async (req: Request, res: Response, next: Next
     const { id } = req.params;
     const data = await customerService.getById(adminId, id);
 
-    // Debug: Dönen customer'da debtPaymentHistory var mı kontrol et
+    // Debug: Dönen customer'da debtPaymentHistory ve nextMaintenanceDate var mı kontrol et
     console.log("🟢 Backend getById - Dönen customer:");
     console.log(`   - debtPaymentHistory: ${data.debtPaymentHistory?.length ?? 0} adet`);
+    console.log(`   - nextMaintenanceDate: ${data.nextMaintenanceDate}`);
     if (data.debtPaymentHistory && data.debtPaymentHistory.length > 0) {
       for (const payment of data.debtPaymentHistory) {
         console.log(`   - ${payment.amount} TL - ${payment.paidAt}`);

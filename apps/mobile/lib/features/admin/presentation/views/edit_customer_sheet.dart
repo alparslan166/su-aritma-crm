@@ -316,16 +316,29 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
 
       // Invalidate customer detail provider to refresh the detail page
       // Borç ödeme geçmişi için yaptığımız gibi, provider'ı invalidate et ve refresh et
+      debugPrint(
+        "═══════════════════════════════════════════════════════════════════════════════════════════",
+      );
+      debugPrint("🟢 Frontend - Provider Refresh BAŞLADI");
+      debugPrint("   Customer ID: ${widget.customer.id}");
+      debugPrint("   updateCustomer response nextMaintenanceDate: ${data.nextMaintenanceDate}");
+      
       ref.invalidate(customerDetailProvider(widget.customer.id));
+      debugPrint("   ✅ Provider invalidate edildi");
+      
       // Provider'ın yeniden yüklenmesini bekle - nextMaintenanceDate dahil tüm veriler güncellenir
       final refreshedCustomer = await ref.read(
         customerDetailProvider(widget.customer.id).future,
       );
+      debugPrint("   ✅ Provider refresh tamamlandı");
 
       // Debug: Refresh sonrası customer'da nextMaintenanceDate var mı kontrol et
       debugPrint("🟢 Refresh sonrası customer:");
       debugPrint(
         "   - nextMaintenanceDate: ${refreshedCustomer.nextMaintenanceDate}",
+      );
+      debugPrint(
+        "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
       if (!mounted) return;
       Navigator.of(context).pop();
