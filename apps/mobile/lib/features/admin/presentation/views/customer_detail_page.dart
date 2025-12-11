@@ -113,10 +113,10 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           _CustomerInfoSection(
             customer: customer,
             onStatusChanged: (newStatus) =>
-                    _updateCustomerStatus(customer, newStatus),
-              ),
+                _updateCustomerStatus(customer, newStatus),
+          ),
           // Bakım Bilgileri - Her zaman göster
-            const SizedBox(height: 24),
+          const SizedBox(height: 24),
           _MaintenanceSection(customer: customer),
           if (customer.hasDebt) ...[
             const SizedBox(height: 24),
@@ -466,10 +466,10 @@ class _ThemedSection extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF1F2937),
-                    letterSpacing: -0.3,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF1F2937),
+                letterSpacing: -0.3,
+              ),
             ),
           ],
         ),
@@ -482,10 +482,7 @@ class _ThemedSection extends StatelessWidget {
               colors: gradientColors,
             ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: borderColor,
-              width: 1.5,
-            ),
+            border: Border.all(color: borderColor, width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: borderColor.withOpacity(0.1),
@@ -1243,41 +1240,33 @@ class _CustomerInfoSection extends StatelessWidget {
       ],
       borderColor: const Color(0xFF7C3AED).withOpacity(0.3),
       children: [
-            const SizedBox(height: 16),
-            if (customer.createdAt != null)
-              _InfoRowIcon(
-                icon: Icons.event,
-                label: "Kayıt Tarihi",
-                value: DateFormat("dd MMM yyyy").format(customer.createdAt!),
-              ),
-            _InfoRowIcon(
-              icon: Icons.badge,
-              label: "İsim",
-              value: customer.name,
-            ),
-            _InfoRowIcon(
-              icon: Icons.phone,
-              label: "Telefon",
-              value: customer.phone,
-            ),
-            if (customer.email != null)
-              _InfoRowIcon(
-                icon: Icons.mail,
-                label: "E-posta",
-                value: customer.email!,
-              ),
-            _InfoRowIcon(
-              icon: Icons.home,
-              label: "Adres",
-              value: customer.address,
-              maxLines: 3,
-            ),
-            const SizedBox(height: 8),
-            _StatusRow(
-              "Durum",
-              customer.status,
-              onChanged: onStatusChanged,
-            ),
+        const SizedBox(height: 16),
+        if (customer.createdAt != null)
+          _InfoRowIcon(
+            icon: Icons.event,
+            label: "Kayıt Tarihi",
+            value: DateFormat("dd MMM yyyy").format(customer.createdAt!),
+          ),
+        _InfoRowIcon(icon: Icons.badge, label: "İsim", value: customer.name),
+        _InfoRowIcon(
+          icon: Icons.phone,
+          label: "Telefon",
+          value: customer.phone,
+        ),
+        if (customer.email != null)
+          _InfoRowIcon(
+            icon: Icons.mail,
+            label: "E-posta",
+            value: customer.email!,
+          ),
+        _InfoRowIcon(
+          icon: Icons.home,
+          label: "Adres",
+          value: customer.address,
+          maxLines: 3,
+        ),
+        const SizedBox(height: 8),
+        _StatusRow("Durum", customer.status, onChanged: onStatusChanged),
       ],
     );
   }
@@ -1904,162 +1893,180 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
         Colors.white.withOpacity(0.0),
       ],
       borderColor: const Color(0xFFEF4444).withOpacity(0.3),
-        children: [
-          Padding(
+      children: [
+        Padding(
           padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (_error != null || _isLoading)
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: _isLoading ? null : _loadLocation,
-                    tooltip: "Yeniden Yükle",
+            children: [
+              if (_error != null || _isLoading)
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _isLoading ? null : _loadLocation,
+                  tooltip: "Yeniden Yükle",
                   color: const Color(0xFFEF4444),
-                  ),
-              ],
-            ),
+                ),
+            ],
           ),
-          InkWell(
-            onTap: _customerLocation != null
-                ? () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => JobMapView(
-                          initialCustomerLocation: _customerLocation!,
-                          initialCustomerId: widget.customer.id,
-                        ),
+        ),
+        InkWell(
+          onTap: _customerLocation != null
+              ? () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => JobMapView(
+                        initialCustomerLocation: _customerLocation!,
+                        initialCustomerId: widget.customer.id,
                       ),
-                    );
-                  }
-                : null,
-            child: SizedBox(
-              height: 250,
-              child: _isLoading
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  : _error != null
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.orange.shade50,
-                              ),
-                              child: Icon(
-                                Icons.location_searching,
-                                color: Colors.orange.shade300,
-                                size: 56,
-                              ),
+                    ),
+                  );
+                }
+              : null,
+          child: SizedBox(
+            height: 250,
+            child: _isLoading
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                : _error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.orange.shade50,
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              "Konum Bulunamadı",
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey.shade700,
-                                  ),
+                            child: Icon(
+                              Icons.location_searching,
+                              color: Colors.orange.shade300,
+                              size: 56,
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _error!.contains("Adres bilgisi")
-                                  ? "Müşterinin adres bilgisi bulunmuyor. Adres bilgisi ekleyerek konumu görüntüleyebilirsiniz."
-                                  : "Müşterinin konum bilgisi yüklenemedi. Adres bilgisi doğru mu kontrol edin veya Google Maps'te açmak için adrese tıklayın.",
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Colors.grey.shade600,
-                                    height: 1.4,
-                                  ),
-                            ),
-                            const SizedBox(height: 16),
-                            OutlinedButton.icon(
-                              onPressed: _loadLocation,
-                              icon: const Icon(Icons.refresh, size: 18),
-                              label: const Text("Tekrar Dene"),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 12,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            "Konum Bulunamadı",
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade700,
                                 ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _error!.contains("Adres bilgisi")
+                                ? "Müşterinin adres bilgisi bulunmuyor. Adres bilgisi ekleyerek konumu görüntüleyebilirsiniz."
+                                : "Müşterinin konum bilgisi yüklenemedi. Adres bilgisi doğru mu kontrol edin veya Google Maps'te açmak için adrese tıklayın.",
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Colors.grey.shade600,
+                                  height: 1.4,
+                                ),
+                          ),
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            onPressed: _loadLocation,
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: const Text("Tekrar Dene"),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
                               ),
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : _customerLocation != null
+                ? Builder(
+                    builder: (context) {
+                      debugPrint(
+                        "🗺️ Rendering customer map at: ${_customerLocation!.latitude}, ${_customerLocation!.longitude}",
+                      );
+                      return ClipRect(
+                        child: FlutterMap(
+                          key: ValueKey(
+                            "${_customerLocation!.latitude}_${_customerLocation!.longitude}",
+                          ),
+                          options: MapOptions(
+                            initialCenter: _customerLocation!,
+                            initialZoom: 15.0,
+                            interactionOptions: const InteractionOptions(
+                              flags: InteractiveFlag.none,
+                            ),
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate:
+                                  "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                              userAgentPackageName: "com.suaritma.app",
+                              maxZoom: 19,
+                              minZoom: 3,
+                            ),
+                             MarkerLayer(
+                               markers: [
+                                 Marker(
+                                   point: _customerLocation!,
+                                   width: 50,
+                                   height: 50,
+                                   child: Container(
+                                     decoration: BoxDecoration(
+                                       color: const Color(0xFF2563EB), // Blue
+                                       shape: BoxShape.circle,
+                                       border: Border.all(
+                                         color: Colors.white,
+                                         width: 3,
+                                       ),
+                                       boxShadow: [
+                                         BoxShadow(
+                                           color: const Color(0xFF2563EB)
+                                               .withOpacity(0.4),
+                                           blurRadius: 8,
+                                           spreadRadius: 2,
+                                         ),
+                                       ],
+                                     ),
+                                     child: const Icon(
+                                       Icons.location_on,
+                                       color: Colors.white,
+                                       size: 28,
+                                     ),
+                                   ),
+                                 ),
+                               ],
+                             ),
                           ],
                         ),
-                      ),
-                    )
-                  : _customerLocation != null
-                  ? Builder(
-                      builder: (context) {
-                        debugPrint(
-                          "🗺️ Rendering customer map at: ${_customerLocation!.latitude}, ${_customerLocation!.longitude}",
-                        );
-                        return ClipRect(
-                          child: FlutterMap(
-                            key: ValueKey(
-                              "${_customerLocation!.latitude}_${_customerLocation!.longitude}",
-                            ),
-                            options: MapOptions(
-                              initialCenter: _customerLocation!,
-                              initialZoom: 15.0,
-                              interactionOptions: const InteractionOptions(
-                                flags: InteractiveFlag.none,
-                              ),
-                            ),
-                            children: [
-                              TileLayer(
-                                urlTemplate:
-                                    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                                userAgentPackageName: "com.suaritma.app",
-                                maxZoom: 19,
-                                minZoom: 3,
-                              ),
-                              MarkerLayer(
-                                markers: [
-                                  Marker(
-                                    point: _customerLocation!,
-                                    width: 40,
-                                    height: 40,
-                                    child: const Icon(
-                                      Icons.location_on,
-                                    color: Color(0xFFEF4444), // Red
-                                      size: 40,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    )
-                  : Builder(
-                      builder: (context) {
-                        debugPrint(
-                          "🗺️ Customer location is null, showing error message",
-                        );
-                        return const Center(
-                          child: Text("Konum bilgisi bulunamadı"),
-                        );
-                      },
-                    ),
-            ),
+                      );
+                    },
+                  )
+                : Builder(
+                    builder: (context) {
+                      debugPrint(
+                        "🗺️ Customer location is null, showing error message",
+                      );
+                      return const Center(
+                        child: Text("Konum bilgisi bulunamadı"),
+                      );
+                    },
+                  ),
           ),
-          Padding(
+        ),
+        Padding(
           padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
-            child: Row(
-              children: [
+          child: Row(
+            children: [
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
@@ -2082,11 +2089,14 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                       horizontal: 12,
                       vertical: 10,
                     ),
-                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
+                    textStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-                if (_customerLocation != null) ...[
+              ),
+              if (_customerLocation != null) ...[
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton.icon(
@@ -2109,15 +2119,18 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                         horizontal: 12,
                         vertical: 10,
                       ),
-                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
+                      textStyle: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ],
+                ),
               ],
-            ),
+            ],
           ),
-        ],
+        ),
+      ],
     );
   }
 }
