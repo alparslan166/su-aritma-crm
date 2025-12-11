@@ -1922,9 +1922,16 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                     );
                   }
                 : null,
-            child: SizedBox(
-              height: 250,
-              child: _isLoading
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final mapHeight = MediaQuery.of(context).size.height * 0.25;
+              final minHeight = 200.0;
+              final maxHeight = 300.0;
+              final calculatedHeight = mapHeight.clamp(minHeight, maxHeight);
+              
+              return SizedBox(
+                height: calculatedHeight,
+                child: _isLoading
                   ? const Center(
                       child: Padding(
                         padding: EdgeInsets.all(16),
@@ -2064,73 +2071,110 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                     ),
             ),
           ),
-          Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
-            child: Row(
-              children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    // Google Maps'te adresi aç
-                    final encodedAddress = Uri.encodeComponent(
-                      widget.customer.address,
-                    );
-                    final googleMapsUrl =
-                        "https://www.google.com/maps/search/?api=1&query=$encodedAddress";
-                    final uri = Uri.parse(googleMapsUrl);
-                    // ignore: unawaited_futures
-                    launchUrl(uri, mode: LaunchMode.externalApplication);
-                  },
-                  icon: const Icon(Icons.place, size: 18),
-                  label: const Text("Google Maps ile Aç"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF60A5FA), // Light Blue
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  ),
-                ),
-                if (_customerLocation != null) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => JobMapView(
-                            initialCustomerLocation: _customerLocation!,
-                            initialCustomerId: widget.customer.id,
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: 0,
+            vertical: MediaQuery.of(context).size.width < 400 ? 8 : 12,
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isSmallScreen = constraints.maxWidth < 400;
+              final buttonHeight = isSmallScreen ? 44.0 : 48.0;
+              final iconSize = isSmallScreen ? 16.0 : 18.0;
+              final fontSize = isSmallScreen ? 12.0 : 13.0;
+              final horizontalPadding = isSmallScreen ? 8.0 : 12.0;
+              
+              return Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: buttonHeight,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          // Google Maps'te adresi aç
+                          final encodedAddress = Uri.encodeComponent(
+                            widget.customer.address,
+                          );
+                          final googleMapsUrl =
+                              "https://www.google.com/maps/search/?api=1&query=$encodedAddress";
+                          final uri = Uri.parse(googleMapsUrl);
+                          // ignore: unawaited_futures
+                          launchUrl(uri, mode: LaunchMode.externalApplication);
+                        },
+                        icon: Icon(Icons.place, size: iconSize),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            "Google Maps ile Aç",
+                            style: TextStyle(
+                              fontSize: fontSize,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                      );
-                    },
-                    icon: const Icon(Icons.map, size: 18),
-                    label: const Text("Haritada Aç"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF60A5FA), // Light Blue
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF60A5FA), // Light Blue
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: horizontalPadding,
+                            vertical: 0,
+                          ),
+                          minimumSize: Size(0, buttonHeight),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
                       ),
-                      textStyle: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
                     ),
                   ),
+                  if (_customerLocation != null) ...[
+                    SizedBox(width: isSmallScreen ? 6 : 8),
+                    Expanded(
+                      child: SizedBox(
+                        height: buttonHeight,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => JobMapView(
+                                  initialCustomerLocation: _customerLocation!,
+                                  initialCustomerId: widget.customer.id,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: Icon(Icons.map, size: iconSize),
+                          label: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              "Haritada Aç",
+                              style: TextStyle(
+                                fontSize: fontSize,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF60A5FA), // Light Blue
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: horizontalPadding,
+                              vertical: 0,
+                            ),
+                            minimumSize: Size(0, buttonHeight),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
+              );
+            },
           ),
+        ),
         ],
     );
   }
