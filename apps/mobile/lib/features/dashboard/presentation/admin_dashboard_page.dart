@@ -138,7 +138,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
               ),
             ),
             const SizedBox(width: 12),
-            const Text("Admin Paneli"),
+            const Text(
+              "Admin Paneli",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
+              ),
+            ),
           ],
         ),
         bottom: TabBar(
@@ -457,7 +464,14 @@ class _AdminDrawer extends ConsumerWidget {
                 size: 24,
               ),
             ),
-            title: const Text("Aktif İşler"),
+            title: const Text(
+              "Aktif İşler",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              ),
+            ),
             onTap: () {
               Navigator.of(context).pop();
               Navigator.of(
@@ -478,7 +492,14 @@ class _AdminDrawer extends ConsumerWidget {
                 size: 24,
               ),
             ),
-            title: const Text("Personeller"),
+            title: const Text(
+              "Personeller",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              ),
+            ),
             onTap: () {
               Navigator.of(context).pop();
               Navigator.of(
@@ -499,7 +520,14 @@ class _AdminDrawer extends ConsumerWidget {
                 size: 24,
               ),
             ),
-            title: const Text("Stok Durumu"),
+            title: const Text(
+              "Stok Durumu",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              ),
+            ),
             onTap: () {
               Navigator.of(context).pop();
               Navigator.of(
@@ -520,7 +548,14 @@ class _AdminDrawer extends ConsumerWidget {
                 size: 24,
               ),
             ),
-            title: const Text("Geçmiş"),
+            title: const Text(
+              "Geçmiş",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              ),
+            ),
             onTap: () {
               Navigator.of(context).pop();
               Navigator.of(
@@ -541,7 +576,14 @@ class _AdminDrawer extends ConsumerWidget {
                 size: 24,
               ),
             ),
-            title: const Text("Harita"),
+            title: const Text(
+              "Harita",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              ),
+            ),
             onTap: () {
               Navigator.of(context).pop();
               Navigator.of(
@@ -562,7 +604,14 @@ class _AdminDrawer extends ConsumerWidget {
                 size: 24,
               ),
             ),
-            title: const Text("Bildirim"),
+            title: const Text(
+              "Bildirim",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              ),
+            ),
             onTap: () {
               Navigator.of(context).pop();
               Navigator.of(context).push(
@@ -584,7 +633,14 @@ class _AdminDrawer extends ConsumerWidget {
                 size: 24,
               ),
             ),
-            title: const Text("Profil"),
+            title: const Text(
+              "Profil",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              ),
+            ),
             onTap: () {
               Navigator.of(context).pop();
               Navigator.of(context).push(
