@@ -28,11 +28,15 @@ type CreateCustomerPayload = {
   installmentStartDate?: string;
   installmentIntervalDays?: number;
   nextMaintenanceDate?: string | null;
+  receivedAmount?: number;
+  paymentDate?: string;
 };
 
 type UpdateCustomerPayload = Partial<CreateCustomerPayload> & {
   remainingDebtAmount?: number;
   nextMaintenanceDate?: string | null;
+  receivedAmount?: number;
+  paymentDate?: string;
 };
 
 type CustomerListFilters = {
@@ -296,6 +300,10 @@ class CustomerService {
     const nextMaintenanceDate = payload.nextMaintenanceDate
       ? new Date(payload.nextMaintenanceDate)
       : null;
+    const paymentDate = payload.paymentDate ? new Date(payload.paymentDate) : null;
+    const receivedAmount = payload.receivedAmount
+      ? new Prisma.Decimal(payload.receivedAmount)
+      : null;
 
     // Calculate remaining debt amount
     let remainingDebtAmount: Prisma.Decimal | null = null;
@@ -324,6 +332,8 @@ class CustomerService {
         installmentIntervalDays,
         remainingDebtAmount,
         nextMaintenanceDate,
+        receivedAmount,
+        paymentDate,
       },
     });
   }
@@ -354,6 +364,16 @@ class CustomerService {
 
     if (payload.status !== undefined) {
       updateData.status = payload.status;
+    }
+
+    // Handle receivedAmount and paymentDate
+    if (payload.receivedAmount !== undefined) {
+      updateData.receivedAmount = payload.receivedAmount
+        ? new Prisma.Decimal(payload.receivedAmount)
+        : null;
+    }
+    if (payload.paymentDate !== undefined) {
+      updateData.paymentDate = payload.paymentDate ? new Date(payload.paymentDate) : null;
     }
 
     // Handle debt fields

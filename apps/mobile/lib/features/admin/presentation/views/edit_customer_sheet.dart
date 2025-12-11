@@ -2,6 +2,7 @@ import "dart:async";
 
 import "package:flutter/material.dart";
 import "package:flutter/foundation.dart" show debugPrint;
+import "package:flutter/services.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 import "package:geocoding/geocoding.dart";
@@ -34,6 +35,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
   late final TextEditingController _debtAmountController;
   late final TextEditingController _installmentCountController;
   late final TextEditingController _installmentIntervalDaysController;
+  late final TextEditingController _receivedAmountController; // Alınan ücret
 
   bool? _hasDebt;
   bool _debtHasInstallment = false;
@@ -46,6 +48,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
   double _nextMaintenanceMonths = 0.0; // Sonraki bakım ayı (0-12 arası)
   bool _maintenanceDateChanged = false; // Bakım tarihi değiştirildi mi?
   double? _initialDebtAmount; // Başlangıç borç miktarı (karşılaştırma için)
+  DateTime? _paymentDate; // Ücret alım tarihi
 
   @override
   void initState() {
@@ -67,14 +70,18 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     _installmentIntervalDaysController = TextEditingController(
       text: customer.installmentIntervalDays?.toString() ?? "",
     );
+    _receivedAmountController = TextEditingController(
+      text: customer.receivedAmount?.toStringAsFixed(2) ?? "",
+    );
+    _paymentDate = customer.paymentDate ?? DateTime.now(); // Varsayılan: bugün
 
     _hasDebt = customer.hasDebt;
     _debtHasInstallment = customer.hasInstallment;
     _createdAt = customer.createdAt;
     // Bir sonraki borç ödeme tarihi: Eğer müşterinin mevcut tarihi varsa onu kullan,
     // yoksa varsayılan olarak 1 ay sonraya ayarla
-    _nextDebtDate = customer.nextDebtDate ?? 
-        DateTime.now().add(const Duration(days: 30));
+    _nextDebtDate =
+        customer.nextDebtDate ?? DateTime.now().add(const Duration(days: 30));
     _installmentStartDate = customer.installmentStartDate;
     // Bakım tarihi - mevcut değerleri formda göster
     try {
@@ -136,6 +143,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     _debtAmountController.dispose();
     _installmentCountController.dispose();
     _installmentIntervalDaysController.dispose();
+    _receivedAmountController.dispose();
     super.dispose();
   }
 
@@ -314,6 +322,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
             nextMaintenanceDate: calculatedMaintenanceDate, // null veya tarih
             sendNextMaintenanceDate:
                 sendNextMaintenanceDate, // Sadece değişiklik varsa true
+            receivedAmount: _receivedAmountController.text.trim().isNotEmpty
+                ? double.tryParse(_receivedAmountController.text.trim())
+                : null,
+            paymentDate: _paymentDate,
           );
 
       debugPrint(
@@ -1097,6 +1109,67 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                     ),
                   ],
                 ],
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                Text(
+                  "Alınan Ücret",
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _receivedAmountController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: "Alınan Ücret (₺)",
+                    hintText: "ör. 1500",
+                    prefixIcon: const Icon(Icons.attach_money),
+                    suffixText: "₺",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                  ),
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  readOnly: true,
+                  controller: TextEditingController(
+                    text: _paymentDate != null
+                        ? DateFormat("dd.MM.yyyy").format(_paymentDate!)
+                        : "",
+                  ),
+                  decoration: InputDecoration(
+                    labelText: "Ücret Alım Tarihi",
+                    hintText: "Tarih seçin",
+                    prefixIcon: const Icon(Icons.calendar_today),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _paymentDate ?? DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _paymentDate = picked;
+                          });
+                        }
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                  ),
+                ),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,

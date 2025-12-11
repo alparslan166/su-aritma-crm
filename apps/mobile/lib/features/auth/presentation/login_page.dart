@@ -114,12 +114,13 @@ class LoginPage extends HookConsumerWidget {
                       Text(
                         "Su Arıtma Platformu",
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                          letterSpacing: -0.5,
-                          height: 1.2,
-                        ),
+                        style: Theme.of(context).textTheme.headlineLarge
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                              letterSpacing: -0.5,
+                              height: 1.2,
+                            ),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -484,4 +485,3 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
     );
   }
 }
-

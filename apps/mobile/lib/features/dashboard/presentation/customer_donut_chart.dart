@@ -92,9 +92,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(
-                  child: AnimatedCompanyTitle(text: displayTitle),
-                ),
+                Center(child: AnimatedCompanyTitle(text: displayTitle)),
                 // Responsive boşluk - yazı ile grafik arası
                 LayoutBuilder(
                   builder: (context, constraints) {
@@ -574,10 +572,7 @@ class _LegendItem extends StatelessWidget {
 class AnimatedCompanyTitle extends StatefulWidget {
   final String text;
 
-  const AnimatedCompanyTitle({
-    super.key,
-    required this.text,
-  });
+  const AnimatedCompanyTitle({super.key, required this.text});
 
   @override
   State<AnimatedCompanyTitle> createState() => _AnimatedCompanyTitleState();
@@ -604,41 +599,28 @@ class _AnimatedCompanyTitleState extends State<AnimatedCompanyTitle>
       vsync: this,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(-1.0, 0.0), // Start from left
-      end: Offset.zero, // End at center
-    ).animate(
-      CurvedAnimation(
-        parent: _slideController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
+    _slideAnimation =
+        Tween<Offset>(
+          begin: const Offset(-1.0, 0.0), // Start from left
+          end: Offset.zero, // End at center
+        ).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+        );
 
     // Fade-in animation (same duration as slide)
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _slideController,
-        curve: Curves.easeOut,
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
 
-    // Shimmer animation (continuous loop)
+    // Shimmer animation (continuous loop) - daha yavaş
     _shimmerController = AnimationController(
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 5),
       vsync: this,
     );
 
-    _shimmerAnimation = Tween<double>(
-      begin: -1.0,
-      end: 2.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _shimmerController,
-        curve: Curves.linear,
-      ),
+    _shimmerAnimation = Tween<double>(begin: -1.0, end: 2.0).animate(
+      CurvedAnimation(parent: _shimmerController, curve: Curves.linear),
     );
 
     // Breathing animation (continuous loop)
@@ -647,14 +629,8 @@ class _AnimatedCompanyTitleState extends State<AnimatedCompanyTitle>
       vsync: this,
     );
 
-    _breathingAnimation = Tween<double>(
-      begin: 0.98,
-      end: 1.02,
-    ).animate(
-      CurvedAnimation(
-        parent: _breathingController,
-        curve: Curves.easeInOut,
-      ),
+    _breathingAnimation = Tween<double>(begin: 0.98, end: 1.02).animate(
+      CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut),
     );
 
     // Start animations
@@ -690,7 +666,8 @@ class _AnimatedCompanyTitleState extends State<AnimatedCompanyTitle>
                   final textWidth = constraints.maxWidth;
                   final shimmerPosition = _shimmerAnimation.value;
                   final shimmerWidth = textWidth * 0.4; // 40% of text width
-                  final shimmerStart = (shimmerPosition * textWidth) - (shimmerWidth / 2);
+                  final shimmerStart =
+                      (shimmerPosition * textWidth) - (shimmerWidth / 2);
 
                   return Stack(
                     alignment: Alignment.center,
@@ -701,7 +678,7 @@ class _AnimatedCompanyTitleState extends State<AnimatedCompanyTitle>
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w900, // Daha kalın
                           fontStyle: FontStyle.italic,
                           color: Colors.black87,
                           letterSpacing: 0.5,
@@ -710,45 +687,15 @@ class _AnimatedCompanyTitleState extends State<AnimatedCompanyTitle>
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      // Shimmer effect (blue light)
+                      // Shimmer effect (blue light overlay - only light, not text)
                       Positioned.fill(
-                        child: ClipRect(
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            widthFactor: shimmerWidth / textWidth,
-                            child: Transform.translate(
-                              offset: Offset(shimmerStart, 0),
-                              child: ShaderMask(
-                                blendMode: BlendMode.srcATop,
-                                shaderCallback: (bounds) {
-                                  return LinearGradient(
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                    colors: [
-                                      Colors.transparent,
-                                      const Color(0xFF2563EB).withOpacity(0.5),
-                                      const Color(0xFF3B82F6),
-                                      const Color(0xFF2563EB).withOpacity(0.5),
-                                      Colors.transparent,
-                                    ],
-                                    stops: const [0.0, 0.3, 0.5, 0.7, 1.0],
-                                  ).createShader(bounds);
-                                },
-                                child: Text(
-                                  widget.text,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    fontStyle: FontStyle.italic,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                    height: 1.2,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            painter: _ShimmerPainter(
+                              shimmerStart: shimmerStart,
+                              shimmerWidth: shimmerWidth,
+                              textHeight:
+                                  30, // Approximate text height based on fontSize 24 * 1.2
                             ),
                           ),
                         ),
@@ -762,5 +709,55 @@ class _AnimatedCompanyTitleState extends State<AnimatedCompanyTitle>
         ),
       ),
     );
+  }
+}
+
+/// Custom painter for shimmer light effect
+class _ShimmerPainter extends CustomPainter {
+  final double shimmerStart;
+  final double shimmerWidth;
+  final double textHeight;
+
+  _ShimmerPainter({
+    required this.shimmerStart,
+    required this.shimmerWidth,
+    required this.textHeight,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centerY = size.height / 2;
+    final rect = Rect.fromLTWH(
+      shimmerStart,
+      centerY - textHeight / 2,
+      shimmerWidth,
+      textHeight,
+    );
+
+    final gradient = LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: [
+        Colors.transparent,
+        const Color(0xFF1E3A8A).withOpacity(0.7), // Daha belirgin koyu lacivert
+        const Color(0xFF2563EB).withOpacity(0.9), // Daha belirgin koyu mavi
+        const Color(0xFF1E3A8A).withOpacity(0.7), // Daha belirgin koyu lacivert
+        Colors.transparent,
+      ],
+      stops: const [0.0, 0.25, 0.5, 0.75, 1.0], // Daha geniş merkez bölgesi
+    );
+
+    final paint = Paint()
+      ..shader = gradient.createShader(rect)
+      ..blendMode = BlendMode.screen;
+
+    canvas.drawRect(rect, paint);
+  }
+
+  @override
+  bool shouldRepaint(_ShimmerPainter oldDelegate) {
+    return oldDelegate.shimmerStart != shimmerStart ||
+        oldDelegate.shimmerWidth != shimmerWidth ||
+        oldDelegate.textHeight != textHeight;
   }
 }

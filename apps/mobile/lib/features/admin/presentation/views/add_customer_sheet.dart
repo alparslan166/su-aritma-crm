@@ -31,6 +31,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
   final _debtAmountController = TextEditingController();
   final _installmentCountController = TextEditingController();
   final _installmentIntervalDaysController = TextEditingController();
+  final _receivedAmountController = TextEditingController(); // Alınan ücret
   bool? _hasDebt; // null = not selected, true = yes, false = no
   bool _debtHasInstallment = false;
   late DateTime _createdAt;
@@ -43,12 +44,14 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
   LatLng? _currentLocation; // Konum bilgisi
   late DateTime _lastTransactionDate; // Son işlem tarihi
   double _filterChangeMonths = 0.0; // Filtre değişim ayı (0-12 arası)
+  DateTime? _paymentDate; // Ücret alım tarihi
 
   @override
   void initState() {
     super.initState();
     _createdAt = DateTime.now();
     _lastTransactionDate = DateTime.now(); // Varsayılan olarak bugün
+    _paymentDate = DateTime.now(); // Varsayılan olarak bugün
   }
 
   @override
@@ -60,6 +63,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
     _debtAmountController.dispose();
     _installmentCountController.dispose();
     _installmentIntervalDaysController.dispose();
+    _receivedAmountController.dispose();
     super.dispose();
   }
 
@@ -282,6 +286,10 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
             installmentIntervalDays: installmentIntervalDays,
             nextMaintenanceDate:
                 calculatedMaintenanceDate, // Bakım bilgilerini gönder
+            receivedAmount: _receivedAmountController.text.trim().isNotEmpty
+                ? double.tryParse(_receivedAmountController.text.trim())
+                : null,
+            paymentDate: _paymentDate,
           );
 
       // Tüm filter type'lar için provider'ları refresh et
@@ -496,6 +504,57 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                         ),
                       ),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Alınan Ücret alanı
+                TextField(
+                  controller: _receivedAmountController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: "Alınan Ücret (₺)",
+                    prefixIcon: const Icon(Icons.attach_money),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Ücret Alım Tarihi
+                TextFormField(
+                  readOnly: true,
+                  controller: TextEditingController(
+                    text: _paymentDate != null
+                        ? DateFormat("dd.MM.yyyy").format(_paymentDate!)
+                        : "",
+                  ),
+                  decoration: InputDecoration(
+                    labelText: "Ücret Alım Tarihi",
+                    hintText: "Tarih seçin",
+                    prefixIcon: const Icon(Icons.calendar_today),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _paymentDate ?? DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _paymentDate = picked;
+                          });
+                        }
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
                   ),
                 ),
                 // Harita gösterimi - konum ve adres varsa

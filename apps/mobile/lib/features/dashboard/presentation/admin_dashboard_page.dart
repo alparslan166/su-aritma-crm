@@ -29,6 +29,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
   late TabController _tabController;
   late AnimationController _homeIconAnimationController;
   late Animation<double> _homeIconBounceAnimation;
+  late List<AnimationController> _tabTextAnimationControllers;
+  late List<Animation<double>> _tabTextScaleAnimations;
   int _previousTabIndex = -1; // Önceki tab index'ini takip et
 
   @override
@@ -52,6 +54,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
       ),
     );
 
+    // Tab text scale animasyonları için controller'lar
+    _tabTextAnimationControllers = List.generate(
+      5,
+      (index) => AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 200),
+      ),
+    );
+
+    // Her tab için scale animasyonu (1.0 -> 1.2 -> 1.0)
+    _tabTextScaleAnimations = _tabTextAnimationControllers.map((controller) {
+      return Tween<double>(
+        begin: 1.0,
+        end: 1.2,
+      ).animate(CurvedAnimation(parent: controller, curve: Curves.easeInOut));
+    }).toList();
+
     // Tab değişikliğini dinle (tüm controller'lar initialize edildikten sonra)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -70,6 +89,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
     if (!mounted) return;
 
     final currentIndex = _tabController.index;
+
+    // Seçili tab'ın metnini büyüt-küçült animasyonu
+    if (currentIndex != _previousTabIndex &&
+        currentIndex < _tabTextAnimationControllers.length) {
+      _tabTextAnimationControllers[currentIndex].forward().then((_) {
+        if (mounted) {
+          _tabTextAnimationControllers[currentIndex].reverse();
+        }
+      });
+    }
 
     // Sadece farklı bir tab'dan Ana Sayfa'ya (index 2) geçildiğinde animasyonu tetikle
     // Aynı tab'a tekrar basıldığında animasyon çalışmasın
@@ -100,6 +129,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _homeIconAnimationController.dispose();
+    for (final controller in _tabTextAnimationControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -173,47 +205,63 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
           ),
           tabs: [
             Tab(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "Tüm",
-                    style: TextStyle(fontSize: responsiveFontSize),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    "Müşteriler",
-                    style: TextStyle(fontSize: responsiveFontSize),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              child: AnimatedBuilder(
+                animation: _tabTextScaleAnimations[0],
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _tabTextScaleAnimations[0].value,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Tüm",
+                          style: TextStyle(fontSize: responsiveFontSize),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          "Müşteriler",
+                          style: TextStyle(fontSize: responsiveFontSize),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
             Tab(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "Ödemesi",
-                    style: TextStyle(fontSize: responsiveFontSize),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    "Gelen",
-                    style: TextStyle(fontSize: responsiveFontSize),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              child: AnimatedBuilder(
+                animation: _tabTextScaleAnimations[1],
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _tabTextScaleAnimations[1].value,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Ödemesi",
+                          style: TextStyle(fontSize: responsiveFontSize),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          "Gelen",
+                          style: TextStyle(fontSize: responsiveFontSize),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
             Tab(
@@ -241,47 +289,63 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
               ),
             ),
             Tab(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "Bakımı",
-                    style: TextStyle(fontSize: responsiveFontSize),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    "Gelen",
-                    style: TextStyle(fontSize: responsiveFontSize),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              child: AnimatedBuilder(
+                animation: _tabTextScaleAnimations[3],
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _tabTextScaleAnimations[3].value,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Bakımı",
+                          style: TextStyle(fontSize: responsiveFontSize),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          "Gelen",
+                          style: TextStyle(fontSize: responsiveFontSize),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
             Tab(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "İş",
-                    style: TextStyle(fontSize: responsiveFontSize),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    "Atama",
-                    style: TextStyle(fontSize: responsiveFontSize),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              child: AnimatedBuilder(
+                animation: _tabTextScaleAnimations[4],
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _tabTextScaleAnimations[4].value,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "İş",
+                          style: TextStyle(fontSize: responsiveFontSize),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          "Atama",
+                          style: TextStyle(fontSize: responsiveFontSize),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ],

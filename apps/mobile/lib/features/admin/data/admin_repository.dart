@@ -461,6 +461,8 @@ class AdminRepository {
     DateTime? installmentStartDate,
     int? installmentIntervalDays,
     DateTime? nextMaintenanceDate,
+    double? receivedAmount,
+    DateTime? paymentDate,
   }) async {
     final data = <String, dynamic>{
       "name": name,
@@ -481,6 +483,9 @@ class AdminRepository {
         "installmentIntervalDays": installmentIntervalDays,
       if (nextMaintenanceDate != null)
         "nextMaintenanceDate": nextMaintenanceDate.toUtc().toIso8601String(),
+      if (receivedAmount != null) "receivedAmount": receivedAmount,
+      if (paymentDate != null)
+        "paymentDate": paymentDate.toUtc().toIso8601String(),
     };
     final response = await _client.post("/customers", data: data);
     return Customer.fromJson(response.data["data"] as Map<String, dynamic>);
@@ -507,6 +512,8 @@ class AdminRepository {
     nextMaintenanceDate, // null gönderilirse temizlenir, undefined gönderilirse korunur
     bool sendNextMaintenanceDate =
         false, // nextMaintenanceDate gönderilmeli mi? (null olsa bile)
+    double? receivedAmount,
+    DateTime? paymentDate,
   }) async {
     final data = <String, dynamic>{};
     if (name != null) data["name"] = name;
@@ -534,6 +541,10 @@ class AdminRepository {
     }
     if (remainingDebtAmount != null)
       data["remainingDebtAmount"] = remainingDebtAmount;
+    if (receivedAmount != null) data["receivedAmount"] = receivedAmount;
+    if (paymentDate != null) {
+      data["paymentDate"] = paymentDate.toUtc().toIso8601String();
+    }
     // nextMaintenanceDate gönder
     // NOT: nextMaintenanceDate parametresi sadece değişiklik yapıldığında gönderilir
     // Eğer null gönderilirse, backend'de null olarak set edilir (temizlenir)
@@ -542,25 +553,15 @@ class AdminRepository {
     debugPrint(
       "═══════════════════════════════════════════════════════════════════════════════════════════",
     );
-    debugPrint(
-      "🔵🔵🔵 Frontend Repository - updateCustomer BAŞLADI 🔵🔵🔵",
-    );
-    debugPrint(
-      "   Customer ID: $id",
-    );
-    debugPrint(
-      "   sendNextMaintenanceDate: $sendNextMaintenanceDate",
-    );
-    debugPrint(
-      "   nextMaintenanceDate (raw): $nextMaintenanceDate",
-    );
+    debugPrint("🔵🔵🔵 Frontend Repository - updateCustomer BAŞLADI 🔵🔵🔵");
+    debugPrint("   Customer ID: $id");
+    debugPrint("   sendNextMaintenanceDate: $sendNextMaintenanceDate");
+    debugPrint("   nextMaintenanceDate (raw): $nextMaintenanceDate");
     if (sendNextMaintenanceDate) {
       if (nextMaintenanceDate != null) {
         final dateString = nextMaintenanceDate.toUtc().toIso8601String();
         data["nextMaintenanceDate"] = dateString;
-        debugPrint(
-          "   ✅ nextMaintenanceDate gönderiliyor: $dateString",
-        );
+        debugPrint("   ✅ nextMaintenanceDate gönderiliyor: $dateString");
       } else {
         // Null göndermek için null olarak gönder
         // Backend'de payload.nextMaintenanceDate !== undefined kontrolü var
@@ -575,21 +576,19 @@ class AdminRepository {
         "   ⚠️ nextMaintenanceDate gönderilmiyor (undefined - mevcut değer korunacak)",
       );
     }
-    debugPrint(
-      "   Gönderilecek data: ${data.toString()}",
-    );
+    debugPrint("   Gönderilecek data: ${data.toString()}");
     debugPrint(
       "═══════════════════════════════════════════════════════════════════════════════════════════",
     );
     // Eğer sendNextMaintenanceDate false ise, nextMaintenanceDate hiç gönderilmez (undefined)
     final response = await _client.put("/customers/$id", data: data);
-    final updatedCustomer = Customer.fromJson(response.data["data"] as Map<String, dynamic>);
+    final updatedCustomer = Customer.fromJson(
+      response.data["data"] as Map<String, dynamic>,
+    );
     debugPrint(
       "═══════════════════════════════════════════════════════════════════════════════════════════",
     );
-    debugPrint(
-      "🔵🔵🔵 Frontend Repository - updateCustomer TAMAMLANDI 🔵🔵🔵",
-    );
+    debugPrint("🔵🔵🔵 Frontend Repository - updateCustomer TAMAMLANDI 🔵🔵🔵");
     debugPrint(
       "   Response nextMaintenanceDate: ${updatedCustomer.nextMaintenanceDate}",
     );
@@ -833,12 +832,12 @@ class AdminRepository {
     final baseUrl = _client.options.baseUrl;
     final pdfUrl = "$baseUrl/invoices/job/$jobId/pdf";
     final uri = Uri.parse(pdfUrl);
-    
+
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
       return "pdf_$jobId"; // Return identifier only, not file path
     }
-    
+
     throw Exception("PDF açılamadı. Lütfen tekrar deneyin.");
   }
 }

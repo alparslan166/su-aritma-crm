@@ -41,7 +41,7 @@ class PushNotificationService {
         debugPrint("Firebase not initialized, skipping push notifications");
         return;
       }
-      
+
       _messaging = FirebaseMessaging.instance;
 
       // Request permissions

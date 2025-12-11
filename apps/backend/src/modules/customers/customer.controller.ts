@@ -51,6 +51,8 @@ const createSchema = z
     installmentStartDate: z.string().datetime().optional(),
     installmentIntervalDays: z.number().int().positive().optional(),
     nextMaintenanceDate: z.string().datetime().optional(),
+    receivedAmount: z.number().nonnegative().optional(),
+    paymentDate: z.string().datetime().optional(),
   })
   .refine(
     (data) => {

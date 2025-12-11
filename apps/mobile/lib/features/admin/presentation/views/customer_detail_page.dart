@@ -112,10 +112,10 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           _CustomerInfoSection(
             customer: customer,
             onStatusChanged: (newStatus) =>
-                    _updateCustomerStatus(customer, newStatus),
-              ),
+                _updateCustomerStatus(customer, newStatus),
+          ),
           // Bakım Bilgileri - Her zaman göster
-            const SizedBox(height: 24),
+          const SizedBox(height: 24),
           _MaintenanceSection(customer: customer),
           if (customer.hasDebt) ...[
             const SizedBox(height: 24),
@@ -823,7 +823,7 @@ class _DebtSection extends StatelessWidget {
                   const SizedBox(height: 16),
                   _DebtRow(
                     icon: Icons.calendar_today,
-                    label: "Sonraki Borç Tarihi",
+                    label: "Borç Ödeme Tarihi",
                     value: DateFormat(
                       "dd MMM yyyy",
                     ).format(customer.nextDebtDate!),
@@ -1001,6 +1001,121 @@ class _DebtPaymentHistorySection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
+        // Alınan Ücret kartı - eğer varsa göster
+        if (customer.receivedAmount != null &&
+            customer.paymentDate != null) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF2563EB).withValues(alpha: 0.08),
+                  const Color(0xFF3B82F6).withValues(alpha: 0.05),
+                  Colors.white,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF2563EB).withValues(alpha: 0.2),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.attach_money,
+                      color: Color(0xFF2563EB),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              "${customer.receivedAmount!.toStringAsFixed(2)} TL",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Color(0xFF2563EB),
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFF2563EB,
+                                ).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                "Alınan Ücret",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF2563EB),
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today,
+                              size: 16,
+                              color: Colors.grey.shade600,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              DateFormat(
+                                "dd MMM yyyy, HH:mm",
+                              ).format(customer.paymentDate!),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 0.1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         if (customer.debtPaymentHistory != null &&
             customer.debtPaymentHistory!.isNotEmpty) ...[
           ...customer.debtPaymentHistory!.map((payment) {
@@ -1889,35 +2004,35 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
         Colors.white.withOpacity(0.0),
       ],
       borderColor: const Color(0xFF60A5FA).withOpacity(0.3),
-        children: [
-          Padding(
+      children: [
+        Padding(
           padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (_error != null || _isLoading)
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: _isLoading ? null : _loadLocation,
-                    tooltip: "Yeniden Yükle",
+            children: [
+              if (_error != null || _isLoading)
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _isLoading ? null : _loadLocation,
+                  tooltip: "Yeniden Yükle",
                   color: const Color(0xFF60A5FA), // Light Blue
-                  ),
-              ],
-            ),
+                ),
+            ],
           ),
-          InkWell(
-            onTap: _customerLocation != null
-                ? () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => JobMapView(
-                          initialCustomerLocation: _customerLocation!,
-                          initialCustomerId: widget.customer.id,
-                        ),
+        ),
+        InkWell(
+          onTap: _customerLocation != null
+              ? () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => JobMapView(
+                        initialCustomerLocation: _customerLocation!,
+                        initialCustomerId: widget.customer.id,
                       ),
-                    );
-                  }
-                : null,
+                    ),
+                  );
+                }
+              : null,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final mapHeight = MediaQuery.of(context).size.height * 0.25;
@@ -1927,102 +2042,102 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
 
               return SizedBox(
                 height: calculatedHeight,
-              child: _isLoading
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  : _error != null
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
+                child: _isLoading
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    : _error != null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
                                   color: const Color(
                                     0xFF60A5FA,
                                   ).withOpacity(0.1),
-                              ),
+                                ),
                                 child: const Icon(
-                                Icons.location_searching,
+                                  Icons.location_searching,
                                   color: Color(0xFF60A5FA), // Light Blue
-                                size: 56,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              "Konum Bulunamadı",
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey.shade700,
-                                  ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _error!.contains("Adres bilgisi")
-                                  ? "Müşterinin adres bilgisi bulunmuyor. Adres bilgisi ekleyerek konumu görüntüleyebilirsiniz."
-                                  : "Müşterinin konum bilgisi yüklenemedi. Adres bilgisi doğru mu kontrol edin veya Google Maps'te açmak için adrese tıklayın.",
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Colors.grey.shade600,
-                                    height: 1.4,
-                                  ),
-                            ),
-                            const SizedBox(height: 16),
-                            OutlinedButton.icon(
-                              onPressed: _loadLocation,
-                              icon: const Icon(Icons.refresh, size: 18),
-                              label: const Text("Tekrar Dene"),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 12,
+                                  size: 56,
                                 ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 16),
+                              Text(
+                                "Konum Bulunamadı",
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade700,
+                                    ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _error!.contains("Adres bilgisi")
+                                    ? "Müşterinin adres bilgisi bulunmuyor. Adres bilgisi ekleyerek konumu görüntüleyebilirsiniz."
+                                    : "Müşterinin konum bilgisi yüklenemedi. Adres bilgisi doğru mu kontrol edin veya Google Maps'te açmak için adrese tıklayın.",
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Colors.grey.shade600,
+                                      height: 1.4,
+                                    ),
+                              ),
+                              const SizedBox(height: 16),
+                              OutlinedButton.icon(
+                                onPressed: _loadLocation,
+                                icon: const Icon(Icons.refresh, size: 18),
+                                label: const Text("Tekrar Dene"),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    )
-                  : _customerLocation != null
-                  ? Builder(
-                      builder: (context) {
-                        debugPrint(
-                          "🗺️ Rendering customer map at: ${_customerLocation!.latitude}, ${_customerLocation!.longitude}",
-                        );
-                        return ClipRect(
-                          child: FlutterMap(
-                            key: ValueKey(
-                              "${_customerLocation!.latitude}_${_customerLocation!.longitude}",
-                            ),
-                            options: MapOptions(
-                              initialCenter: _customerLocation!,
-                              initialZoom: 15.0,
-                              interactionOptions: const InteractionOptions(
-                                flags: InteractiveFlag.none,
+                      )
+                    : _customerLocation != null
+                    ? Builder(
+                        builder: (context) {
+                          debugPrint(
+                            "🗺️ Rendering customer map at: ${_customerLocation!.latitude}, ${_customerLocation!.longitude}",
+                          );
+                          return ClipRect(
+                            child: FlutterMap(
+                              key: ValueKey(
+                                "${_customerLocation!.latitude}_${_customerLocation!.longitude}",
                               ),
-                            ),
-                            children: [
-                              TileLayer(
-                                urlTemplate:
-                                    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                                userAgentPackageName: "com.suaritma.app",
-                                maxZoom: 19,
-                                minZoom: 3,
+                              options: MapOptions(
+                                initialCenter: _customerLocation!,
+                                initialZoom: 15.0,
+                                interactionOptions: const InteractionOptions(
+                                  flags: InteractiveFlag.none,
+                                ),
                               ),
-                              MarkerLayer(
-                                markers: [
-                                  Marker(
-                                    point: _customerLocation!,
+                              children: [
+                                TileLayer(
+                                  urlTemplate:
+                                      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                                  userAgentPackageName: "com.suaritma.app",
+                                  maxZoom: 19,
+                                  minZoom: 3,
+                                ),
+                                MarkerLayer(
+                                  markers: [
+                                    Marker(
+                                      point: _customerLocation!,
                                       width: 50,
                                       height: 50,
                                       child: Container(
@@ -2045,35 +2160,35 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                                             ),
                                           ],
                                         ),
-                                    child: const Icon(
-                                      Icons.location_on,
+                                        child: const Icon(
+                                          Icons.location_on,
                                           color: Colors.white,
                                           size: 28,
                                         ),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    )
-                  : Builder(
-                      builder: (context) {
-                        debugPrint(
-                          "🗺️ Customer location is null, showing error message",
-                        );
-                        return const Center(
-                          child: Text("Konum bilgisi bulunamadı"),
-                        );
-                      },
-                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      )
+                    : Builder(
+                        builder: (context) {
+                          debugPrint(
+                            "🗺️ Customer location is null, showing error message",
+                          );
+                          return const Center(
+                            child: Text("Konum bilgisi bulunamadı"),
+                          );
+                        },
+                      ),
               );
             },
-            ),
           ),
-          Padding(
+        ),
+        Padding(
           padding: EdgeInsets.symmetric(horizontal: 0, vertical: 8),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -2085,22 +2200,22 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
               final horizontalPadding = isSmallScreen ? 8.0 : 12.0;
 
               return Row(
-              children: [
+                children: [
                   Expanded(
                     child: SizedBox(
                       height: buttonHeight,
                       child: ElevatedButton.icon(
-                  onPressed: () {
-                    // Google Maps'te adresi aç
-                    final encodedAddress = Uri.encodeComponent(
-                      widget.customer.address,
-                    );
-                    final googleMapsUrl =
-                        "https://www.google.com/maps/search/?api=1&query=$encodedAddress";
-                    final uri = Uri.parse(googleMapsUrl);
-                    // ignore: unawaited_futures
-                    launchUrl(uri, mode: LaunchMode.externalApplication);
-                  },
+                        onPressed: () {
+                          // Google Maps'te adresi aç
+                          final encodedAddress = Uri.encodeComponent(
+                            widget.customer.address,
+                          );
+                          final googleMapsUrl =
+                              "https://www.google.com/maps/search/?api=1&query=$encodedAddress";
+                          final uri = Uri.parse(googleMapsUrl);
+                          // ignore: unawaited_futures
+                          launchUrl(uri, mode: LaunchMode.externalApplication);
+                        },
                         icon: Icon(Icons.place, size: iconSize),
                         label: FittedBox(
                           fit: BoxFit.scaleDown,
@@ -2112,7 +2227,7 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                             ),
                           ),
                         ),
-                  style: ElevatedButton.styleFrom(
+                        style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(
                             0xFF60A5FA,
                           ), // Light Blue
@@ -2127,24 +2242,24 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                           ),
                         ),
                       ),
+                    ),
                   ),
-                ),
-                if (_customerLocation != null) ...[
+                  if (_customerLocation != null) ...[
                     SizedBox(width: isSmallScreen ? 6 : 8),
                     Expanded(
                       child: SizedBox(
                         height: buttonHeight,
                         child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => JobMapView(
-                            initialCustomerLocation: _customerLocation!,
-                            initialCustomerId: widget.customer.id,
-                          ),
-                        ),
-                      );
-                    },
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => JobMapView(
+                                  initialCustomerLocation: _customerLocation!,
+                                  initialCustomerId: widget.customer.id,
+                                ),
+                              ),
+                            );
+                          },
                           icon: Icon(Icons.map, size: iconSize),
                           label: FittedBox(
                             fit: BoxFit.scaleDown,
@@ -2156,7 +2271,7 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                               ),
                             ),
                           ),
-                    style: ElevatedButton.styleFrom(
+                          style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(
                               0xFF60A5FA,
                             ), // Light Blue
@@ -2171,15 +2286,15 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                             ),
                           ),
                         ),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
               );
             },
-            ),
           ),
-        ],
+        ),
+      ],
     );
   }
 }

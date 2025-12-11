@@ -171,6 +171,8 @@ model Customer {
   remainingDebtAmount     Decimal?
   paidDebtAmount          Decimal?               @default(0)
   nextMaintenanceDate     DateTime?
+  receivedAmount          Decimal?
+  paymentDate             DateTime?
   jobs                    Job[]
   debtPaymentHistory      DebtPaymentHistory[]
   createdAt               DateTime               @default(now())

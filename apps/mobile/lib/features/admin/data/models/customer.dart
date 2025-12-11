@@ -20,6 +20,8 @@ class Customer {
     this.remainingDebtAmount,
     this.paidDebtAmount,
     this.nextMaintenanceDate,
+    this.receivedAmount,
+    this.paymentDate,
   });
 
   final String id;
@@ -42,6 +44,8 @@ class Customer {
   final double? remainingDebtAmount;
   final double? paidDebtAmount;
   final DateTime? nextMaintenanceDate;
+  final double? receivedAmount;
+  final DateTime? paymentDate;
 
   factory Customer.fromJson(Map<String, dynamic> json) {
     final jobsList = json["jobs"] as List<dynamic>?;
@@ -81,6 +85,10 @@ class Customer {
       nextMaintenanceDate: json["nextMaintenanceDate"] != null
           ? DateTime.tryParse(json["nextMaintenanceDate"] as String)
           : null,
+      receivedAmount: _parseDouble(json["receivedAmount"]),
+      paymentDate: json["paymentDate"] != null
+          ? DateTime.tryParse(json["paymentDate"] as String)
+          : null,
     );
   }
 
@@ -105,6 +113,8 @@ class Customer {
     double? remainingDebtAmount,
     double? paidDebtAmount,
     DateTime? nextMaintenanceDate,
+    double? receivedAmount,
+    DateTime? paymentDate,
   }) {
     return Customer(
       id: id ?? this.id,
@@ -128,6 +138,8 @@ class Customer {
       remainingDebtAmount: remainingDebtAmount ?? this.remainingDebtAmount,
       paidDebtAmount: paidDebtAmount ?? this.paidDebtAmount,
       nextMaintenanceDate: nextMaintenanceDate ?? this.nextMaintenanceDate,
+      receivedAmount: receivedAmount ?? this.receivedAmount,
+      paymentDate: paymentDate ?? this.paymentDate,
     );
   }
 
