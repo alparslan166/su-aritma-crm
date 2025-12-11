@@ -139,94 +139,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           ],
           // Borç Ödeme Geçmişi - Borç Ödeme bölümünün üzerinde (her zaman göster)
           const SizedBox(height: 24),
-          _Section(
-            title: "Borç Ödeme Geçmişi",
-            children: [
-              if (customer.debtPaymentHistory != null &&
-                  customer.debtPaymentHistory!.isNotEmpty) ...[
-                ...customer.debtPaymentHistory!.map((payment) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    "${payment.amount.toStringAsFixed(2)} TL",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: Color(0xFF10B981),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    "ödedi",
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey.shade700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    size: 14,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    DateFormat(
-                                      "dd MMM yyyy",
-                                    ).format(payment.paidAt),
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey.shade600,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            // TODO: Fatura oluşturma işlevi eklenecek
-                          },
-                          icon: const Icon(Icons.receipt),
-                          color: const Color(0xFF2563EB), // Mavi renk
-                          tooltip: "Fatura Oluştur",
-                        ),
-                        Icon(Icons.check_circle, color: Colors.green, size: 24),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ] else ...[
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Center(
-                    child: Text(
-                      "Henüz ödeme yapılmadı",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
+          _DebtPaymentHistorySection(customer: customer),
           // Borç Ödeme formu - sadece borç varsa göster
           if (customer.hasDebt) ...[
             const SizedBox(height: 24),
@@ -976,6 +889,215 @@ class _DebtRow extends StatelessWidget {
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _DebtPaymentHistorySection extends StatelessWidget {
+  const _DebtPaymentHistorySection({required this.customer});
+
+  final Customer customer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.history,
+                size: 24,
+                color: Color(0xFF10B981),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              "Borç Ödeme Geçmişi",
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF10B981),
+                    letterSpacing: -0.3,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (customer.debtPaymentHistory != null &&
+            customer.debtPaymentHistory!.isNotEmpty) ...[
+          ...customer.debtPaymentHistory!.map((payment) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF10B981).withValues(alpha: 0.08),
+                    const Color(0xFF34D399).withValues(alpha: 0.05),
+                    Colors.white,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    spreadRadius: 0,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.check_circle,
+                        color: Color(0xFF10B981),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                "${payment.amount.toStringAsFixed(2)} TL",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  color: Color(0xFF10B981),
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981)
+                                      .withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  "ödedi",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF10B981),
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                size: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                DateFormat("dd MMM yyyy, HH:mm")
+                                    .format(payment.paidAt),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        onPressed: () {
+                          // TODO: Fatura oluşturma işlevi eklenecek
+                        },
+                        icon: const Icon(Icons.receipt),
+                        color: const Color(0xFF2563EB),
+                        tooltip: "Fatura Oluştur",
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ] else ...[
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF10B981).withValues(alpha: 0.05),
+                  Colors.white,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.history_outlined,
+                    size: 48,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Henüz ödeme yapılmadı",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      fontStyle: FontStyle.italic,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
