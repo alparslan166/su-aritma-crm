@@ -93,20 +93,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Center(
-                  child: Text(
-                    displayTitle,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      fontStyle: FontStyle.italic,
-                      color: Colors.black87,
-                      letterSpacing: 0.5,
-                      height: 1.2,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  child: AnimatedCompanyTitle(text: displayTitle),
                 ),
                 // Responsive boşluk - yazı ile grafik arası
                 LayoutBuilder(
@@ -579,6 +566,201 @@ class _LegendItem extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Animated company title widget with slide-in, fade-in, shimmer, and breathing animations
+class AnimatedCompanyTitle extends StatefulWidget {
+  final String text;
+
+  const AnimatedCompanyTitle({
+    super.key,
+    required this.text,
+  });
+
+  @override
+  State<AnimatedCompanyTitle> createState() => _AnimatedCompanyTitleState();
+}
+
+class _AnimatedCompanyTitleState extends State<AnimatedCompanyTitle>
+    with TickerProviderStateMixin {
+  late AnimationController _slideController;
+  late AnimationController _shimmerController;
+  late AnimationController _breathingController;
+
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _shimmerAnimation;
+  late Animation<double> _breathingAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Slide-in animation (from left)
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(-1.0, 0.0), // Start from left
+      end: Offset.zero, // End at center
+    ).animate(
+      CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+
+    // Fade-in animation (same duration as slide)
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeOut,
+      ),
+    );
+
+    // Shimmer animation (continuous loop)
+    _shimmerController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    );
+
+    _shimmerAnimation = Tween<double>(
+      begin: -1.0,
+      end: 2.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _shimmerController,
+        curve: Curves.linear,
+      ),
+    );
+
+    // Breathing animation (continuous loop)
+    _breathingController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+
+    _breathingAnimation = Tween<double>(
+      begin: 0.98,
+      end: 1.02,
+    ).animate(
+      CurvedAnimation(
+        parent: _breathingController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    // Start animations
+    _slideController.forward();
+    _shimmerController.repeat();
+    _breathingController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _slideController.dispose();
+    _shimmerController.dispose();
+    _breathingController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: AnimatedBuilder(
+          animation: Listenable.merge([
+            _shimmerController,
+            _breathingController,
+          ]),
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _breathingAnimation.value,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final textWidth = constraints.maxWidth;
+                  final shimmerPosition = _shimmerAnimation.value;
+                  final shimmerWidth = textWidth * 0.4; // 40% of text width
+                  final shimmerStart = (shimmerPosition * textWidth) - (shimmerWidth / 2);
+
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Base text (matte black)
+                      Text(
+                        widget.text,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.black87,
+                          letterSpacing: 0.5,
+                          height: 1.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      // Shimmer effect (blue light)
+                      Positioned.fill(
+                        child: ClipRect(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: shimmerWidth / textWidth,
+                            child: Transform.translate(
+                              offset: Offset(shimmerStart, 0),
+                              child: ShaderMask(
+                                blendMode: BlendMode.srcATop,
+                                shaderCallback: (bounds) {
+                                  return LinearGradient(
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                    colors: [
+                                      Colors.transparent,
+                                      const Color(0xFF2563EB).withOpacity(0.5),
+                                      const Color(0xFF3B82F6),
+                                      const Color(0xFF2563EB).withOpacity(0.5),
+                                      Colors.transparent,
+                                    ],
+                                    stops: const [0.0, 0.3, 0.5, 0.7, 1.0],
+                                  ).createShader(bounds);
+                                },
+                                child: Text(
+                                  widget.text,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    fontStyle: FontStyle.italic,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                    height: 1.2,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }
