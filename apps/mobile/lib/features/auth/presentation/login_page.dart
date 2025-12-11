@@ -110,18 +110,8 @@ class LoginPage extends HookConsumerWidget {
                       const SizedBox(height: 40),
                       // Logo/Icon Area with Animation
                       _AnimatedLogo(),
-                      const SizedBox(height: 32),
-                      Text(
-                        "Su Arıtma Platformu",
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineLarge
-                            ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1F2937),
-                              letterSpacing: -0.5,
-                              height: 1.2,
-                            ),
-                      ),
+                      const SizedBox(height: 20),
+                      _AnimatedTitleText(),
                       const SizedBox(height: 8),
                       Text(
                         "Rolünü seç ve güvenli giriş yap",
@@ -479,6 +469,86 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
                 ),
               ),
             ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AnimatedTitleText extends StatefulWidget {
+  const _AnimatedTitleText();
+
+  @override
+  State<_AnimatedTitleText> createState() => _AnimatedTitleTextState();
+}
+
+class _AnimatedTitleTextState extends State<_AnimatedTitleText>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    );
+    _animation = Tween<double>(begin: -1.0, end: 2.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _controller.repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return ShaderMask(
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [
+                Colors.black87, // Mat siyah
+                Colors.black87,
+                const Color(0xFF1E3A8A), // Lacivert
+                const Color(0xFF2563EB), // Açık lacivert
+                const Color(0xFF1E3A8A), // Lacivert
+                Colors.black87,
+                Colors.black87,
+              ],
+              stops: [
+                0.0,
+                (_animation.value - 0.3).clamp(0.0, 1.0),
+                (_animation.value - 0.1).clamp(0.0, 1.0),
+                _animation.value.clamp(0.0, 1.0),
+                (_animation.value + 0.1).clamp(0.0, 1.0),
+                (_animation.value + 0.3).clamp(0.0, 1.0),
+                1.0,
+              ],
+            ).createShader(bounds);
+          },
+          child: Text(
+            "Su Arıtma Platformu",
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87, // Mat siyah
+                  letterSpacing: -0.5,
+                  height: 1.2,
+                ),
           ),
         );
       },
