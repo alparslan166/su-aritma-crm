@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "receivedAmount" DECIMAL(12,2),
+ADD COLUMN IF NOT EXISTS "paymentDate" TIMESTAMP(3);
+
