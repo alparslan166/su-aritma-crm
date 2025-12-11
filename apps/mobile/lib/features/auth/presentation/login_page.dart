@@ -517,47 +517,64 @@ class _AnimatedTitleTextState extends State<_AnimatedTitleText>
         final normalizedValue = ((_animation.value + 1.0) / 3.0).clamp(0.0, 1.0);
         
         // Işığın genişliği ve pozisyonu
-        final lightWidth = 0.4;
-        final lightCenter = normalizedValue;
-        final lightStart = (lightCenter - lightWidth / 2).clamp(0.0, 1.0);
-        final lightEnd = (lightCenter + lightWidth / 2).clamp(0.0, 1.0);
+        const lightWidth = 0.4;
+        final lightPosition = normalizedValue;
+        final lightStart = math.max(0.0, lightPosition - lightWidth / 2);
+        final lightEnd = math.min(1.0, lightPosition + lightWidth / 2);
         
-        return ShaderMask(
-          blendMode: BlendMode.srcATop,
-          shaderCallback: (Rect bounds) {
-            return LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [
-                Colors.black87,
-                Colors.black87,
-                const Color(0xFF1E3A8A),
-                const Color(0xFF2563EB),
-                const Color(0xFF1E3A8A),
-                Colors.black87,
-                Colors.black87,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return Stack(
+              children: [
+                // Mat siyah yazı (arka plan)
+                Text(
+                  "Su Arıtma Platformu",
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                    letterSpacing: -0.5,
+                    height: 1.2,
+                  ),
+                ),
+                // Lacivert ışık efekti (üstte)
+                Positioned.fill(
+                  child: ClipRect(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: lightEnd - lightStart,
+                      child: Transform.translate(
+                        offset: Offset(constraints.maxWidth * lightStart, 0),
+                        child: ShaderMask(
+                          shaderCallback: (bounds) {
+                            return LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                const Color(0xFF1E3A8A),
+                                const Color(0xFF2563EB),
+                                const Color(0xFF1E3A8A),
+                              ],
+                            ).createShader(bounds);
+                          },
+                          child: Text(
+                            "Su Arıtma Platformu",
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: -0.5,
+                              height: 1.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
-              stops: [
-                0.0,
-                math.max(0.0, lightStart - 0.1),
-                lightStart,
-                lightCenter,
-                lightEnd,
-                math.min(1.0, lightEnd + 0.1),
-                1.0,
-              ],
-            ).createShader(bounds);
+            );
           },
-          child: Text(
-            "Su Arıtma Platformu",
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.white, // ShaderMask için beyaz
-              letterSpacing: -0.5,
-              height: 1.2,
-            ),
-          ),
         );
       },
     );
