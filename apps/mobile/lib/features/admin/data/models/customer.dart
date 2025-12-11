@@ -19,6 +19,7 @@ class Customer {
     this.installmentIntervalDays,
     this.remainingDebtAmount,
     this.paidDebtAmount,
+    this.nextMaintenanceDate,
   });
 
   final String id;
@@ -40,6 +41,7 @@ class Customer {
   final int? installmentIntervalDays;
   final double? remainingDebtAmount;
   final double? paidDebtAmount;
+  final DateTime? nextMaintenanceDate;
 
   factory Customer.fromJson(Map<String, dynamic> json) {
     final jobsList = json["jobs"] as List<dynamic>?;
@@ -76,6 +78,9 @@ class Customer {
       installmentIntervalDays: json["installmentIntervalDays"] as int?,
       remainingDebtAmount: _parseDouble(json["remainingDebtAmount"]),
       paidDebtAmount: _parseDouble(json["paidDebtAmount"]),
+      nextMaintenanceDate: json["nextMaintenanceDate"] != null
+          ? DateTime.tryParse(json["nextMaintenanceDate"] as String)
+          : null,
     );
   }
 
@@ -99,6 +104,7 @@ class Customer {
     int? installmentIntervalDays,
     double? remainingDebtAmount,
     double? paidDebtAmount,
+    DateTime? nextMaintenanceDate,
   }) {
     return Customer(
       id: id ?? this.id,
@@ -121,6 +127,7 @@ class Customer {
           installmentIntervalDays ?? this.installmentIntervalDays,
       remainingDebtAmount: remainingDebtAmount ?? this.remainingDebtAmount,
       paidDebtAmount: paidDebtAmount ?? this.paidDebtAmount,
+      nextMaintenanceDate: nextMaintenanceDate ?? this.nextMaintenanceDate,
     );
   }
 
@@ -174,8 +181,15 @@ class Customer {
     });
   }
 
-  /// Sonraki bakım tarihini döndürür (en yakın)
-  DateTime? get nextMaintenanceDate {
+  /// Sonraki bakım tarihini döndürür
+  /// Önce customer'ın kendi nextMaintenanceDate field'ını kontrol et
+  /// Eğer yoksa, jobs'dan en yakın maintenanceDueAt'i bul
+  DateTime? get nextMaintenanceDateComputed {
+    // Önce customer'ın kendi nextMaintenanceDate field'ını kullan
+    if (nextMaintenanceDate != null) {
+      return nextMaintenanceDate;
+    }
+    // Eğer yoksa, jobs'dan en yakın olanı bul
     if (jobs == null) return null;
     DateTime? nearest;
     for (final job in jobs!) {
