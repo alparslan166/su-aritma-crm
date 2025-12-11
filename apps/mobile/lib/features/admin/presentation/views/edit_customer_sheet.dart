@@ -254,7 +254,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
 
-      await ref
+      final data = await ref
           .read(adminRepositoryProvider)
           .updateCustomer(
             id: widget.customer.id,
@@ -282,6 +282,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
       debugPrint("✅ Frontend - updateCustomer TAMAMLANDI (await sonrası)");
+      debugPrint("   Response nextMaintenanceDate: ${data.nextMaintenanceDate}");
       debugPrint(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
