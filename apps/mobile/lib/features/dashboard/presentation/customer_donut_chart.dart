@@ -146,59 +146,75 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                       try {
                         // Smooth animasyon değeri kullan (CurvedAnimation)
                         final animationValue = _gradientAnimation!.value;
-
-                        // Gradient'i soldan sağa kaydır - smooth geçiş için
-                        // Daha smooth bir hareket için range'i daralt
-                        final smoothOffset =
-                            (animationValue * 2.0 - 1.0) *
-                            0.9; // -0.9'den 0.9'a kadar
+                        
+                        // Animasyon değerini 0-1 aralığına normalize et
+                        final normalizedValue = animationValue;
+                        
+                        // Işığın genişliği ve pozisyonu
+                        const lightWidth = 0.4;
+                        final lightPosition = normalizedValue;
+                        final lightStart = math.max(0.0, lightPosition - lightWidth / 2);
+                        final lightEnd = math.min(1.0, lightPosition + lightWidth / 2);
 
                         return Opacity(
                           opacity: _fadeInAnimation!.value,
-                          child: ShaderMask(
-                            shaderCallback: (bounds) => LinearGradient(
-                              colors: [
-                                const Color(0xFF2563EB), // Ana mavi
-                                const Color(0xFF3B82F6), // Açık mavi
-                                const Color(0xFF60A5FA), // Daha açık mavi
-                                const Color(0xFF93C5FD), // Çok açık mavi
-                                const Color(0xFF60A5FA), // Geri dönüş
-                                const Color(0xFF3B82F6), // Orta mavi
-                                const Color(0xFF2563EB), // Ana mavi'ye dönüş
-                              ],
-                              begin: Alignment(smoothOffset - 0.4, -1.0),
-                              end: Alignment(smoothOffset + 0.4, 1.0),
-                              stops: const [
-                                0.0,
-                                0.25,
-                                0.4,
-                                0.5,
-                                0.6,
-                                0.75,
-                                1.0,
-                              ],
-                            ).createShader(bounds),
-                            child: Text(
-                              displayTitle,
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 0.5,
-                                shadows: [
-                                  Shadow(
-                                    color: const Color(
-                                      0xFF2563EB,
-                                    ).withOpacity(0.3),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              return Stack(
+                                children: [
+                                  // Mat siyah yazı (arka plan)
+                                  Text(
+                                    displayTitle,
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87, // Mat siyah
+                                      letterSpacing: 0.5,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  // Lacivert ışık efekti (üstte)
+                                  Positioned.fill(
+                                    child: ClipRect(
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        widthFactor: lightEnd - lightStart,
+                                        child: Transform.translate(
+                                          offset: Offset(constraints.maxWidth * lightStart, 0),
+                                          child: ShaderMask(
+                                            shaderCallback: (bounds) {
+                                              return LinearGradient(
+                                                begin: Alignment.centerLeft,
+                                                end: Alignment.centerRight,
+                                                colors: [
+                                                  const Color(0xFF1E3A8A), // Lacivert
+                                                  const Color(0xFF2563EB), // Açık lacivert
+                                                  const Color(0xFF1E3A8A), // Lacivert
+                                                ],
+                                              ).createShader(bounds);
+                                            },
+                                            child: Text(
+                                              displayTitle,
+                                              style: TextStyle(
+                                                fontSize: 24,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                                letterSpacing: 0.5,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ],
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                              );
+                            },
                           ),
                         );
                       } catch (e) {
