@@ -147,20 +147,24 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                         // Smooth animasyon değeri kullan (CurvedAnimation)
                         final animationValue = _gradientAnimation!.value;
                         
-                        // Animasyon değerini 0-1 aralığına normalize et
-                        final normalizedValue = animationValue;
+                        // Animasyon değerini -1.0'dan 2.0'a normalize et (soldan sağa geçiş için)
+                        final normalizedValue = animationValue * 3.0 - 1.0;
                         
-                        // Işığın genişliği ve pozisyonu
-                        const lightWidth = 0.4;
-                        final lightPosition = normalizedValue;
+                        // Işığın genişliği (daha geniş ve yumuşak)
+                        const lightWidth = 0.5;
+                        final textWidth = 1.0;
+                        final lightPosition = normalizedValue * textWidth;
                         final lightStart = math.max(0.0, lightPosition - lightWidth / 2);
-                        final lightEnd = math.min(1.0, lightPosition + lightWidth / 2);
+                        final lightEnd = math.min(textWidth, lightPosition + lightWidth / 2);
 
                         return Opacity(
                           opacity: _fadeInAnimation!.value,
                           child: LayoutBuilder(
                             builder: (context, constraints) {
+                              final textWidthPx = constraints.maxWidth;
+                              
                               return Stack(
+                                alignment: Alignment.center,
                                 children: [
                                   // Mat siyah yazı (arka plan)
                                   Text(
@@ -168,8 +172,10 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                                     style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
+                                      fontStyle: FontStyle.italic, // Hafif italik
                                       color: Colors.black87, // Mat siyah
                                       letterSpacing: 0.5,
+                                      height: 1.2,
                                     ),
                                     textAlign: TextAlign.center,
                                     maxLines: 2,
@@ -178,37 +184,53 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                                   // Lacivert ışık efekti (üstte)
                                   Positioned.fill(
                                     child: ClipRect(
-                                      child: Align(
-                                        alignment: Alignment.centerLeft,
-                                        widthFactor: lightEnd - lightStart,
-                                        child: Transform.translate(
-                                          offset: Offset(constraints.maxWidth * lightStart, 0),
-                                          child: ShaderMask(
-                                            shaderCallback: (bounds) {
-                                              return LinearGradient(
-                                                begin: Alignment.centerLeft,
-                                                end: Alignment.centerRight,
-                                                colors: [
-                                                  const Color(0xFF1E3A8A), // Lacivert
-                                                  const Color(0xFF2563EB), // Açık lacivert
-                                                  const Color(0xFF1E3A8A), // Lacivert
-                                                ],
-                                              ).createShader(bounds);
-                                            },
-                                            child: Text(
-                                              displayTitle,
-                                              style: TextStyle(
-                                                fontSize: 24,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                                letterSpacing: 0.5,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ),
+                                      child: AnimatedBuilder(
+                                        animation: _gradientAnimation!,
+                                        builder: (context, child) {
+                                          return Stack(
+                                            children: [
+                                              // Ana ışık efekti
+                                              if (lightEnd > 0 && lightStart < textWidth)
+                                                Positioned(
+                                                  left: math.max(0.0, lightStart * textWidthPx),
+                                                  width: (lightEnd - lightStart) * textWidthPx,
+                                                  child: ShaderMask(
+                                                    blendMode: BlendMode.srcATop,
+                                                    shaderCallback: (bounds) {
+                                                      return LinearGradient(
+                                                        begin: Alignment.centerLeft,
+                                                        end: Alignment.centerRight,
+                                                        colors: [
+                                                          Colors.transparent,
+                                                          const Color(0xFF1E3A8A).withOpacity(0.3), // Lacivert (hafif)
+                                                          const Color(0xFF2563EB), // Açık lacivert (parlak)
+                                                          const Color(0xFF3B82F6).withOpacity(0.9), // Daha açık
+                                                          const Color(0xFF2563EB), // Açık lacivert
+                                                          const Color(0xFF1E3A8A).withOpacity(0.3), // Lacivert (hafif)
+                                                          Colors.transparent,
+                                                        ],
+                                                        stops: const [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0],
+                                                      ).createShader(bounds);
+                                                    },
+                                                    child: Text(
+                                                      displayTitle,
+                                                      style: TextStyle(
+                                                        fontSize: 24,
+                                                        fontWeight: FontWeight.bold,
+                                                        fontStyle: FontStyle.italic, // Hafif italik
+                                                        color: Colors.white,
+                                                        letterSpacing: 0.5,
+                                                        height: 1.2,
+                                                      ),
+                                                      textAlign: TextAlign.center,
+                                                      maxLines: 2,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          );
+                                        },
                                       ),
                                     ),
                                   ),
