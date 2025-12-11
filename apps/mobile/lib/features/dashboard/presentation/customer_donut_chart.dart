@@ -18,12 +18,6 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
     with TickerProviderStateMixin {
   AnimationController? _animationController;
   AnimationController? _rotationController;
-  AnimationController? _gradientController;
-  AnimationController? _fadeInController;
-  AnimationController? _typewriterController;
-  Animation<double>? _gradientAnimation;
-  Animation<double>? _fadeInAnimation;
-  Animation<double>? _typewriterAnimation;
 
   @override
   void initState() {
@@ -37,51 +31,12 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
       duration: const Duration(seconds: 20),
       vsync: this,
     )..repeat();
-
-    _gradientController = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    );
-
-    // Smooth animasyon için CurvedAnimation ekle
-    _gradientAnimation = CurvedAnimation(
-      parent: _gradientController!,
-      curve: Curves.easeInOut,
-    );
-    _gradientController!.repeat();
-
-    // Fade-in animasyonu - sadece bir kez çalışacak
-    _fadeInController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _fadeInAnimation = CurvedAnimation(
-      parent: _fadeInController!,
-      curve: Curves.easeIn,
-    );
-    _fadeInController!.forward(); // Fade-in'i başlat
-
-    // Typewriter animasyonu - harfler tek tek görünecek
-    _typewriterController = AnimationController(
-      duration: const Duration(milliseconds: 2000), // Toplam süre
-      vsync: this,
-    );
-
-    _typewriterAnimation = CurvedAnimation(
-      parent: _typewriterController!,
-      curve: Curves.easeOut,
-    );
-    _typewriterController!.forward(); // Typewriter animasyonunu başlat
   }
 
   @override
   void dispose() {
     _animationController?.dispose();
     _rotationController?.dispose();
-    _gradientController?.dispose();
-    _fadeInController?.dispose();
-    _typewriterController?.dispose();
     super.dispose();
   }
 
@@ -138,172 +93,19 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Center(
-                  child: AnimatedBuilder(
-                    animation: Listenable.merge(
-                      [
-                        _animationController,
-                        _rotationController,
-                        _gradientController,
-                        _fadeInController,
-                        _typewriterController,
-                      ].whereType<Listenable>(),
+                  child: Text(
+                    displayTitle,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.black87,
+                      letterSpacing: 0.5,
+                      height: 1.2,
                     ),
-                    builder: (context, child) {
-                      if (!mounted) {
-                        return const SizedBox.shrink(); // Safety check
-                      }
-
-                      // Controller'lar initialize edilmediyse boş widget döndür
-                      if (_gradientAnimation == null ||
-                          _fadeInAnimation == null ||
-                          _typewriterAnimation == null) {
-                        return const SizedBox.shrink();
-                      }
-
-                      try {
-                        // Typewriter animasyonu için karakter sayısını hesapla
-                        final characters = displayTitle.split('');
-                        final totalChars = characters.length;
-                        final typewriterProgress = _typewriterAnimation!.value;
-                        
-                        // Smooth animasyon değeri kullan (CurvedAnimation)
-                        final animationValue = _gradientAnimation!.value;
-                        
-                        // Animasyon değerini -1.0'dan 2.0'a normalize et (soldan sağa geçiş için)
-                        final normalizedValue = animationValue * 3.0 - 1.0;
-                        
-                        // Işığın genişliği (daha geniş ve yumuşak)
-                        const lightWidth = 0.5;
-                        final textWidth = 1.0;
-                        final lightPosition = normalizedValue * textWidth;
-                        final lightStart = math.max(0.0, lightPosition - lightWidth / 2);
-                        final lightEnd = math.min(textWidth, lightPosition + lightWidth / 2);
-
-                        return Opacity(
-                          opacity: _fadeInAnimation!.value,
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final textWidthPx = constraints.maxWidth;
-                              
-                              return Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // Mat siyah yazı (arka plan) - typewriter efekti ile
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: characters.asMap().entries.map((entry) {
-                                      final index = entry.key;
-                                      final char = entry.value;
-                                      
-                                      // Her harf için animasyon progress'i hesapla
-                                      final charProgress = math.max(0.0, math.min(1.0, 
-                                        (typewriterProgress * totalChars - index).clamp(0.0, 1.0)
-                                      ));
-                                      
-                                      // Yumuşak geçiş için easeOut curve uygula
-                                      final easedProgress = 1.0 - math.pow(1.0 - charProgress, 3);
-                                      
-                                      return Opacity(
-                                        opacity: easedProgress,
-                                        child: Transform.translate(
-                                          offset: Offset(0, (1 - easedProgress) * 10), // Yukarıdan aşağıya slide
-                                          child: Text(
-                                            char,
-                                            style: TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.bold,
-                                              fontStyle: FontStyle.italic,
-                                              color: Colors.black87,
-                                              letterSpacing: 0.5,
-                                              height: 1.2,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                                  // Lacivert ışık efekti (üstte) - sadece görünen harflere
-                                  Positioned.fill(
-                                    child: ClipRect(
-                                      child: AnimatedBuilder(
-                                        animation: _gradientAnimation!,
-                                        builder: (context, child) {
-                                          return Stack(
-                                            children: [
-                                              // Ana ışık efekti
-                                              if (lightEnd > 0 && lightStart < textWidth)
-                                                Positioned(
-                                                  left: math.max(0.0, lightStart * textWidthPx),
-                                                  width: (lightEnd - lightStart) * textWidthPx,
-                                                  child: ShaderMask(
-                                                    blendMode: BlendMode.srcATop,
-                                                    shaderCallback: (bounds) {
-                                                      return LinearGradient(
-                                                        begin: Alignment.centerLeft,
-                                                        end: Alignment.centerRight,
-                                                        colors: [
-                                                          Colors.transparent,
-                                                          const Color(0xFF1E3A8A).withOpacity(0.3),
-                                                          const Color(0xFF2563EB),
-                                                          const Color(0xFF3B82F6).withOpacity(0.9),
-                                                          const Color(0xFF2563EB),
-                                                          const Color(0xFF1E3A8A).withOpacity(0.3),
-                                                          Colors.transparent,
-                                                        ],
-                                                        stops: const [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0],
-                                                      ).createShader(bounds);
-                                                    },
-                                                    child: Row(
-                                                      mainAxisAlignment: MainAxisAlignment.center,
-                                                      children: characters.asMap().entries.map((entry) {
-                                                        final index = entry.key;
-                                                        final char = entry.value;
-                                                        
-                                                        // Her harf için animasyon progress'i hesapla
-                                                        final charProgress = math.max(0.0, math.min(1.0, 
-                                                          (typewriterProgress * totalChars - index).clamp(0.0, 1.0)
-                                                        ));
-                                                        
-                                                        // Yumuşak geçiş için easeOut curve uygula
-                                                        final easedProgress = 1.0 - math.pow(1.0 - charProgress, 3);
-                                                        
-                                                        return Opacity(
-                                                          opacity: easedProgress,
-                                                          child: Transform.translate(
-                                                            offset: Offset(0, (1 - easedProgress) * 10),
-                                                            child: Text(
-                                                              char,
-                                                              style: TextStyle(
-                                                                fontSize: 24,
-                                                                fontWeight: FontWeight.bold,
-                                                                fontStyle: FontStyle.italic,
-                                                                color: Colors.white,
-                                                                letterSpacing: 0.5,
-                                                                height: 1.2,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        );
-                                                      }).toList(),
-                                                    ),
-                                                  ),
-                                                ),
-                                            ],
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                        );
-                      } catch (e) {
-                        // Controller'lar henüz initialize edilmemişse boş widget döndür
-                        return const SizedBox.shrink();
-                      }
-                    },
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 // Responsive boşluk - yazı ile grafik arası
@@ -311,11 +113,11 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                   builder: (context, constraints) {
                     // Ekran genişliğine göre responsive boşluk
                     final screenWidth = MediaQuery.of(context).size.width;
-                    final spacing = screenWidth < 400 
-                        ? 40.0  // Küçük ekranlar için
+                    final spacing = screenWidth < 400
+                        ? 40.0 // Küçük ekranlar için
                         : screenWidth < 600
-                            ? 48.0  // Orta ekranlar için
-                            : 56.0; // Büyük ekranlar için
+                        ? 48.0 // Orta ekranlar için
+                        : 56.0; // Büyük ekranlar için
                     return SizedBox(height: spacing);
                   },
                 ),
