@@ -1,7 +1,6 @@
 import "package:flutter/material.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
-import "package:open_file/open_file.dart";
 
 import "../../../../core/error/error_handler.dart";
 import "../../data/admin_repository.dart";
@@ -480,17 +479,14 @@ class JobCard extends ConsumerWidget {
     );
 
     try {
-      // Generate PDF
+      // Generate and open PDF (opens directly from URL, never saved to device)
       final repository = ref.read(adminRepositoryProvider);
-      final pdfPath = await repository.generateInvoicePdf(jobId);
+      await repository.generateInvoicePdf(jobId);
 
       // Close loading dialog
       if (context.mounted) {
         Navigator.of(context).pop();
       }
-
-      // Open PDF
-      await OpenFile.open(pdfPath);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

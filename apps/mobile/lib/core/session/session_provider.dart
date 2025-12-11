@@ -1,7 +1,6 @@
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
 import "../../features/auth/domain/auth_role.dart";
-import "session_storage.dart";
 
 class AuthSession {
   AuthSession({required this.role, required this.identifier});
@@ -29,33 +28,17 @@ final authSessionProvider =
     );
 
 class AuthSessionNotifier extends StateNotifier<AuthSession?> {
-  AuthSessionNotifier() : super(null) {
-    _loadSession();
-  }
+  AuthSessionNotifier() : super(null);
 
-  Future<void> _loadSession() async {
-    final sessionData = await SessionStorage.loadSession();
-    if (sessionData != null) {
-      state = AuthSession.fromJson(sessionData);
-    }
-  }
-
+  /// Set session - only stored in memory, not persisted to device
   Future<void> setSession(AuthSession? session, {bool remember = false}) async {
     state = session;
-
-    if (session != null && remember) {
-      await SessionStorage.saveSession(
-        role: session.role.name,
-        identifier: session.identifier,
-        remember: remember,
-      );
-    } else if (session == null) {
-      await SessionStorage.clearSession();
-    }
+    // Session is only kept in memory, never saved to device storage
   }
 
+  /// Clear session from memory
   Future<void> clearSession() async {
     state = null;
-    await SessionStorage.clearSession();
+    // No device storage to clear
   }
 }

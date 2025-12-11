@@ -9,7 +9,6 @@ import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 import "package:latlong2/latlong.dart";
-import "package:open_file/open_file.dart";
 import "package:url_launcher/url_launcher.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 
@@ -1743,17 +1742,14 @@ class _JobCard extends ConsumerWidget {
     );
 
     try {
-      // Generate PDF
+      // Generate and open PDF (opens directly from URL, never saved to device)
       final repository = ref.read(adminRepositoryProvider);
-      final pdfPath = await repository.generateInvoicePdf(jobId);
+      await repository.generateInvoicePdf(jobId);
 
       // Close loading dialog
       if (context.mounted) {
         Navigator.of(context).pop();
       }
-
-      // Open PDF
-      await OpenFile.open(pdfPath);
 
       // Refresh customer detail and job list
       ref.invalidate(customerDetailProvider(customerId));
@@ -1899,13 +1895,13 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
             child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
               children: [
-              if (_error != null || _isLoading)
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _isLoading ? null : _loadLocation,
-                  tooltip: "Yeniden Yükle",
+                if (_error != null || _isLoading)
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _isLoading ? null : _loadLocation,
+                    tooltip: "Yeniden Yükle",
                   color: const Color(0xFF60A5FA), // Light Blue
-                ),
+                  ),
               ],
             ),
           ),
@@ -1928,10 +1924,10 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
               final minHeight = 200.0;
               final maxHeight = 300.0;
               final calculatedHeight = mapHeight.clamp(minHeight, maxHeight);
-              
+
               return SizedBox(
                 height: calculatedHeight,
-                child: _isLoading
+              child: _isLoading
                   ? const Center(
                       child: Padding(
                         padding: EdgeInsets.all(16),
@@ -1945,18 +1941,20 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFF60A5FA).withOpacity(0.1),
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                  color: const Color(
+                                    0xFF60A5FA,
+                                  ).withOpacity(0.1),
+                              ),
+                                child: const Icon(
+                                Icons.location_searching,
+                                  color: Color(0xFF60A5FA), // Light Blue
+                                size: 56,
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.location_searching,
-                              color: Color(0xFF60A5FA), // Light Blue
-                              size: 56,
-                            ),
-                          ),
                             const SizedBox(height: 16),
                             Text(
                               "Konum Bulunamadı",
@@ -2025,31 +2023,33 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                                 markers: [
                                   Marker(
                                     point: _customerLocation!,
-                                  width: 50,
-                                  height: 50,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF60A5FA), // Light Blue
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 3,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
+                                      width: 50,
+                                      height: 50,
+                                      child: Container(
+                                        decoration: BoxDecoration(
                                           color: const Color(
                                             0xFF60A5FA,
-                                          ).withOpacity(0.4),
-                                          blurRadius: 8,
-                                          spreadRadius: 2,
+                                          ), // Light Blue
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 3,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFF60A5FA,
+                                              ).withOpacity(0.4),
+                                              blurRadius: 8,
+                                              spreadRadius: 2,
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
                                     child: const Icon(
                                       Icons.location_on,
-                                      color: Colors.white,
-                                      size: 28,
-                                    ),
+                                          color: Colors.white,
+                                          size: 28,
+                                        ),
                                     ),
                                   ),
                                 ],
@@ -2071,13 +2071,10 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                     ),
               );
             },
+            ),
           ),
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: 0,
-            vertical: 8,
-          ),
+          Padding(
+          padding: EdgeInsets.symmetric(horizontal: 0, vertical: 8),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final screenWidth = MediaQuery.of(context).size.width;
@@ -2086,24 +2083,24 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
               final iconSize = isSmallScreen ? 16.0 : 18.0;
               final fontSize = isSmallScreen ? 12.0 : 13.0;
               final horizontalPadding = isSmallScreen ? 8.0 : 12.0;
-              
+
               return Row(
-                children: [
+              children: [
                   Expanded(
                     child: SizedBox(
                       height: buttonHeight,
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          // Google Maps'te adresi aç
-                          final encodedAddress = Uri.encodeComponent(
-                            widget.customer.address,
-                          );
-                          final googleMapsUrl =
-                              "https://www.google.com/maps/search/?api=1&query=$encodedAddress";
-                          final uri = Uri.parse(googleMapsUrl);
-                          // ignore: unawaited_futures
-                          launchUrl(uri, mode: LaunchMode.externalApplication);
-                        },
+                  onPressed: () {
+                    // Google Maps'te adresi aç
+                    final encodedAddress = Uri.encodeComponent(
+                      widget.customer.address,
+                    );
+                    final googleMapsUrl =
+                        "https://www.google.com/maps/search/?api=1&query=$encodedAddress";
+                    final uri = Uri.parse(googleMapsUrl);
+                    // ignore: unawaited_futures
+                    launchUrl(uri, mode: LaunchMode.externalApplication);
+                  },
                         icon: Icon(Icons.place, size: iconSize),
                         label: FittedBox(
                           fit: BoxFit.scaleDown,
@@ -2115,8 +2112,10 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                             ),
                           ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF60A5FA), // Light Blue
+                  style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(
+                            0xFF60A5FA,
+                          ), // Light Blue
                           foregroundColor: Colors.white,
                           padding: EdgeInsets.symmetric(
                             horizontal: horizontalPadding,
@@ -2128,24 +2127,24 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                           ),
                         ),
                       ),
-                    ),
                   ),
-                  if (_customerLocation != null) ...[
+                ),
+                if (_customerLocation != null) ...[
                     SizedBox(width: isSmallScreen ? 6 : 8),
                     Expanded(
                       child: SizedBox(
                         height: buttonHeight,
                         child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => JobMapView(
-                                  initialCustomerLocation: _customerLocation!,
-                                  initialCustomerId: widget.customer.id,
-                                ),
-                              ),
-                            );
-                          },
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => JobMapView(
+                            initialCustomerLocation: _customerLocation!,
+                            initialCustomerId: widget.customer.id,
+                          ),
+                        ),
+                      );
+                    },
                           icon: Icon(Icons.map, size: iconSize),
                           label: FittedBox(
                             fit: BoxFit.scaleDown,
@@ -2157,8 +2156,10 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                               ),
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF60A5FA), // Light Blue
+                    style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(
+                              0xFF60A5FA,
+                            ), // Light Blue
                             foregroundColor: Colors.white,
                             padding: EdgeInsets.symmetric(
                               horizontal: horizontalPadding,
@@ -2170,14 +2171,14 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                             ),
                           ),
                         ),
-                      ),
                     ),
-                  ],
+                  ),
                 ],
+              ],
               );
             },
+            ),
           ),
-        ),
         ],
     );
   }

@@ -167,12 +167,12 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       // Eğer değişmişse, farkı ekle
       double? remainingDebtAmount;
       double? debtAmount;
-      
+
       if (hasDebt && newDebtAmount != null) {
         // Başlangıç borç miktarı ile karşılaştır
         final initialDebt = _initialDebtAmount ?? 0.0;
         final debtDifference = newDebtAmount - initialDebt;
-        
+
         // Eğer borç değişmişse, farkı ekle
         if (debtDifference != 0) {
           final existingRemaining = widget.customer.remainingDebtAmount ?? 0.0;
@@ -195,10 +195,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
           : null;
 
       // Show confirmation dialog for debt changes (sadece değişiklik varsa)
-      if (hasDebt && 
-          newDebtAmount != null && 
-          newDebtAmount > 0 && 
-          debtAmount != null && 
+      if (hasDebt &&
+          newDebtAmount != null &&
+          newDebtAmount > 0 &&
+          debtAmount != null &&
           remainingDebtAmount != null) {
         final confirm = await showDialog<bool>(
           context: context,
@@ -236,7 +236,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       // Eğer kullanıcı değişiklik yapmadıysa, mevcut değeri koru (sendNextMaintenanceDate: false)
       DateTime? calculatedMaintenanceDate;
       bool sendNextMaintenanceDate = false;
-      
+
       if (_maintenanceDateChanged) {
         // Kullanıcı değişiklik yaptıysa, yeni tarihi hesapla
         sendNextMaintenanceDate = true;
@@ -301,21 +301,25 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
             createdAt: _createdAt,
             hasDebt: hasDebt,
             debtAmount: debtAmount, // undefined ise backend güncellemez
-            remainingDebtAmount: remainingDebtAmount, // undefined ise backend güncellemez
+            remainingDebtAmount:
+                remainingDebtAmount, // undefined ise backend güncellemez
             hasInstallment: hasInstallment,
             installmentCount: installmentCount,
             nextDebtDate: _nextDebtDate,
             installmentStartDate: _installmentStartDate,
             installmentIntervalDays: installmentIntervalDays,
             nextMaintenanceDate: calculatedMaintenanceDate, // null veya tarih
-            sendNextMaintenanceDate: sendNextMaintenanceDate, // Sadece değişiklik varsa true
+            sendNextMaintenanceDate:
+                sendNextMaintenanceDate, // Sadece değişiklik varsa true
           );
 
       debugPrint(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
       debugPrint("✅ Frontend - updateCustomer TAMAMLANDI (await sonrası)");
-      debugPrint("   Response nextMaintenanceDate: ${data.nextMaintenanceDate}");
+      debugPrint(
+        "   Response nextMaintenanceDate: ${data.nextMaintenanceDate}",
+      );
       debugPrint(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
@@ -355,11 +359,13 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       );
       debugPrint("🟢 Frontend - Provider Refresh BAŞLADI");
       debugPrint("   Customer ID: ${widget.customer.id}");
-      debugPrint("   updateCustomer response nextMaintenanceDate: ${data.nextMaintenanceDate}");
-      
+      debugPrint(
+        "   updateCustomer response nextMaintenanceDate: ${data.nextMaintenanceDate}",
+      );
+
       ref.invalidate(customerDetailProvider(widget.customer.id));
       debugPrint("   ✅ Provider invalidate edildi");
-      
+
       // Provider'ın yeniden yüklenmesini bekle - nextMaintenanceDate dahil tüm veriler güncellenir
       final refreshedCustomer = await ref.read(
         customerDetailProvider(widget.customer.id).future,

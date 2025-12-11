@@ -1,7 +1,6 @@
 import "package:flutter/material.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
-import "package:open_file/open_file.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 
 import "../../../../core/error/error_handler.dart";
@@ -259,17 +258,14 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
     );
 
     try {
-      // Generate PDF
+      // Generate and open PDF (opens directly from URL, never saved to device)
       final repository = ref.read(adminRepositoryProvider);
-      final pdfPath = await repository.generateInvoicePdf(job.id);
+      await repository.generateInvoicePdf(job.id);
 
       // Close loading dialog
       if (context.mounted) {
         Navigator.of(context).pop();
       }
-
-      // Open PDF
-      await OpenFile.open(pdfPath);
 
       // Refresh job detail
       ref.invalidate(_jobDetailProvider(widget.jobId));

@@ -1,13 +1,7 @@
 import "package:dio/dio.dart";
-import "package:flutter/foundation.dart" show kIsWeb, debugPrint;
+import "package:flutter/foundation.dart" show debugPrint;
 import "package:hooks_riverpod/hooks_riverpod.dart";
-import "package:path_provider/path_provider.dart";
 import "package:url_launcher/url_launcher.dart";
-
-// Conditional import for dart:io (not available on Web)
-// On Web, we import a stub file that provides a File class
-// On other platforms, dart:io is imported
-import "dart:io" if (dart.library.html) "file_stub.dart" as io;
 
 import "../../../core/network/api_client.dart";
 import "models/customer.dart";
@@ -833,65 +827,18 @@ class AdminRepository {
   }
 
   // Helper function to write bytes to file (only works on non-Web platforms)
-  Future<void> _writeBytesToFile(String filePath, List<int> bytes) async {
-    if (kIsWeb) {
-      throw UnsupportedError("File operations not supported on Web");
-    }
-    final file = io.File(filePath);
-    await file.writeAsBytes(bytes);
-  }
-
+  /// Generate invoice PDF - opens directly from URL, never saves to device
   Future<String> generateInvoicePdf(String jobId) async {
-    // On Web, open PDF directly in browser
-    if (kIsWeb) {
-      final baseUrl = _client.options.baseUrl;
-      final pdfUrl = "$baseUrl/invoices/job/$jobId/pdf";
-      final uri = Uri.parse(pdfUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-        return "web_pdf_$jobId";
-      }
-      throw Exception("PDF açılamadı. Lütfen tekrar deneyin.");
+    // Always open PDF directly from URL - never save to device storage
+    final baseUrl = _client.options.baseUrl;
+    final pdfUrl = "$baseUrl/invoices/job/$jobId/pdf";
+    final uri = Uri.parse(pdfUrl);
+    
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return "pdf_$jobId"; // Return identifier only, not file path
     }
-
-    // For mobile/desktop platforms, save PDF to file
-    try {
-      final directory = await getTemporaryDirectory();
-      final response = await _client.get(
-        "/invoices/job/$jobId/pdf",
-        options: Options(
-          responseType: ResponseType.bytes,
-          headers: {"Accept": "application/pdf"},
-        ),
-      );
-      final filePath = "${directory.path}/fatura_$jobId.pdf";
-      await _writeBytesToFile(filePath, response.data as List<int>);
-      return filePath;
-    } catch (e) {
-      // If temporary directory fails, try application documents directory
-      try {
-        final directory = await getApplicationDocumentsDirectory();
-        final response = await _client.get(
-          "/invoices/job/$jobId/pdf",
-          options: Options(
-            responseType: ResponseType.bytes,
-            headers: {"Accept": "application/pdf"},
-          ),
-        );
-        final filePath = "${directory.path}/fatura_$jobId.pdf";
-        await _writeBytesToFile(filePath, response.data as List<int>);
-        return filePath;
-      } catch (e2) {
-        // If both fail, open PDF directly from URL
-        final baseUrl = _client.options.baseUrl;
-        final pdfUrl = "$baseUrl/invoices/job/$jobId/pdf";
-        final uri = Uri.parse(pdfUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-          return "web_pdf_$jobId";
-        }
-        throw Exception("PDF açılamadı. Lütfen tekrar deneyin.");
-      }
-    }
+    
+    throw Exception("PDF açılamadı. Lütfen tekrar deneyin.");
   }
 }
