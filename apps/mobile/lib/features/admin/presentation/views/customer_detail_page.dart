@@ -110,28 +110,13 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           // Harita bölümü - en üstte
           _CustomerMapSection(customer: customer),
           const SizedBox(height: 24),
-          _Section(
-            title: "Müşteri Bilgileri",
-            children: [
-              if (customer.createdAt != null)
-                _Row(
-                  "Kayıt Tarihi",
-                  DateFormat("dd MMM yyyy").format(customer.createdAt!),
-                ),
-              _Row("İsim", customer.name),
-              _Row("Telefon", customer.phone),
-              if (customer.email != null) _Row("E-posta", customer.email!),
-              _Row("Adres", customer.address),
-              _StatusRow(
-                "Durum",
-                customer.status,
-                onChanged: (newStatus) =>
+          _CustomerInfoSection(
+            customer: customer,
+            onStatusChanged: (newStatus) =>
                     _updateCustomerStatus(customer, newStatus),
               ),
-            ],
-          ),
           // Bakım Bilgileri - Her zaman göster
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
           _MaintenanceSection(customer: customer),
           if (customer.hasDebt) ...[
             const SizedBox(height: 24),
@@ -447,6 +432,79 @@ class _Section extends StatelessWidget {
   }
 }
 
+class _ThemedSection extends StatelessWidget {
+  const _ThemedSection({
+    required this.title,
+    required this.icon,
+    required this.gradientColors,
+    required this.borderColor,
+    required this.children,
+  });
+
+  final String title;
+  final Widget icon;
+  final List<Color> gradientColors;
+  final Color borderColor;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: borderColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: icon,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1F2937),
+                    letterSpacing: -0.3,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: gradientColors,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: borderColor,
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: borderColor.withOpacity(0.1),
+                blurRadius: 12,
+                spreadRadius: 0,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(children: children),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _MaintenanceSection extends StatelessWidget {
   const _MaintenanceSection({required this.customer});
 
@@ -454,9 +512,11 @@ class _MaintenanceSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOverdue = customer.nextMaintenanceDate != null &&
+    final isOverdue =
+        customer.nextMaintenanceDate != null &&
         customer.nextMaintenanceDate!.isBefore(DateTime.now());
-    final isUrgent = customer.nextMaintenanceDate != null &&
+    final isUrgent =
+        customer.nextMaintenanceDate != null &&
         !isOverdue &&
         customer.nextMaintenanceDate!.difference(DateTime.now()).inDays <= 7;
 
@@ -482,10 +542,10 @@ class _MaintenanceSection extends StatelessWidget {
             Text(
               "Bakım Bilgileri",
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFFF59E0B),
-                    letterSpacing: -0.3,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFFF59E0B),
+                letterSpacing: -0.3,
+              ),
             ),
           ],
         ),
@@ -523,13 +583,14 @@ class _MaintenanceSection extends StatelessWidget {
                   _MaintenanceRow(
                     icon: Icons.calendar_today,
                     label: "Sonraki Bakım Tarihi",
-                    value: DateFormat("dd MMM yyyy")
-                        .format(customer.nextMaintenanceDate!),
+                    value: DateFormat(
+                      "dd MMM yyyy",
+                    ).format(customer.nextMaintenanceDate!),
                     valueColor: isOverdue
                         ? Colors.red.shade700
                         : isUrgent
-                            ? Colors.orange.shade700
-                            : const Color(0xFF1F2937),
+                        ? Colors.orange.shade700
+                        : const Color(0xFF1F2937),
                   ),
                   const SizedBox(height: 16),
                   if (customer.maintenanceTimeRemaining != null)
@@ -540,8 +601,8 @@ class _MaintenanceSection extends StatelessWidget {
                       valueColor: isOverdue
                           ? Colors.red.shade700
                           : isUrgent
-                              ? Colors.orange.shade700
-                              : const Color(0xFF10B981),
+                          ? Colors.orange.shade700
+                          : const Color(0xFF10B981),
                       isBold: true,
                     ),
                 ] else ...[
@@ -594,11 +655,7 @@ class _MaintenanceRow extends StatelessWidget {
             color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: const Color(0xFFF59E0B),
-          ),
+          child: Icon(icon, size: 20, color: const Color(0xFFF59E0B)),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -639,9 +696,11 @@ class _DebtSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOverdue = customer.nextDebtDate != null &&
+    final isOverdue =
+        customer.nextDebtDate != null &&
         customer.nextDebtDate!.isBefore(DateTime.now());
-    final hasRemainingDebt = customer.remainingDebtAmount != null &&
+    final hasRemainingDebt =
+        customer.remainingDebtAmount != null &&
         customer.remainingDebtAmount! > 0;
     // Son ödeme tarihini bul (en son ödenen)
     DateTime? latestPaymentDate;
@@ -673,10 +732,10 @@ class _DebtSection extends StatelessWidget {
             Text(
               "Borç Bilgileri",
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF2563EB),
-                    letterSpacing: -0.3,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF2563EB),
+                letterSpacing: -0.3,
+              ),
             ),
           ],
         ),
@@ -744,7 +803,8 @@ class _DebtSection extends StatelessWidget {
                   _DebtRow(
                     icon: Icons.account_balance_wallet,
                     label: "Kalan Borç",
-                    value: "${customer.remainingDebtAmount!.toStringAsFixed(2)} TL",
+                    value:
+                        "${customer.remainingDebtAmount!.toStringAsFixed(2)} TL",
                     valueColor: hasRemainingDebt
                         ? const Color(0xFFEF4444)
                         : const Color(0xFF10B981),
@@ -756,7 +816,9 @@ class _DebtSection extends StatelessWidget {
                   _DebtRow(
                     icon: Icons.event_available,
                     label: "Son Ödeme Tarihi",
-                    value: DateFormat("dd MMM yyyy, HH:mm").format(latestPaymentDate),
+                    value: DateFormat(
+                      "dd MMM yyyy, HH:mm",
+                    ).format(latestPaymentDate),
                     valueColor: const Color(0xFF10B981),
                     isBold: true,
                   ),
@@ -766,7 +828,9 @@ class _DebtSection extends StatelessWidget {
                   _DebtRow(
                     icon: Icons.calendar_today,
                     label: "Sonraki Borç Tarihi",
-                    value: DateFormat("dd MMM yyyy").format(customer.nextDebtDate!),
+                    value: DateFormat(
+                      "dd MMM yyyy",
+                    ).format(customer.nextDebtDate!),
                     valueColor: isOverdue
                         ? Colors.red.shade700
                         : const Color(0xFF1F2937),
@@ -794,10 +858,7 @@ class _DebtSection extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.red.shade50,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Colors.red.shade200,
-                        width: 1,
-                      ),
+                      border: Border.all(color: Colors.red.shade200, width: 1),
                     ),
                     child: Row(
                       children: [
@@ -874,11 +935,7 @@ class _DebtRow extends StatelessWidget {
             color: const Color(0xFF2563EB).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: const Color(0xFF2563EB),
-          ),
+          child: Icon(icon, size: 20, color: const Color(0xFF2563EB)),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -940,10 +997,10 @@ class _DebtPaymentHistorySection extends StatelessWidget {
             Text(
               "Borç Ödeme Geçmişi",
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF10B981),
-                    letterSpacing: -0.3,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF10B981),
+                letterSpacing: -0.3,
+              ),
             ),
           ],
         ),
@@ -1016,8 +1073,9 @@ class _DebtPaymentHistorySection extends StatelessWidget {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF10B981)
-                                      .withValues(alpha: 0.1),
+                                  color: const Color(
+                                    0xFF10B981,
+                                  ).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
@@ -1042,8 +1100,9 @@ class _DebtPaymentHistorySection extends StatelessWidget {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                DateFormat("dd MMM yyyy, HH:mm")
-                                    .format(payment.paidAt),
+                                DateFormat(
+                                  "dd MMM yyyy, HH:mm",
+                                ).format(payment.paidAt),
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.grey.shade700,
@@ -1151,6 +1210,137 @@ class _Row extends StatelessWidget {
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF1F2937),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomerInfoSection extends StatelessWidget {
+  const _CustomerInfoSection({
+    required this.customer,
+    required this.onStatusChanged,
+  });
+
+  final Customer customer;
+  final ValueChanged<String> onStatusChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return _ThemedSection(
+      title: "Müşteri Bilgileri",
+      icon: const Icon(
+        Icons.person_outline,
+        size: 24,
+        color: Color(0xFF7C3AED), // Purple
+      ),
+      gradientColors: [
+        const Color(0xFF7C3AED).withOpacity(0.1), // Purple
+        const Color(0xFFA78BFA).withOpacity(0.05), // Light Purple
+        Colors.white.withOpacity(0.0),
+      ],
+      borderColor: const Color(0xFF7C3AED).withOpacity(0.3),
+      children: [
+            const SizedBox(height: 16),
+            if (customer.createdAt != null)
+              _InfoRowIcon(
+                icon: Icons.event,
+                label: "Kayıt Tarihi",
+                value: DateFormat("dd MMM yyyy").format(customer.createdAt!),
+              ),
+            _InfoRowIcon(
+              icon: Icons.badge,
+              label: "İsim",
+              value: customer.name,
+            ),
+            _InfoRowIcon(
+              icon: Icons.phone,
+              label: "Telefon",
+              value: customer.phone,
+            ),
+            if (customer.email != null)
+              _InfoRowIcon(
+                icon: Icons.mail,
+                label: "E-posta",
+                value: customer.email!,
+              ),
+            _InfoRowIcon(
+              icon: Icons.home,
+              label: "Adres",
+              value: customer.address,
+              maxLines: 3,
+            ),
+            const SizedBox(height: 8),
+            _StatusRow(
+              "Durum",
+              customer.status,
+              onChanged: onStatusChanged,
+            ),
+      ],
+    );
+  }
+}
+
+class _InfoRowIcon extends StatelessWidget {
+  const _InfoRowIcon({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.maxLines = 1,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final int maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFA78BFA).withOpacity(0.2), // Light purple
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: const Color(0xFF7C3AED), // Purple
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  maxLines: maxLines,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1F2937),
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1701,29 +1891,31 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return _ThemedSection(
+      title: "Konum",
+      icon: const Icon(
+        Icons.location_on_outlined,
+        size: 24,
+        color: Color(0xFFEF4444), // Red
+      ),
+      gradientColors: [
+        const Color(0xFFEF4444).withOpacity(0.1), // Red
+        const Color(0xFFF87171).withOpacity(0.05), // Light Red
+        Colors.white.withOpacity(0.0),
+      ],
+      borderColor: const Color(0xFFEF4444).withOpacity(0.3),
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.only(bottom: 8),
             child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                const Icon(Icons.map, color: Color(0xFF2563EB)),
-                const SizedBox(width: 8),
-                Text(
-                  "Konum",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
                 if (_error != null || _isLoading)
                   IconButton(
                     icon: const Icon(Icons.refresh),
                     onPressed: _isLoading ? null : _loadLocation,
                     tooltip: "Yeniden Yükle",
+                  color: const Color(0xFFEF4444),
                   ),
               ],
             ),
@@ -1841,7 +2033,7 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                                     height: 40,
                                     child: const Icon(
                                       Icons.location_on,
-                                      color: Color(0xFF2563EB),
+                                    color: Color(0xFFEF4444), // Red
                                       size: 40,
                                     ),
                                   ),
@@ -1865,10 +2057,11 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
             child: Row(
               children: [
-                ElevatedButton.icon(
+              Expanded(
+                child: ElevatedButton.icon(
                   onPressed: () {
                     // Google Maps'te adresi aç
                     final encodedAddress = Uri.encodeComponent(
@@ -1883,16 +2076,20 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                   icon: const Icon(Icons.place, size: 18),
                   label: const Text("Google Maps ile Aç"),
                   style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEF4444), // Red
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 8,
+                      vertical: 10,
                     ),
-                    textStyle: const TextStyle(fontSize: 12),
+                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                   ),
                 ),
                 if (_customerLocation != null) ...[
-                  const Spacer(),
-                  ElevatedButton.icon(
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -1906,11 +2103,14 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                     icon: const Icon(Icons.map, size: 18),
                     label: const Text("Haritada Aç"),
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444), // Red
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
-                        vertical: 8,
+                        vertical: 10,
                       ),
-                      textStyle: const TextStyle(fontSize: 12),
+                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
                     ),
                   ),
                 ],
@@ -1918,7 +2118,6 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
             ),
           ),
         ],
-      ),
     );
   }
 }
