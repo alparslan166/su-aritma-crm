@@ -62,6 +62,9 @@ class CustomerService {
         debtPaymentHistory: {
           orderBy: { paidAt: "desc" },
         },
+        receivedAmountHistory: {
+          orderBy: { receivedAt: "desc" },
+        },
       },
     });
     if (!customer) {
@@ -377,15 +380,12 @@ class CustomerService {
       // Sadece değer değiştiyse geçmişe kaydet
       if (
         newReceivedAmount &&
-        (!existingReceivedAmount ||
-          !newReceivedAmount.equals(existingReceivedAmount))
+        (!existingReceivedAmount || !newReceivedAmount.equals(existingReceivedAmount))
       ) {
         // Geçmişe kaydet (transaction içinde)
         // Bu işlem update ile birlikte yapılacak
         updateData.receivedAmount = newReceivedAmount;
-        updateData.paymentDate = payload.paymentDate
-          ? new Date(payload.paymentDate)
-          : new Date();
+        updateData.paymentDate = payload.paymentDate ? new Date(payload.paymentDate) : new Date();
       } else {
         updateData.receivedAmount = newReceivedAmount;
       }
@@ -581,14 +581,14 @@ class CustomerService {
       updateData.nextMaintenanceDate,
     );
     console.log("🔵 Backend Service - updateData (full):", JSON.stringify(updateData, null, 2));
-    
+
     // Eğer receivedAmount değiştiyse, geçmişe kaydet
     const shouldAddHistory =
       payload.receivedAmount !== undefined &&
       payload.receivedAmount !== null &&
       (!existing.receivedAmount ||
         !new Prisma.Decimal(payload.receivedAmount).equals(existing.receivedAmount));
-    
+
     const updatedCustomer = await prisma.$transaction(async (tx) => {
       const updated = await tx.customer.update({
         where: { id: customerId },
@@ -626,11 +626,11 @@ class CustomerService {
 
       return updated;
     });
-    
+
     if (!updatedCustomer) {
       throw new AppError("Customer not found after update", 404);
     }
-    
+
     console.log(
       "🔵 Backend Service - updatedCustomer.nextMaintenanceDate:",
       updatedCustomer.nextMaintenanceDate,
