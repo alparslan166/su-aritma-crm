@@ -367,12 +367,30 @@ class CustomerService {
     }
 
     // Handle receivedAmount and paymentDate
+    // Eğer receivedAmount değiştiyse, geçmişe kaydet
     if (payload.receivedAmount !== undefined) {
-      updateData.receivedAmount = payload.receivedAmount
+      const newReceivedAmount = payload.receivedAmount
         ? new Prisma.Decimal(payload.receivedAmount)
         : null;
+      const existingReceivedAmount = existing.receivedAmount;
+
+      // Sadece değer değiştiyse geçmişe kaydet
+      if (
+        newReceivedAmount &&
+        (!existingReceivedAmount ||
+          !newReceivedAmount.equals(existingReceivedAmount))
+      ) {
+        // Geçmişe kaydet (transaction içinde)
+        // Bu işlem update ile birlikte yapılacak
+        updateData.receivedAmount = newReceivedAmount;
+        updateData.paymentDate = payload.paymentDate
+          ? new Date(payload.paymentDate)
+          : new Date();
+      } else {
+        updateData.receivedAmount = newReceivedAmount;
+      }
     }
-    if (payload.paymentDate !== undefined) {
+    if (payload.paymentDate !== undefined && payload.receivedAmount === undefined) {
       updateData.paymentDate = payload.paymentDate ? new Date(payload.paymentDate) : null;
     }
 
@@ -563,12 +581,46 @@ class CustomerService {
       updateData.nextMaintenanceDate,
     );
     console.log("🔵 Backend Service - updateData (full):", JSON.stringify(updateData, null, 2));
-    const updatedCustomer = await prisma.customer.update({
-      where: { id: customerId },
-      data: updateData,
-      include: {
-        debtPaymentHistory: true,
-      },
+    
+    // Eğer receivedAmount değiştiyse, geçmişe kaydet
+    const shouldAddHistory =
+      payload.receivedAmount !== undefined &&
+      payload.receivedAmount !== null &&
+      (!existing.receivedAmount ||
+        !new Prisma.Decimal(payload.receivedAmount).equals(existing.receivedAmount));
+    
+    const updatedCustomer = await prisma.$transaction(async (tx) => {
+      const updated = await tx.customer.update({
+        where: { id: customerId },
+        data: updateData,
+        include: {
+          debtPaymentHistory: true,
+          receivedAmountHistory: true,
+        },
+      });
+
+      // Eğer receivedAmount değiştiyse, geçmişe kaydet
+      if (shouldAddHistory && payload.receivedAmount) {
+        await tx.receivedAmountHistory.create({
+          data: {
+            customerId,
+            amount: new Prisma.Decimal(payload.receivedAmount),
+            receivedAt: payload.paymentDate ? new Date(payload.paymentDate) : new Date(),
+          },
+        });
+        // Geçmişi tekrar yükle
+        return tx.customer.findUnique({
+          where: { id: customerId },
+          include: {
+            debtPaymentHistory: true,
+            receivedAmountHistory: {
+              orderBy: { receivedAt: "desc" },
+            },
+          },
+        });
+      }
+
+      return updated;
     });
     console.log(
       "🔵 Backend Service - updatedCustomer.nextMaintenanceDate:",
