@@ -155,10 +155,15 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
           indicatorColor: const Color(0xFF2563EB),
           indicatorWeight: 3,
           labelStyle: TextStyle(
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             fontSize: responsiveFontSize,
+            letterSpacing: 0.3,
           ),
-          unselectedLabelStyle: TextStyle(fontSize: responsiveFontSize),
+          unselectedLabelStyle: TextStyle(
+            fontSize: responsiveFontSize,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.2,
+          ),
           isScrollable: false,
           tabAlignment: TabAlignment.fill,
           dividerColor: Colors.transparent,
@@ -458,11 +463,7 @@ class _AdminDrawer extends ConsumerWidget {
                 color: const Color(0xFF2563EB).withOpacity(0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
-                Icons.work,
-                color: Color(0xFF2563EB),
-                size: 24,
-              ),
+              child: const Icon(Icons.work, color: Color(0xFF2563EB), size: 24),
             ),
             title: const Text(
               "Aktif İşler",
@@ -542,11 +543,7 @@ class _AdminDrawer extends ConsumerWidget {
                 color: Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                Icons.history,
-                color: Colors.grey.shade700,
-                size: 24,
-              ),
+              child: Icon(Icons.history, color: Colors.grey.shade700, size: 24),
             ),
             title: const Text(
               "Geçmiş",
@@ -570,11 +567,7 @@ class _AdminDrawer extends ConsumerWidget {
                 color: const Color(0xFFEF4444).withOpacity(0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
-                Icons.map,
-                color: Color(0xFFEF4444),
-                size: 24,
-              ),
+              child: const Icon(Icons.map, color: Color(0xFFEF4444), size: 24),
             ),
             title: const Text(
               "Harita",
