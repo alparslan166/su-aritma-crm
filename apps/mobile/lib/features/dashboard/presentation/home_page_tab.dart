@@ -340,24 +340,31 @@ class _QuickActionsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.flash_on,
-                color: const Color(0xFF2563EB).withOpacity(0.8),
-                size: 22,
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.flash_on,
+                  color: const Color(0xFF2563EB),
+                  size: 20,
+                ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Text(
                 "Hızlı Erişim",
                 style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
                   color: const Color(0xFF1F2937),
-                  letterSpacing: 0.2,
-                  height: 1.3,
+                  letterSpacing: 0.3,
+                  height: 1.2,
                 ),
               ),
             ],
