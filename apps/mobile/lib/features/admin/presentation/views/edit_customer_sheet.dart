@@ -71,7 +71,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     _hasDebt = customer.hasDebt;
     _debtHasInstallment = customer.hasInstallment;
     _createdAt = customer.createdAt;
-    _nextDebtDate = customer.nextDebtDate;
+    // Bir sonraki borç ödeme tarihi: Eğer müşterinin mevcut tarihi varsa onu kullan,
+    // yoksa varsayılan olarak 1 ay sonraya ayarla
+    _nextDebtDate = customer.nextDebtDate ?? 
+        DateTime.now().add(const Duration(days: 30));
     _installmentStartDate = customer.installmentStartDate;
     // Bakım tarihi - mevcut değerleri formda göster
     try {
