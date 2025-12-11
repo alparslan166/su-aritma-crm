@@ -111,7 +111,16 @@ class LoginPage extends HookConsumerWidget {
                       // Logo/Icon Area with Animation
                       _AnimatedLogo(),
                       const SizedBox(height: 20),
-                      _AnimatedTitleText(),
+                      Text(
+                        "Su Arıtma Platformu",
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                          letterSpacing: -0.5,
+                          height: 1.2,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         "Rolünü seç ve güvenli giriş yap",
@@ -476,107 +485,3 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
   }
 }
 
-class _AnimatedTitleText extends StatefulWidget {
-  const _AnimatedTitleText();
-
-  @override
-  State<_AnimatedTitleText> createState() => _AnimatedTitleTextState();
-}
-
-class _AnimatedTitleTextState extends State<_AnimatedTitleText>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    );
-    _animation = Tween<double>(
-      begin: -1.0,
-      end: 2.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-    _controller.repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        // Animasyon değerini 0-1 aralığına normalize et
-        final normalizedValue = ((_animation.value + 1.0) / 3.0).clamp(0.0, 1.0);
-        
-        // Işığın genişliği ve pozisyonu
-        const lightWidth = 0.4;
-        final lightPosition = normalizedValue;
-        final lightStart = math.max(0.0, lightPosition - lightWidth / 2);
-        final lightEnd = math.min(1.0, lightPosition + lightWidth / 2);
-        
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            return Stack(
-              children: [
-                // Mat siyah yazı (arka plan)
-                Text(
-                  "Su Arıtma Platformu",
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                    letterSpacing: -0.5,
-                    height: 1.2,
-                  ),
-                ),
-                // Lacivert ışık efekti (üstte)
-                Positioned.fill(
-                  child: ClipRect(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: lightEnd - lightStart,
-                      child: Transform.translate(
-                        offset: Offset(constraints.maxWidth * lightStart, 0),
-                        child: ShaderMask(
-                          shaderCallback: (bounds) {
-                            return LinearGradient(
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                              colors: [
-                                const Color(0xFF1E3A8A),
-                                const Color(0xFF2563EB),
-                                const Color(0xFF1E3A8A),
-                              ],
-                            ).createShader(bounds);
-                          },
-                          child: Text(
-                            "Su Arıtma Platformu",
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: -0.5,
-                              height: 1.2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-}
