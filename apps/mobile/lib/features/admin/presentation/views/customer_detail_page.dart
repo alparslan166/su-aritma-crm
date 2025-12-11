@@ -2069,16 +2069,19 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                         );
                       },
                     ),
-            ),
+              );
+            },
           ),
+        ),
         Padding(
           padding: EdgeInsets.symmetric(
             horizontal: 0,
-            vertical: MediaQuery.of(context).size.width < 400 ? 8 : 12,
+            vertical: 8,
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final isSmallScreen = constraints.maxWidth < 400;
+              final screenWidth = MediaQuery.of(context).size.width;
+              final isSmallScreen = screenWidth < 400;
               final buttonHeight = isSmallScreen ? 44.0 : 48.0;
               final iconSize = isSmallScreen ? 16.0 : 18.0;
               final fontSize = isSmallScreen ? 12.0 : 13.0;
