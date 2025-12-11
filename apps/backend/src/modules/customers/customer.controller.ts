@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { getAdminId, getPersonnelId } from "@/lib/tenant";
 import { notificationService } from "@/modules/notifications/notification.service";
+import { AppError } from "@/middleware/error-handler";
 
 const listQuerySchema = z.object({
   search: z.string().optional(),
@@ -214,6 +215,10 @@ export const updateCustomerHandler = async (req: Request, res: Response, next: N
       ...payload,
       email: payload.email === "" ? undefined : payload.email,
     });
+
+    if (!data) {
+      throw new AppError("Customer not found after update", 404);
+    }
 
     console.log("   Response data.nextMaintenanceDate:", data.nextMaintenanceDate);
     console.log("🔵🔵🔵 Backend Controller - updateCustomer TAMAMLANDI 🔵🔵🔵");

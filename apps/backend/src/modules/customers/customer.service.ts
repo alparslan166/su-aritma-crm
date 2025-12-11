@@ -609,7 +609,7 @@ class CustomerService {
           },
         });
         // Geçmişi tekrar yükle
-        return tx.customer.findUnique({
+        const reloaded = await tx.customer.findUnique({
           where: { id: customerId },
           include: {
             debtPaymentHistory: true,
@@ -618,10 +618,19 @@ class CustomerService {
             },
           },
         });
+        if (!reloaded) {
+          throw new AppError("Customer not found after update", 404);
+        }
+        return reloaded;
       }
 
       return updated;
     });
+    
+    if (!updatedCustomer) {
+      throw new AppError("Customer not found after update", 404);
+    }
+    
     console.log(
       "🔵 Backend Service - updatedCustomer.nextMaintenanceDate:",
       updatedCustomer.nextMaintenanceDate,
