@@ -13,6 +13,7 @@ import "../../../../core/error/error_handler.dart";
 import "../../application/customer_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
+import "../../../dashboard/presentation/home_page_provider.dart";
 import "add_customer_sheet.dart";
 import "edit_customer_sheet.dart";
 import "job_map_view.dart";
@@ -765,6 +766,13 @@ class CustomersView extends HookConsumerWidget {
     try {
       await ref.read(adminRepositoryProvider).deleteCustomer(customer.id);
       await notifier.refresh(showLoading: false);
+      
+      // Ana sayfa grafik ve istatistiklerini statik olarak yenile
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(customerCategoryDataProvider);
+      ref.invalidate(overduePaymentsCustomersProvider);
+      ref.invalidate(upcomingMaintenanceProvider);
+      
       if (context.mounted) {
         messenger.showSnackBar(
           SnackBar(content: Text("${customer.name} silindi")),
@@ -844,6 +852,12 @@ class CustomersView extends HookConsumerWidget {
 
     // Listeyi yenile
     await notifier.refresh(showLoading: false);
+
+    // Ana sayfa grafik ve istatistiklerini statik olarak yenile
+    ref.invalidate(dashboardStatsProvider);
+    ref.invalidate(customerCategoryDataProvider);
+    ref.invalidate(overduePaymentsCustomersProvider);
+    ref.invalidate(upcomingMaintenanceProvider);
 
     // Seçim modunu kapat ve seçimleri temizle
     if (context.mounted) {

@@ -14,6 +14,7 @@ import "../../../../core/error/error_handler.dart";
 import "../../application/customer_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
+import "../../../dashboard/presentation/home_page_provider.dart";
 import "customer_detail_page.dart" show customerDetailProvider;
 import "customers_view.dart"; // CustomerFilterType enum'ı için
 
@@ -395,6 +396,13 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       debugPrint(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
+      
+      // Ana sayfa grafik ve istatistiklerini statik olarak yenile
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(customerCategoryDataProvider);
+      ref.invalidate(overduePaymentsCustomersProvider);
+      ref.invalidate(upcomingMaintenanceProvider);
+      
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(

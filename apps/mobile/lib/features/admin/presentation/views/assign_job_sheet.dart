@@ -9,6 +9,7 @@ import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
 import "../../data/models/personnel.dart";
+import "../../../dashboard/presentation/home_page_provider.dart";
 
 class AssignJobSheet extends ConsumerStatefulWidget {
   const AssignJobSheet({super.key});
@@ -151,6 +152,12 @@ class _AssignJobSheetState extends ConsumerState<AssignJobSheet> {
       // Refresh lists
       ref.invalidate(personnelListProvider);
       ref.invalidate(customerListProvider);
+      
+      // Ana sayfa grafik ve istatistiklerini statik olarak yenile
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(customerCategoryDataProvider);
+      ref.invalidate(overduePaymentsCustomersProvider);
+      ref.invalidate(upcomingMaintenanceProvider);
 
       if (!mounted) return;
       Navigator.of(context).pop();

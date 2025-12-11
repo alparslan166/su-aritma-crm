@@ -17,6 +17,7 @@ import "../../application/customer_list_notifier.dart";
 import "../../application/job_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
+import "../../../dashboard/presentation/home_page_provider.dart";
 import "edit_customer_sheet.dart";
 import "job_map_view.dart";
 import "customers_view.dart"; // CustomerFilterType enum'ı için
@@ -210,6 +211,13 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
         );
         notifier.refresh(showLoading: false);
       }
+      
+      // Ana sayfa grafik ve istatistiklerini statik olarak yenile
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(customerCategoryDataProvider);
+      ref.invalidate(overduePaymentsCustomersProvider);
+      ref.invalidate(upcomingMaintenanceProvider);
+      
       if (context.mounted) {
         messenger.showSnackBar(
           SnackBar(
@@ -267,6 +275,12 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
         );
         notifier.refresh(showLoading: false);
       }
+
+      // Ana sayfa grafik ve istatistiklerini statik olarak yenile
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(customerCategoryDataProvider);
+      ref.invalidate(overduePaymentsCustomersProvider);
+      ref.invalidate(upcomingMaintenanceProvider);
 
       navigator.pop();
       messenger.showSnackBar(
@@ -340,6 +354,13 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
       }
 
       ref.invalidate(jobListProvider);
+      
+      // Ana sayfa grafik ve istatistiklerini statik olarak yenile
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(customerCategoryDataProvider);
+      ref.invalidate(overduePaymentsCustomersProvider);
+      ref.invalidate(upcomingMaintenanceProvider);
+      
       if (context.mounted) {
         messenger.showSnackBar(SnackBar(content: Text("${job.title} silindi")));
       }
@@ -1573,6 +1594,12 @@ class _PayDebtFormState extends ConsumerState<_PayDebtForm> {
       // Eğer customer list sayfası açıksa, orada loading görünmez
       ref.read(customerListProvider.notifier).refresh(showLoading: false);
 
+      // Ana sayfa grafik ve istatistiklerini statik olarak yenile
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(customerCategoryDataProvider);
+      ref.invalidate(overduePaymentsCustomersProvider);
+      ref.invalidate(upcomingMaintenanceProvider);
+
       if (!mounted) return;
       _amountController.clear();
       setState(() {
@@ -1901,6 +1928,12 @@ class _JobCard extends ConsumerWidget {
       // Refresh customer detail and job list
       ref.invalidate(customerDetailProvider(customerId));
       ref.invalidate(jobListProvider);
+
+      // Ana sayfa grafik ve istatistiklerini statik olarak yenile
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(customerCategoryDataProvider);
+      ref.invalidate(overduePaymentsCustomersProvider);
+      ref.invalidate(upcomingMaintenanceProvider);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -13,6 +13,7 @@ import "package:latlong2/latlong.dart";
 import "../../application/customer_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/inventory_item.dart";
+import "../../../dashboard/presentation/home_page_provider.dart";
 import "customers_view.dart"; // CustomerFilterType enum'ı için
 
 class AddCustomerSheet extends ConsumerStatefulWidget {
@@ -311,6 +312,12 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
         // Mevcut filtreleri koruyarak refresh et (showLoading=false)
         notifier.refresh(showLoading: false);
       }
+
+      // Ana sayfa grafik ve istatistiklerini statik olarak yenile
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(customerCategoryDataProvider);
+      ref.invalidate(overduePaymentsCustomersProvider);
+      ref.invalidate(upcomingMaintenanceProvider);
 
       if (!mounted) return;
       Navigator.of(context).pop();
