@@ -47,21 +47,22 @@ router.use("/auth", authRouter);
 router.use("/admins", adminRouter);
 
 // API Router - /customers route logging middleware
+// Production'da da görünmesi için console.log kullanıyoruz
 router.use(
   "/customers",
   (req: Request, res: Response, next: NextFunction) => {
     if (req.method === "PUT") {
-      logger.debug(
+      console.log(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
-      logger.debug("🔵🔵🔵 API Router - /customers Route Match Edildi 🔵🔵🔵");
-      logger.debug("   Method:", req.method);
-      logger.debug("   URL:", req.originalUrl);
-      logger.debug("   Path:", req.path);
-      logger.debug("   Params:", JSON.stringify(req.params, null, 2));
-      logger.debug("   Headers:", JSON.stringify(req.headers, null, 2));
-      logger.debug("   Body:", JSON.stringify(req.body, null, 2));
-      logger.debug(
+      console.log("🔵🔵🔵 API Router - /customers Route Match Edildi 🔵🔵🔵");
+      console.log("   Method:", req.method);
+      console.log("   URL:", req.originalUrl);
+      console.log("   Path:", req.path);
+      console.log("   Params:", JSON.stringify(req.params, null, 2));
+      console.log("   Headers:", JSON.stringify(req.headers, null, 2));
+      console.log("   Body:", JSON.stringify(req.body, null, 2));
+      console.log(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
     }

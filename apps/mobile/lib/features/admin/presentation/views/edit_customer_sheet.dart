@@ -321,7 +321,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       final refreshedCustomer = await ref.read(
         customerDetailProvider(widget.customer.id).future,
       );
-      
+
       // Debug: Refresh sonrası customer'da nextMaintenanceDate var mı kontrol et
       debugPrint("🟢 Refresh sonrası customer:");
       debugPrint(
@@ -1051,7 +1051,9 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                             debugPrint(
                               "═══════════════════════════════════════════════════════════════════════════════════════════",
                             );
-                            debugPrint("🔵🔵🔵 Frontend - Güncelle BUTONUNA BASILDI 🔵🔵🔵");
+                            debugPrint(
+                              "🔵🔵🔵 Frontend - Güncelle BUTONUNA BASILDI 🔵🔵🔵",
+                            );
                             debugPrint("   Customer ID: ${widget.customer.id}");
                             debugPrint(
                               "═══════════════════════════════════════════════════════════════════════════════════════════",

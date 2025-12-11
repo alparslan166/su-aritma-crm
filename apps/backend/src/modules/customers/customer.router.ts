@@ -19,18 +19,19 @@ router.get("/:id", getCustomerHandler);
 router.post("/", createCustomerHandler);
 
 // Debug middleware: PUT request'leri logla (route'tan önce tanımlanmalı)
+// Production'da da görünmesi için console.log kullanıyoruz
 router.put(
   "/:id",
   (req, res, next) => {
-    logger.debug(
+    console.log(
       "═══════════════════════════════════════════════════════════════════════════════════════════",
     );
-    logger.debug("🔵🔵🔵 Customer Router - PUT /:id middleware 🔵🔵🔵");
-    logger.debug("   URL:", req.url);
-    logger.debug("   Method:", req.method);
-    logger.debug("   Params:", JSON.stringify(req.params, null, 2));
-    logger.debug("   Body:", JSON.stringify(req.body, null, 2));
-    logger.debug(
+    console.log("🔵🔵🔵 Customer Router - PUT /:id middleware 🔵🔵🔵");
+    console.log("   URL:", req.url);
+    console.log("   Method:", req.method);
+    console.log("   Params:", JSON.stringify(req.params, null, 2));
+    console.log("   Body:", JSON.stringify(req.body, null, 2));
+    console.log(
       "═══════════════════════════════════════════════════════════════════════════════════════════",
     );
     next();

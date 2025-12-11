@@ -28,19 +28,20 @@ export const createApp = () => {
   app.use(express.urlencoded({ extended: true }));
 
   // Global request logging middleware - tüm gelen request'leri logla
+  // Production'da da görünmesi için logger.info kullanıyoruz
   app.use((req: Request, res: Response, next: NextFunction) => {
     // Sadece /api/customers PUT request'lerini detaylı logla
     if (req.path.startsWith("/api/customers") && req.method === "PUT") {
-      logger.debug(
+      console.log(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
-      logger.debug("🔵🔵🔵 Backend Global - Request Alındı 🔵🔵🔵");
-      logger.debug("   Method:", req.method);
-      logger.debug("   URL:", req.originalUrl);
-      logger.debug("   Path:", req.path);
-      logger.debug("   Headers:", JSON.stringify(req.headers, null, 2));
-      logger.debug("   Body:", JSON.stringify(req.body, null, 2));
-      logger.debug(
+      console.log("🔵🔵🔵 Backend Global - Request Alındı 🔵🔵🔵");
+      console.log("   Method:", req.method);
+      console.log("   URL:", req.originalUrl);
+      console.log("   Path:", req.path);
+      console.log("   Headers:", JSON.stringify(req.headers, null, 2));
+      console.log("   Body:", JSON.stringify(req.body, null, 2));
+      console.log(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
     }

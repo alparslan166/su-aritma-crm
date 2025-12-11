@@ -183,25 +183,26 @@ export const updateCustomerHandler = async (req: Request, res: Response, next: N
   try {
     const adminId = getAdminId(req);
     const { id } = req.params;
-    logger.debug(
+    // Production'da da görünmesi için console.log kullanıyoruz
+    console.log(
       "═══════════════════════════════════════════════════════════════════════════════════════════",
     );
-    logger.debug("🔵🔵🔵 Backend Controller - updateCustomer BAŞLADI 🔵🔵🔵");
-    logger.debug("   Customer ID:", id);
-    logger.debug("   Request body (raw):", JSON.stringify(req.body, null, 2));
+    console.log("🔵🔵🔵 Backend Controller - updateCustomer BAŞLADI 🔵🔵🔵");
+    console.log("   Customer ID:", id);
+    console.log("   Request body (raw):", JSON.stringify(req.body, null, 2));
 
     let payload;
     try {
       payload = updateSchema.parse(req.body);
     } catch (parseError) {
-      logger.debug("   ❌ Zod parse hatası:", parseError);
+      console.log("   ❌ Zod parse hatası:", parseError);
       throw parseError;
     }
 
-    logger.debug("   Parsed payload:", JSON.stringify(payload, null, 2));
-    logger.debug("   payload.nextMaintenanceDate:", payload.nextMaintenanceDate);
-    logger.debug("   payload.nextMaintenanceDate type:", typeof payload.nextMaintenanceDate);
-    logger.debug(
+    console.log("   Parsed payload:", JSON.stringify(payload, null, 2));
+    console.log("   payload.nextMaintenanceDate:", payload.nextMaintenanceDate);
+    console.log("   payload.nextMaintenanceDate type:", typeof payload.nextMaintenanceDate);
+    console.log(
       "   payload.nextMaintenanceDate !== undefined:",
       payload.nextMaintenanceDate !== undefined,
     );
@@ -211,9 +212,9 @@ export const updateCustomerHandler = async (req: Request, res: Response, next: N
       email: payload.email === "" ? undefined : payload.email,
     });
 
-    logger.debug("   Response data.nextMaintenanceDate:", data.nextMaintenanceDate);
-    logger.debug("🔵🔵🔵 Backend Controller - updateCustomer TAMAMLANDI 🔵🔵🔵");
-    logger.debug(
+    console.log("   Response data.nextMaintenanceDate:", data.nextMaintenanceDate);
+    console.log("🔵🔵🔵 Backend Controller - updateCustomer TAMAMLANDI 🔵🔵🔵");
+    console.log(
       "═══════════════════════════════════════════════════════════════════════════════════════════",
     );
     res.json({ success: true, data });

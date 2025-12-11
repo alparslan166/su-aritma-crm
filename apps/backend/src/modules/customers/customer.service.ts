@@ -457,8 +457,9 @@ class CustomerService {
     }
 
     // Update maintenance date for customer and jobs if provided
-    logger.debug("🔵 Backend Service - payload.nextMaintenanceDate:", payload.nextMaintenanceDate);
-    logger.debug(
+    // Production'da da görünmesi için console.log kullanıyoruz
+    console.log("🔵 Backend Service - payload.nextMaintenanceDate:", payload.nextMaintenanceDate);
+    console.log(
       "🔵 Backend Service - payload.nextMaintenanceDate !== undefined:",
       payload.nextMaintenanceDate !== undefined,
     );
@@ -467,8 +468,8 @@ class CustomerService {
         ? new Date(payload.nextMaintenanceDate)
         : null;
 
-      logger.debug("🔵 Backend Service - maintenanceDate:", maintenanceDate);
-      logger.debug(
+      console.log("🔵 Backend Service - maintenanceDate:", maintenanceDate);
+      console.log(
         "🔵 Backend Service - updateData.nextMaintenanceDate set ediliyor:",
         maintenanceDate,
       );
@@ -537,11 +538,11 @@ class CustomerService {
       }
     }
 
-    logger.debug(
+    console.log(
       "🔵 Backend Service - updateData.nextMaintenanceDate:",
       updateData.nextMaintenanceDate,
     );
-    logger.debug("🔵 Backend Service - updateData (full):", JSON.stringify(updateData, null, 2));
+    console.log("🔵 Backend Service - updateData (full):", JSON.stringify(updateData, null, 2));
     const updatedCustomer = await prisma.customer.update({
       where: { id: customerId },
       data: updateData,
@@ -549,11 +550,11 @@ class CustomerService {
         debtPaymentHistory: true,
       },
     });
-    logger.debug(
+    console.log(
       "🔵 Backend Service - updatedCustomer.nextMaintenanceDate:",
       updatedCustomer.nextMaintenanceDate,
     );
-    logger.debug(
+    console.log(
       "🔵 Backend Service - updatedCustomer (full):",
       JSON.stringify(
         {
