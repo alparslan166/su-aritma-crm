@@ -141,9 +141,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
             const Text(
               "Admin Paneli",
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.w600,
-                letterSpacing: 0.3,
+                letterSpacing: 0.2,
               ),
             ),
           ],
