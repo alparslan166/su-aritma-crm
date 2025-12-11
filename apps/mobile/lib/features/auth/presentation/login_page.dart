@@ -1,3 +1,5 @@
+import "dart:math" as math;
+
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "package:flutter_hooks/flutter_hooks.dart";
@@ -106,19 +108,8 @@ class LoginPage extends HookConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 40),
-                      // Logo/Icon Area
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.water_drop,
-                          size: 64,
-                          color: Color(0xFF2563EB),
-                        ),
-                      ),
+                      // Logo/Icon Area with Animation
+                      _AnimatedLogo(),
                       const SizedBox(height: 32),
                       Text(
                         "Su Arıtma Platformu",
@@ -127,7 +118,8 @@ class LoginPage extends HookConsumerWidget {
                             ?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF1F2937),
-                              letterSpacing: -1,
+                              letterSpacing: -0.5,
+                              height: 1.2,
                             ),
                       ),
                       const SizedBox(height: 8),
@@ -136,6 +128,8 @@ class LoginPage extends HookConsumerWidget {
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Colors.grey.shade600,
+                          letterSpacing: 0.2,
+                          height: 1.4,
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -356,6 +350,147 @@ class LoginPage extends HookConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AnimatedLogo extends StatefulWidget {
+  const _AnimatedLogo();
+
+  @override
+  State<_AnimatedLogo> createState() => _AnimatedLogoState();
+}
+
+class _AnimatedLogoState extends State<_AnimatedLogo>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _rotationAnimation;
+  late Animation<double> _opacityAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _rotationAnimation = Tween<double>(
+      begin: 0.0,
+      end: 2 * math.pi,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.8, curve: Curves.easeInOut),
+      ),
+    );
+
+    _opacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.4, curve: Curves.easeIn),
+      ),
+    );
+
+    _controller.forward();
+
+    // Pulse animation
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _controller.repeat(reverse: true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Opacity(
+            opacity: _opacityAnimation.value,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF2563EB).withValues(alpha: 0.15),
+                    const Color(0xFF10B981).withValues(alpha: 0.15),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+                border: Border.all(
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.3),
+                  width: 2,
+                ),
+              ),
+              child: Container(
+                margin: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF2563EB).withValues(alpha: 0.1),
+                      const Color(0xFF10B981).withValues(alpha: 0.1),
+                    ],
+                  ),
+                ),
+                child: Center(
+                  child: Transform.rotate(
+                    angle: _rotationAnimation.value * 0.1,
+                    child: Icon(
+                      Icons.water_drop,
+                      size: 64,
+                      color: const Color(0xFF2563EB),
+                      shadows: [
+                        Shadow(
+                          color: const Color(0xFF2563EB).withValues(alpha: 0.5),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
