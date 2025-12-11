@@ -898,7 +898,7 @@ class _DebtSection extends StatelessWidget {
     );
   }
 
-  String _getOverdueDays(DateTime dueDate) {
+  static String _getOverdueDaysStatic(DateTime dueDate) {
     final now = DateTime.now();
     final difference = now.difference(dueDate);
     final days = difference.inDays;
@@ -910,6 +910,10 @@ class _DebtSection extends StatelessWidget {
     } else {
       return "$days gün geçti";
     }
+  }
+
+  String _getOverdueDays(DateTime dueDate) {
+    return _getOverdueDaysStatic(dueDate);
   }
 }
 
@@ -1461,20 +1465,6 @@ String _getJobStatusText(String status) {
       return "Arşivlendi";
     default:
       return status;
-  }
-}
-
-String _getOverdueDays(DateTime dueDate) {
-  final now = DateTime.now();
-  final difference = now.difference(dueDate);
-  final days = difference.inDays;
-
-  if (days == 0) {
-    return "Bugün geçti";
-  } else if (days == 1) {
-    return "1 gün geçti";
-  } else {
-    return "$days gün geçti";
   }
 }
 
