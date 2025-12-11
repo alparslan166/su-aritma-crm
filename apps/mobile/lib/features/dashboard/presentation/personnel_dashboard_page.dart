@@ -79,7 +79,18 @@ class PersonnelDashboardPage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.person, color: Color(0xFF10B981)),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7C3AED).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.person,
+                  color: Color(0xFF7C3AED),
+                  size: 24,
+                ),
+              ),
               title: const Text("Profil"),
               onTap: () {
                 Navigator.of(context).pop();
@@ -91,7 +102,18 @@ class PersonnelDashboardPage extends ConsumerWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.person_add, color: Color(0xFF2563EB)),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.person_add,
+                  color: Color(0xFF2563EB),
+                  size: 24,
+                ),
+              ),
               title: const Text("Müşteri Ekle"),
               onTap: () {
                 Navigator.of(context).pop();

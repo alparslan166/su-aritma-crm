@@ -445,7 +445,18 @@ class _AdminDrawer extends ConsumerWidget {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.work),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.work,
+                color: Color(0xFF2563EB),
+                size: 24,
+              ),
+            ),
             title: const Text("Aktif İşler"),
             onTap: () {
               Navigator.of(context).pop();
@@ -455,7 +466,18 @@ class _AdminDrawer extends ConsumerWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.people),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.people,
+                color: Color(0xFF10B981),
+                size: 24,
+              ),
+            ),
             title: const Text("Personeller"),
             onTap: () {
               Navigator.of(context).pop();
@@ -465,7 +487,18 @@ class _AdminDrawer extends ConsumerWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.inventory_2),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.inventory_2,
+                color: Color(0xFFF59E0B),
+                size: 24,
+              ),
+            ),
             title: const Text("Stok Durumu"),
             onTap: () {
               Navigator.of(context).pop();
@@ -475,7 +508,18 @@ class _AdminDrawer extends ConsumerWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.history),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.history,
+                color: Colors.grey.shade700,
+                size: 24,
+              ),
+            ),
             title: const Text("Geçmiş"),
             onTap: () {
               Navigator.of(context).pop();
@@ -485,7 +529,18 @@ class _AdminDrawer extends ConsumerWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.map),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.map,
+                color: Color(0xFFEF4444),
+                size: 24,
+              ),
+            ),
             title: const Text("Harita"),
             onTap: () {
               Navigator.of(context).pop();
@@ -495,7 +550,18 @@ class _AdminDrawer extends ConsumerWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.notifications),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFCD34D).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.notifications,
+                color: Color(0xFFF59E0B),
+                size: 24,
+              ),
+            ),
             title: const Text("Bildirim"),
             onTap: () {
               Navigator.of(context).pop();
@@ -506,7 +572,18 @@ class _AdminDrawer extends ConsumerWidget {
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.person),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF7C3AED).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.person,
+                color: Color(0xFF7C3AED),
+                size: 24,
+              ),
+            ),
             title: const Text("Profil"),
             onTap: () {
               Navigator.of(context).pop();
