@@ -429,7 +429,7 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                           text: scheduledAt != null
                               ? DateFormat("dd.MM.yyyy").format(scheduledAt!)
                               : "",
-                        ),
+                            ),
                         decoration: InputDecoration(
                           labelText: "Planlanan Tarih",
                           hintText: "Tarih seçin",

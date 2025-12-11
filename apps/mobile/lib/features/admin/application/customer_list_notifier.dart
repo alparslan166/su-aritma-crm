@@ -19,7 +19,7 @@ final customerListProviderForFilter =
     >(
       (ref, filterTypeKey) =>
           CustomerListNotifier(ref.watch(adminRepositoryProvider), ref),
-    );
+);
 
 class CustomerListNotifier extends StateNotifier<AsyncValue<List<Customer>>> {
   CustomerListNotifier(this._repository, this._ref)
@@ -141,7 +141,7 @@ class CustomerListNotifier extends StateNotifier<AsyncValue<List<Customer>>> {
       // Sadece ilk yüklemede veya manuel refresh'te loading göster
       // Arama değişikliklerinde mevcut data'yı koru, loading gösterme
       await refresh(showLoading: !wasInitialized && !hasExistingData);
-
+      
       print(
         "✅ Refresh tamamlandı, müşteri sayısı: ${state.valueOrNull?.length ?? 0}",
       );

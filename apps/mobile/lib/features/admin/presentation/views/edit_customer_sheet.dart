@@ -45,6 +45,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
   DateTime _lastMaintenanceDate = DateTime.now(); // Son bakım tarihi
   double _nextMaintenanceMonths = 0.0; // Sonraki bakım ayı (0-12 arası)
   bool _maintenanceDateChanged = false; // Bakım tarihi değiştirildi mi?
+  double? _initialDebtAmount; // Başlangıç borç miktarı (karşılaştırma için)
 
   @override
   void initState() {
@@ -58,6 +59,8 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     _debtAmountController = TextEditingController(
       text: customer.debtAmount?.toStringAsFixed(2) ?? "",
     );
+    // Başlangıç borç miktarını kaydet (karşılaştırma için)
+    _initialDebtAmount = customer.debtAmount;
     _installmentCountController = TextEditingController(
       text: customer.installmentCount?.toString() ?? "",
     );
@@ -70,16 +73,28 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     _createdAt = customer.createdAt;
     _nextDebtDate = customer.nextDebtDate;
     _installmentStartDate = customer.installmentStartDate;
-    // Bakım tarihi - varsayılan olarak bugün veya müşterinin nextMaintenanceDate'i
+    // Bakım tarihi - mevcut değerleri formda göster
     try {
       final nextMaintenance = customer.nextMaintenanceDate;
       if (nextMaintenance != null) {
-        // Eğer nextMaintenanceDate varsa, bunu son bakım tarihi olarak kullan
-        _lastMaintenanceDate = nextMaintenance;
-        // Slider değerini 0 olarak başlat (kullanıcı değiştirebilir)
-        _nextMaintenanceMonths = 0.0;
+        // Eğer nextMaintenanceDate varsa, bugünü son bakım tarihi olarak kullan
+        // ve slider'ı nextMaintenanceDate'e göre ayarla
+        _lastMaintenanceDate = DateTime.now();
+        // nextMaintenanceDate'den bugüne kadar geçen süreyi hesapla
+        final now = DateTime.now();
+        final difference = nextMaintenance.difference(now);
+        final monthsFromNow = (difference.inDays / 30).round();
+        // Slider değerini ayarla (0-12 arası)
+        if (monthsFromNow >= 0 && monthsFromNow <= 12) {
+          _nextMaintenanceMonths = monthsFromNow.toDouble();
+        } else if (monthsFromNow > 12) {
+          _nextMaintenanceMonths = 12.0;
+        } else {
+          // Geçmiş bir tarihse, 0 olarak ayarla
+          _nextMaintenanceMonths = 0.0;
+        }
       } else {
-        // Eğer nextMaintenanceDate yoksa, bugünü kullan
+        // Eğer nextMaintenanceDate yoksa, bugünü kullan ve slider'ı 0 yap
         _lastMaintenanceDate = DateTime.now();
         _nextMaintenanceMonths = 0.0;
       }
@@ -147,18 +162,26 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
           ? double.tryParse(_debtAmountController.text)
           : null;
 
-      // Calculate remaining debt: if new debt is set, add to existing remaining debt
+      // Borç miktarı değişmiş mi kontrol et
+      // Eğer değer değişmemişse, debtAmount ve remainingDebtAmount gönderme (undefined)
+      // Eğer değişmişse, farkı ekle
       double? remainingDebtAmount;
-      if (hasDebt && newDebtAmount != null) {
-        final existingRemaining = widget.customer.remainingDebtAmount ?? 0.0;
-        remainingDebtAmount = existingRemaining + newDebtAmount;
-      }
-
-      // Calculate total debt: if new debt is set, add to existing debt
       double? debtAmount;
+      
       if (hasDebt && newDebtAmount != null) {
-        final existingDebt = widget.customer.debtAmount ?? 0.0;
-        debtAmount = existingDebt + newDebtAmount;
+        // Başlangıç borç miktarı ile karşılaştır
+        final initialDebt = _initialDebtAmount ?? 0.0;
+        final debtDifference = newDebtAmount - initialDebt;
+        
+        // Eğer borç değişmişse, farkı ekle
+        if (debtDifference != 0) {
+          final existingRemaining = widget.customer.remainingDebtAmount ?? 0.0;
+          final existingDebt = widget.customer.debtAmount ?? 0.0;
+          remainingDebtAmount = existingRemaining + debtDifference;
+          debtAmount = existingDebt + debtDifference;
+        }
+        // Eğer borç değişmemişse, debtAmount ve remainingDebtAmount undefined kalır
+        // Backend'de undefined olanlar güncellenmez
       }
 
       final hasInstallment = hasDebt && _debtHasInstallment;
@@ -171,14 +194,18 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
           ? int.tryParse(_installmentIntervalDaysController.text)
           : null;
 
-      // Show confirmation dialog for debt changes
-      if (hasDebt && newDebtAmount != null && newDebtAmount > 0) {
+      // Show confirmation dialog for debt changes (sadece değişiklik varsa)
+      if (hasDebt && 
+          newDebtAmount != null && 
+          newDebtAmount > 0 && 
+          debtAmount != null && 
+          remainingDebtAmount != null) {
         final confirm = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text("Borç Ekleme Onayı"),
             content: Text(
-              "${newDebtAmount.toStringAsFixed(2)} TL borç eklenecek.\n"
+              "${(newDebtAmount - (_initialDebtAmount ?? 0.0)).toStringAsFixed(2)} TL borç eklenecek.\n"
               "Mevcut borç: ${widget.customer.remainingDebtAmount?.toStringAsFixed(2) ?? "0.00"} TL\n"
               "Yeni toplam borç: ${remainingDebtAmount?.toStringAsFixed(2) ?? "0.00"} TL\n\n"
               "Bu işlemi onaylıyor musunuz?",
@@ -206,18 +233,24 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       }
 
       // Hesaplanan bakım tarihi - sadece kullanıcı değişiklik yaptıysa gönder
-      // Her zaman calculatedMaintenanceDate'i hesapla
-      // Eğer slider 0 ise null gönder (bakım tarihini temizle)
-      // Eğer slider > 0 ise hesaplanan tarihi gönder
+      // Eğer kullanıcı değişiklik yapmadıysa, mevcut değeri koru (sendNextMaintenanceDate: false)
       DateTime? calculatedMaintenanceDate;
-      if (_nextMaintenanceMonths > 0) {
-        calculatedMaintenanceDate = _lastMaintenanceDate.add(
-          Duration(days: (_nextMaintenanceMonths * 30).toInt()),
-        );
-      } else {
-        // Slider 0 ise bakım tarihini temizle (null gönder)
-        calculatedMaintenanceDate = null;
+      bool sendNextMaintenanceDate = false;
+      
+      if (_maintenanceDateChanged) {
+        // Kullanıcı değişiklik yaptıysa, yeni tarihi hesapla
+        sendNextMaintenanceDate = true;
+        if (_nextMaintenanceMonths > 0) {
+          calculatedMaintenanceDate = _lastMaintenanceDate.add(
+            Duration(days: (_nextMaintenanceMonths * 30).toInt()),
+          );
+        } else {
+          // Slider 0 ise bakım tarihini temizle (null gönder)
+          calculatedMaintenanceDate = null;
+        }
       }
+      // Eğer kullanıcı değişiklik yapmadıysa, sendNextMaintenanceDate = false kalır
+      // ve backend mevcut değeri korur
 
       debugPrint(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
@@ -227,7 +260,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       debugPrint("   _nextMaintenanceMonths: $_nextMaintenanceMonths");
       debugPrint("   _lastMaintenanceDate: $_lastMaintenanceDate");
       debugPrint("   calculatedMaintenanceDate: $calculatedMaintenanceDate");
-      debugPrint("   sendNextMaintenanceDate: true (her zaman gönderiliyor)");
+      debugPrint("   sendNextMaintenanceDate: $sendNextMaintenanceDate");
       debugPrint(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
@@ -249,7 +282,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       debugPrint("🔵🔵🔵 Frontend - updateCustomer ÇAĞRILIYOR 🔵🔵🔵");
       debugPrint("   Customer ID: ${widget.customer.id}");
       debugPrint("   nextMaintenanceDate: $calculatedMaintenanceDate");
-      debugPrint("   sendNextMaintenanceDate: true");
+      debugPrint("   sendNextMaintenanceDate: $sendNextMaintenanceDate");
       debugPrint(
         "═══════════════════════════════════════════════════════════════════════════════════════════",
       );
@@ -267,15 +300,15 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
             location: locationData, // GPS konumunu direkt kullan
             createdAt: _createdAt,
             hasDebt: hasDebt,
-            debtAmount: debtAmount,
-            remainingDebtAmount: remainingDebtAmount,
+            debtAmount: debtAmount, // undefined ise backend güncellemez
+            remainingDebtAmount: remainingDebtAmount, // undefined ise backend güncellemez
             hasInstallment: hasInstallment,
             installmentCount: installmentCount,
             nextDebtDate: _nextDebtDate,
             installmentStartDate: _installmentStartDate,
             installmentIntervalDays: installmentIntervalDays,
             nextMaintenanceDate: calculatedMaintenanceDate, // null veya tarih
-            sendNextMaintenanceDate: true, // Her zaman gönder (null veya tarih)
+            sendNextMaintenanceDate: sendNextMaintenanceDate, // Sadece değişiklik varsa true
           );
 
       debugPrint(
