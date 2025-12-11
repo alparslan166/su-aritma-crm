@@ -495,12 +495,10 @@ class _AnimatedTitleTextState extends State<_AnimatedTitleText>
       duration: const Duration(seconds: 3),
       vsync: this,
     );
-    _animation = Tween<double>(begin: -1.0, end: 2.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut,
-      ),
-    );
+    _animation = Tween<double>(
+      begin: -1.0,
+      end: 2.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     _controller.repeat();
   }
 
@@ -515,27 +513,37 @@ class _AnimatedTitleTextState extends State<_AnimatedTitleText>
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
+        // Animasyon değerini 0-1 aralığına normalize et
+        final normalizedValue = ((_animation.value + 1.0) / 3.0).clamp(0.0, 1.0);
+        
+        // Işığın genişliği ve pozisyonu
+        final lightWidth = 0.4;
+        final lightCenter = normalizedValue;
+        final lightStart = (lightCenter - lightWidth / 2).clamp(0.0, 1.0);
+        final lightEnd = (lightCenter + lightWidth / 2).clamp(0.0, 1.0);
+        
         return ShaderMask(
-          shaderCallback: (bounds) {
+          blendMode: BlendMode.srcATop,
+          shaderCallback: (Rect bounds) {
             return LinearGradient(
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
               colors: [
-                Colors.black87, // Mat siyah
                 Colors.black87,
-                const Color(0xFF1E3A8A), // Lacivert
-                const Color(0xFF2563EB), // Açık lacivert
-                const Color(0xFF1E3A8A), // Lacivert
+                Colors.black87,
+                const Color(0xFF1E3A8A),
+                const Color(0xFF2563EB),
+                const Color(0xFF1E3A8A),
                 Colors.black87,
                 Colors.black87,
               ],
               stops: [
                 0.0,
-                (_animation.value - 0.3).clamp(0.0, 1.0),
-                (_animation.value - 0.1).clamp(0.0, 1.0),
-                _animation.value.clamp(0.0, 1.0),
-                (_animation.value + 0.1).clamp(0.0, 1.0),
-                (_animation.value + 0.3).clamp(0.0, 1.0),
+                math.max(0.0, lightStart - 0.1),
+                lightStart,
+                lightCenter,
+                lightEnd,
+                math.min(1.0, lightEnd + 0.1),
                 1.0,
               ],
             ).createShader(bounds);
@@ -544,11 +552,11 @@ class _AnimatedTitleTextState extends State<_AnimatedTitleText>
             "Su Arıtma Platformu",
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87, // Mat siyah
-                  letterSpacing: -0.5,
-                  height: 1.2,
-                ),
+              fontWeight: FontWeight.bold,
+              color: Colors.white, // ShaderMask için beyaz
+              letterSpacing: -0.5,
+              height: 1.2,
+            ),
           ),
         );
       },
