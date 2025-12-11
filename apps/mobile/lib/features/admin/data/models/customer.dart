@@ -204,7 +204,7 @@ class Customer {
 
   /// Kalan süreyi ay ve gün olarak döndürür
   String? get maintenanceTimeRemaining {
-    final nextDate = nextMaintenanceDate;
+    final nextDate = nextMaintenanceDateComputed;
     if (nextDate == null) return null;
     final now = DateTime.now();
     final difference = nextDate.difference(now);
