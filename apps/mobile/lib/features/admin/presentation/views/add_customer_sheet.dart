@@ -14,6 +14,7 @@ import "../../application/customer_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/inventory_item.dart";
 import "../../../dashboard/presentation/home_page_provider.dart";
+import "../widgets/interactive_location_picker.dart";
 import "customers_view.dart"; // CustomerFilterType enum'ı için
 
 class AddCustomerSheet extends ConsumerStatefulWidget {
@@ -141,57 +142,88 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
         return;
       }
 
-      // Reverse geocoding ile adres bilgisini al
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
+      // Show interactive location picker
+      if (!mounted) return;
+      final initialLocation = LatLng(position.latitude, position.longitude);
+
+      final selectedLocation = await showModalBottomSheet<LatLng>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => InteractiveLocationPicker(
+          initialLocation: initialLocation,
+          onLocationSelected: (location) {
+            Navigator.of(context).pop(location);
+          },
+        ),
       );
 
-      if (placemarks.isNotEmpty) {
-        final placemark = placemarks.first;
-        // Adres bilgisini formatla
-        final addressParts = <String>[];
-        if (placemark.street != null && placemark.street!.isNotEmpty) {
-          addressParts.add(placemark.street!);
-        }
-        if (placemark.subThoroughfare != null &&
-            placemark.subThoroughfare!.isNotEmpty) {
-          addressParts.add('No: ${placemark.subThoroughfare}');
-        }
-        if (placemark.subLocality != null &&
-            placemark.subLocality!.isNotEmpty) {
-          addressParts.add(placemark.subLocality!);
-        }
-        if (placemark.locality != null && placemark.locality!.isNotEmpty) {
-          addressParts.add(placemark.locality!);
-        }
-        if (placemark.administrativeArea != null &&
-            placemark.administrativeArea!.isNotEmpty) {
-          addressParts.add(placemark.administrativeArea!);
-        }
-        if (placemark.postalCode != null && placemark.postalCode!.isNotEmpty) {
-          addressParts.add(placemark.postalCode!);
-        }
+      if (selectedLocation != null && mounted) {
+        // Reverse geocoding ile adres bilgisini al
+        try {
+          List<Placemark> placemarks = await placemarkFromCoordinates(
+            selectedLocation.latitude,
+            selectedLocation.longitude,
+          );
 
-        final address = addressParts.join(', ');
+          if (placemarks.isNotEmpty) {
+            final placemark = placemarks.first;
+            // Adres bilgisini formatla
+            final addressParts = <String>[];
+            if (placemark.street != null && placemark.street!.isNotEmpty) {
+              addressParts.add(placemark.street!);
+            }
+            if (placemark.subThoroughfare != null &&
+                placemark.subThoroughfare!.isNotEmpty) {
+              addressParts.add('No: ${placemark.subThoroughfare}');
+            }
+            if (placemark.subLocality != null &&
+                placemark.subLocality!.isNotEmpty) {
+              addressParts.add(placemark.subLocality!);
+            }
+            if (placemark.locality != null && placemark.locality!.isNotEmpty) {
+              addressParts.add(placemark.locality!);
+            }
+            if (placemark.administrativeArea != null &&
+                placemark.administrativeArea!.isNotEmpty) {
+              addressParts.add(placemark.administrativeArea!);
+            }
+            if (placemark.postalCode != null &&
+                placemark.postalCode!.isNotEmpty) {
+              addressParts.add(placemark.postalCode!);
+            }
 
-        if (mounted) {
+            final address = addressParts.join(', ');
+
+            setState(() {
+              _addressController.text = address;
+              _currentLocation = selectedLocation;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Konum seçildi ve adres otomatik olarak eklendi"),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } else {
+            setState(() {
+              _currentLocation = selectedLocation;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Konum seçildi (adres bilgisi alınamadı)"),
+              ),
+            );
+          }
+        } catch (e) {
+          // If reverse geocoding fails, just save the location
           setState(() {
-            _addressController.text = address;
-            _currentLocation = LatLng(position.latitude, position.longitude);
+            _currentLocation = selectedLocation;
           });
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Adres otomatik olarak eklendi"),
-              backgroundColor: Colors.green,
-            ),
+            SnackBar(content: Text("Konum seçildi (adres alınamadı: $e)")),
           );
         }
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Adres bilgisi alınamadı")),
-        );
       }
     } catch (e) {
       if (!mounted) return;
@@ -498,7 +530,9 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                               ),
                               const SizedBox(width: 12),
                               Text(
-                                "Bulunduğum Konumu Seç",
+                                _currentLocation != null
+                                    ? "Konumu Düzenle"
+                                    : "Bulunduğum Konumu Seç",
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
