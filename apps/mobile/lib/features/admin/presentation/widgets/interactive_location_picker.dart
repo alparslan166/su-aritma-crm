@@ -33,6 +33,7 @@ class _InteractiveLocationPickerState extends State<InteractiveLocationPicker>
   Offset? _markerScreenPosition;
   late AnimationController _bounceController;
   late Animation<double> _bounceAnimation;
+  bool _hasInitializedLocation = false;
 
   @override
   void initState() {
@@ -81,6 +82,65 @@ class _InteractiveLocationPickerState extends State<InteractiveLocationPicker>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateMarkerScreenPosition();
     });
+    // Get user's current location when map first opens
+    if (!_hasInitializedLocation) {
+      _hasInitializedLocation = true;
+      _initializeWithCurrentLocation();
+    }
+  }
+
+  Future<void> _initializeWithCurrentLocation() async {
+    try {
+      // Check location permissions
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        // If location services are disabled, use initialLocation
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          // If permission denied, use initialLocation
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        // If permission denied forever, use initialLocation
+        return;
+      }
+
+      // Get current location
+      final position =
+          await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+          ).timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              throw TimeoutException("Konum alınamadı");
+            },
+          );
+
+      final currentLocation = LatLng(position.latitude, position.longitude);
+
+      if (!mounted) return;
+
+      // Move map to current location
+      _mapController.move(currentLocation, _mapController.camera.zoom);
+
+      // Update selected location to current location
+      setState(() {
+        _selectedLocation = currentLocation;
+      });
+
+      // Update marker screen position
+      _updateMarkerScreenPosition();
+    } catch (e) {
+      // If any error occurs, silently use initialLocation
+      // No need to show error message on initialization
+    }
   }
 
   @override
