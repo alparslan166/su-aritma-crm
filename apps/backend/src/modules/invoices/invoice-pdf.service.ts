@@ -10,6 +10,12 @@ type MaterialItem = {
   total: number;
 };
 
+type PersonnelInfo = {
+  name: string;
+  phone: string;
+  email?: string | null;
+};
+
 type InvoiceData = {
   invoiceNumber: string;
   invoiceDate: Date;
@@ -24,6 +30,8 @@ type InvoiceData = {
   total: number;
   notes?: string | null;
   materials?: MaterialItem[];
+  personnel?: PersonnelInfo[];
+  collectedAmount?: number | null;
   companyName: string;
   companyAddress: string;
   companyPhone: string;
@@ -98,12 +106,21 @@ export class InvoicePdfService {
       try {
         // Check if file is actually a TTF (starts with TTF magic bytes)
         const fontBuffer = fs.readFileSync(notoSansRegular);
-        const isTTF = fontBuffer.length > 4 && 
-          (fontBuffer[0] === 0x00 && fontBuffer[1] === 0x01 && fontBuffer[2] === 0x00 && fontBuffer[3] === 0x00) ||
-          (fontBuffer[0] === 0x4F && fontBuffer[1] === 0x54 && fontBuffer[2] === 0x54 && fontBuffer[3] === 0x4F); // OTTO for OTF
-        
+        const isTTF =
+          (fontBuffer.length > 4 &&
+            fontBuffer[0] === 0x00 &&
+            fontBuffer[1] === 0x01 &&
+            fontBuffer[2] === 0x00 &&
+            fontBuffer[3] === 0x00) ||
+          (fontBuffer[0] === 0x4f &&
+            fontBuffer[1] === 0x54 &&
+            fontBuffer[2] === 0x54 &&
+            fontBuffer[3] === 0x4f); // OTTO for OTF
+
         if (!isTTF) {
-          console.warn(`⚠️ Font file ${notoSansRegular} is not a valid TTF/OTF file, using Helvetica`);
+          console.warn(
+            `⚠️ Font file ${notoSansRegular} is not a valid TTF/OTF file, using Helvetica`,
+          );
         } else {
           doc.registerFont("NotoSans", notoSansRegular);
           fontRegular = "NotoSans";
@@ -123,12 +140,21 @@ export class InvoicePdfService {
       try {
         // Check if file is actually a TTF (starts with TTF magic bytes)
         const fontBuffer = fs.readFileSync(notoSansBold);
-        const isTTF = fontBuffer.length > 4 && 
-          (fontBuffer[0] === 0x00 && fontBuffer[1] === 0x01 && fontBuffer[2] === 0x00 && fontBuffer[3] === 0x00) ||
-          (fontBuffer[0] === 0x4F && fontBuffer[1] === 0x54 && fontBuffer[2] === 0x54 && fontBuffer[3] === 0x4F); // OTTO for OTF
-        
+        const isTTF =
+          (fontBuffer.length > 4 &&
+            fontBuffer[0] === 0x00 &&
+            fontBuffer[1] === 0x01 &&
+            fontBuffer[2] === 0x00 &&
+            fontBuffer[3] === 0x00) ||
+          (fontBuffer[0] === 0x4f &&
+            fontBuffer[1] === 0x54 &&
+            fontBuffer[2] === 0x54 &&
+            fontBuffer[3] === 0x4f); // OTTO for OTF
+
         if (!isTTF) {
-          console.warn(`⚠️ Font file ${notoSansBold} is not a valid TTF/OTF file, using Helvetica-Bold`);
+          console.warn(
+            `⚠️ Font file ${notoSansBold} is not a valid TTF/OTF file, using Helvetica-Bold`,
+          );
         } else {
           doc.registerFont("NotoSans-Bold", notoSansBold);
           fontBold = "NotoSans-Bold";
@@ -231,15 +257,54 @@ export class InvoicePdfService {
     const jobY = custY + 140;
     doc.font(fontBold).fontSize(12).fillColor(textDark).text("Hizmet Bilgileri", 50, jobY);
 
+    let currentY = jobY + 20;
     doc
       .font(fontRegular)
       .fontSize(10)
       .fillColor("#444")
-      .text(`Hizmet: ${data.jobTitle}`, 50, jobY + 20)
-      .text(`Tarih: ${data.jobDate.toLocaleDateString("tr-TR")}`, 50, jobY + 35);
+      .text(`Hizmet: ${data.jobTitle}`, 50, currentY)
+      .text(`Tarih: ${data.jobDate.toLocaleDateString("tr-TR")}`, 50, currentY + 15);
+
+    currentY += 30;
+
+    // Personnel Info (Personel Bilgileri)
+    if (data.personnel && data.personnel.length > 0) {
+      doc.font(fontBold).fontSize(12).fillColor(textDark).text("Personel Bilgileri", 50, currentY);
+      currentY += 20;
+
+      doc.font(fontRegular).fontSize(10).fillColor("#444");
+
+      for (const person of data.personnel) {
+        doc.text(`Personel: ${person.name}`, 50, currentY);
+        doc.text(`Telefon: ${person.phone}`, 50, currentY + 15);
+        if (person.email) {
+          doc.text(`E-posta: ${person.email}`, 50, currentY + 30);
+          currentY += 45;
+        } else {
+          currentY += 30;
+        }
+      }
+    }
+
+    // Collected Amount (Alınan Ücret)
+    if (data.collectedAmount !== null && data.collectedAmount !== undefined) {
+      doc
+        .font(fontBold)
+        .fontSize(12)
+        .fillColor(textDark)
+        .text("Alınan Ücret", 50, currentY);
+      currentY += 20;
+
+      doc
+        .font(fontBold)
+        .fontSize(11)
+        .fillColor(primary)
+        .text(money(data.collectedAmount), 50, currentY);
+      currentY += 25;
+    }
 
     // Material Table
-    let tableY = jobY + 60;
+    let tableY = currentY + 10;
     if (data.materials && data.materials.length > 0) {
       doc.font(fontBold).fontSize(12).fillColor(textDark).text("Kullanılan Malzemeler", 50, tableY);
 

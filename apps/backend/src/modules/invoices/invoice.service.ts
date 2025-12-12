@@ -40,12 +40,24 @@ class InvoiceService {
                 inventoryItem: true,
               },
             },
+            personnel: {
+              include: {
+                personnel: {
+                  select: {
+                    id: true,
+                    name: true,
+                    phone: true,
+                    email: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
     });
     if (!invoice) {
-      throw new AppError("Invoice not found", 404);
+      throw new AppError("Fatura bulunamadı", 404);
     }
     return invoice;
   }
@@ -65,17 +77,17 @@ class InvoiceService {
       },
     });
     if (!job) {
-      throw new AppError("Job not found", 404);
+      throw new AppError("İş bulunamadı", 404);
     }
 
     // Check if job is delivered
     if (job.status !== "DELIVERED") {
-      throw new AppError("Invoice can only be created for delivered jobs", 400);
+      throw new AppError("Fatura sadece teslim edilmiş işler için oluşturulabilir", 400);
     }
 
     // Check if invoice already exists
     if (job.invoiceId) {
-      throw new AppError("Invoice already exists for this job", 400);
+      throw new AppError("Bu iş için zaten bir fatura mevcut", 400);
     }
 
     // Calculate totals if not provided
@@ -88,7 +100,7 @@ class InvoiceService {
 
     // Customer bilgileri - job.customer nullable olabilir
     if (!job.customer) {
-      throw new AppError("Job must have a customer to create an invoice", 400);
+      throw new AppError("Fatura oluşturmak için işin bir müşteriye ait olması gerekir", 400);
     }
 
     // Create invoice
@@ -229,7 +241,7 @@ class InvoiceService {
       },
     });
 
-    // Get materials from invoice.job.materials (already included in ensureInvoice)
+    // Get materials from invoice.job.materials (personnel input - already included in ensureInvoice)
     let materials: Array<{
       name: string;
       quantity: number;
@@ -246,6 +258,28 @@ class InvoiceService {
       }));
     }
 
+    // Get personnel information (who delivered the job)
+    let personnelInfo: Array<{
+      name: string;
+      phone: string;
+      email?: string | null;
+    }> = [];
+
+    if (invoice.job && invoice.job.personnel && Array.isArray(invoice.job.personnel)) {
+      personnelInfo = invoice.job.personnel
+        .filter((assignment) => assignment.personnel) // Only if personnel exists
+        .map((assignment) => ({
+          name: assignment.personnel.name,
+          phone: assignment.personnel.phone,
+          email: assignment.personnel.email || null,
+        }));
+    }
+
+    // Get collected amount (alınan ücret) from job
+    const collectedAmount = invoice.job?.collectedAmount
+      ? Number(invoice.job.collectedAmount)
+      : null;
+
     return {
       invoiceNumber: invoice.invoiceNumber,
       invoiceDate: invoice.createdAt,
@@ -260,6 +294,8 @@ class InvoiceService {
       total: Number(invoice.total),
       notes: invoice.notes,
       materials,
+      personnel: personnelInfo,
+      collectedAmount,
       companyName: admin?.companyName || "Firma Adı",
       companyAddress: admin?.companyAddress || "Firma Adresi",
       companyPhone: admin?.companyPhone || "Firma Telefonu",
@@ -274,11 +310,11 @@ class InvoiceService {
     // Check if invoice already exists
     const job = await jobService.getById(adminId, jobId);
     if (!job) {
-      throw new AppError("Job not found", 404);
+      throw new AppError("İş bulunamadı", 404);
     }
 
     if (job.status !== "DELIVERED") {
-      throw new AppError("Invoice can only be created for delivered jobs", 400);
+      throw new AppError("Fatura sadece teslim edilmiş işler için oluşturulabilir", 400);
     }
 
     let invoice;
