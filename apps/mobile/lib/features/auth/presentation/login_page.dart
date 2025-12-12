@@ -33,6 +33,7 @@ class LoginPage extends HookConsumerWidget {
     final adminIdController = useTextEditingController(
       text: loginState.adminId,
     );
+    final isPasswordVisible = useState<bool>(false);
 
     useEffect(() {
       identifierController.text = loginState.identifier;
@@ -68,17 +69,29 @@ class LoginPage extends HookConsumerWidget {
         }
       }
 
-      final errored = nextStatus is AsyncError;
-      if (errored) {
-        final errorMessage = nextStatus.error.toString();
-        // Show error message for both loading errors and validation errors
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+      // Only show error if transitioning from loading to error (new error)
+      // This prevents showing the same error multiple times
+      final nextErrored = nextStatus is AsyncError;
+      final prevErrored = prevStatus is AsyncError;
+      final wasLoading = prevStatus?.isLoading == true;
+
+      // Show error only if:
+      // 1. Current status is error AND
+      // 2. Previous status was loading (transitioned from loading to error) OR
+      // 3. Previous status was NOT error (new error occurred)
+      if (nextErrored && (wasLoading || !prevErrored)) {
+        final errorMessage = (nextStatus as AsyncError).error.toString();
+        if (context.mounted) {
+          // Hide any existing snackbars first
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     });
 
@@ -247,8 +260,22 @@ class LoginPage extends HookConsumerWidget {
                         decoration: InputDecoration(
                           labelText: loginState.role.passwordLabel,
                           prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              isPasswordVisible.value
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                            onPressed: () {
+                              isPasswordVisible.value =
+                                  !isPasswordVisible.value;
+                            },
+                            tooltip: isPasswordVisible.value
+                                ? "Şifreyi Gizle"
+                                : "Şifreyi Göster",
+                          ),
                         ),
-                        obscureText: true,
+                        obscureText: !isPasswordVisible.value,
                         keyboardType: loginState.role == AuthRole.admin
                             ? TextInputType.visiblePassword
                             : TextInputType.text,

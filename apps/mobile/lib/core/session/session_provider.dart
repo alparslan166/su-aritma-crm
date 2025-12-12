@@ -1,7 +1,4 @@
-import "dart:convert";
-
 import "package:hooks_riverpod/hooks_riverpod.dart";
-import "package:shared_preferences/shared_preferences.dart";
 
 import "../../features/auth/domain/auth_role.dart";
 
@@ -32,54 +29,21 @@ final authSessionProvider =
 
 class AuthSessionNotifier extends StateNotifier<AuthSession?> {
   AuthSessionNotifier() : super(null) {
-    _loadSession();
+    // No persistent storage - session only in memory
+    // All data should be stored in database, not on device
   }
 
-  static const String _sessionKey = "auth_session";
-  static const String _rememberKey = "remember_device";
-
-  /// Load session from device storage
-  Future<void> _loadSession() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final remember = prefs.getBool(_rememberKey) ?? false;
-      
-      if (remember) {
-        final sessionJson = prefs.getString(_sessionKey);
-        if (sessionJson != null) {
-          final sessionMap = jsonDecode(sessionJson) as Map<String, dynamic>;
-          state = AuthSession.fromJson(sessionMap);
-        }
-      }
-    } catch (e) {
-      // Session yüklenemezse null kalır
-      state = null;
-    }
-  }
-
-  /// Set session - stored in memory and optionally persisted to device
+  /// Set session - stored only in memory (no device storage)
+  /// "remember" parameter is kept for API compatibility but has no effect
+  /// Session will be lost when app is closed or uninstalled
   Future<void> setSession(AuthSession? session, {bool remember = false}) async {
+    // Store session only in memory - no device storage
+    // All authentication data should come from database
     state = session;
-    
-    final prefs = await SharedPreferences.getInstance();
-    
-    if (remember && session != null) {
-      // Session'ı kaydet
-      await prefs.setString(_sessionKey, jsonEncode(session.toJson()));
-      await prefs.setBool(_rememberKey, true);
-    } else {
-      // Session'ı temizle
-      await prefs.remove(_sessionKey);
-      await prefs.setBool(_rememberKey, false);
-    }
   }
 
-  /// Clear session from memory and device storage
+  /// Clear session from memory
   Future<void> clearSession() async {
     state = null;
-    
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_sessionKey);
-    await prefs.setBool(_rememberKey, false);
   }
 }
