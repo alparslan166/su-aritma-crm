@@ -833,11 +833,51 @@ class AdminRepository {
     final pdfUrl = "$baseUrl/invoices/job/$jobId/pdf";
     final uri = Uri.parse(pdfUrl);
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-      return "pdf_$jobId"; // Return identifier only, not file path
-    }
+    try {
+      // canLaunchUrl sometimes returns false for valid URLs on Android
+      // So we'll try to launch directly without checking first
+      bool launched = false;
+      String? lastError;
 
-    throw Exception("PDF açılamadı. Lütfen tekrar deneyin.");
+      // Try externalApplication first (works better for PDFs on Android)
+      try {
+        launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (launched) {
+          debugPrint("✅ PDF opened successfully with externalApplication");
+          return "pdf_$jobId";
+        }
+      } catch (e) {
+        lastError = e.toString();
+        debugPrint("⚠️ externalApplication failed: $e");
+      }
+
+      // If externalApplication fails, try platformDefault
+      if (!launched) {
+        try {
+          launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+          if (launched) {
+            debugPrint("✅ PDF opened successfully with platformDefault");
+            return "pdf_$jobId";
+          }
+        } catch (e) {
+          lastError = e.toString();
+          debugPrint("⚠️ platformDefault failed: $e");
+        }
+      }
+
+      // If both fail, provide helpful error message
+      debugPrint("❌ All launch modes failed. Last error: $lastError");
+      throw Exception(
+        "PDF açılamadı. Lütfen bir web tarayıcısı (Chrome, Firefox vb.) veya PDF görüntüleyici uygulaması yüklü olduğundan emin olun. URL: $pdfUrl",
+      );
+    } catch (e) {
+      debugPrint("❌ PDF açma hatası: $e");
+      // Re-throw if it's already an Exception with a message
+      if (e is Exception) {
+        rethrow;
+      }
+      // Otherwise wrap it
+      throw Exception("PDF açılamadı: ${e.toString()}. Lütfen tekrar deneyin.");
+    }
   }
 }

@@ -42,22 +42,39 @@ const money = (v: number) =>
 export class InvoicePdfService {
   private getFontPath(filename: string): string {
     // Try multiple possible paths for the font file
+    // In development: src/assets/fonts/
+    // In production (compiled): dist/assets/fonts/ or __dirname relative
     const possiblePaths = [
+      // Production paths (compiled JS location) - __dirname points to dist/modules/invoices/
       path.join(__dirname, "../../assets/fonts", filename),
       path.join(__dirname, "../../../assets/fonts", filename),
+      path.join(__dirname, "../../../../assets/fonts", filename),
+      // Development paths
       path.join(process.cwd(), "src/assets/fonts", filename),
+      path.join(process.cwd(), "apps/backend/src/assets/fonts", filename),
+      // Production build paths (from process.cwd())
       path.join(process.cwd(), "assets/fonts", filename),
       path.join(process.cwd(), "dist/assets/fonts", filename),
+      path.join(process.cwd(), "apps/backend/dist/assets/fonts", filename),
+      // Railway/production paths
+      path.join("/app", "dist", "assets", "fonts", filename),
+      path.join("/app", "apps", "backend", "dist", "assets", "fonts", filename),
     ];
+
+    console.log(`🔍 Searching for font: ${filename}`);
+    console.log(`   __dirname: ${__dirname}`);
+    console.log(`   process.cwd(): ${process.cwd()}`);
 
     for (const fontPath of possiblePaths) {
       if (fs.existsSync(fontPath)) {
+        console.log(`✅ Font found: ${fontPath}`);
         return fontPath;
       }
     }
 
     // If font file not found, return empty string (will fallback to Helvetica)
-    console.warn(`Font file not found: ${filename}, using default Helvetica`);
+    console.warn(`⚠️ Font file not found: ${filename}, using default Helvetica`);
+    console.warn(`   Searched ${possiblePaths.length} paths`);
     return "";
   }
 
@@ -72,18 +89,37 @@ export class InvoicePdfService {
     const notoSansRegular = this.getFontPath("NotoSans-Regular.ttf");
     const notoSansBold = this.getFontPath("NotoSans-Bold.ttf");
 
-    if (notoSansRegular && fs.existsSync(notoSansRegular)) {
-      doc.registerFont("NotoSans", notoSansRegular);
-    }
-    if (notoSansBold && fs.existsSync(notoSansBold)) {
-      doc.registerFont("NotoSans-Bold", notoSansBold);
+    let fontRegular = "Helvetica";
+    let fontBold = "Helvetica-Bold";
+
+    // Try to register and use NotoSans fonts
+    if (notoSansRegular && notoSansRegular.length > 0 && fs.existsSync(notoSansRegular)) {
+      try {
+        doc.registerFont("NotoSans", notoSansRegular);
+        fontRegular = "NotoSans";
+        console.log(`✅ Registered NotoSans font from: ${notoSansRegular}`);
+      } catch (error) {
+        console.warn(`⚠️ Failed to register NotoSans font: ${error}`);
+      }
+    } else {
+      console.warn(
+        `⚠️ NotoSans-Regular.ttf not found, using Helvetica (Turkish characters may not display correctly)`,
+      );
     }
 
-    // Use NotoSans if available, otherwise fallback to Helvetica
-    const fontRegular =
-      notoSansRegular && fs.existsSync(notoSansRegular) ? "NotoSans" : "Helvetica";
-    const fontBold =
-      notoSansBold && fs.existsSync(notoSansBold) ? "NotoSans-Bold" : "Helvetica-Bold";
+    if (notoSansBold && notoSansBold.length > 0 && fs.existsSync(notoSansBold)) {
+      try {
+        doc.registerFont("NotoSans-Bold", notoSansBold);
+        fontBold = "NotoSans-Bold";
+        console.log(`✅ Registered NotoSans-Bold font from: ${notoSansBold}`);
+      } catch (error) {
+        console.warn(`⚠️ Failed to register NotoSans-Bold font: ${error}`);
+      }
+    } else {
+      console.warn(
+        `⚠️ NotoSans-Bold.ttf not found, using Helvetica-Bold (Turkish characters may not display correctly)`,
+      );
+    }
 
     // Colors
     const primary = "#1E3A8A"; // mavi-gri kurumsal

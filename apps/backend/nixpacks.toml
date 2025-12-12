@@ -8,6 +8,7 @@ cmds = ["npm ci --cache /tmp/.npm || true", "npm ci --include=dev"]
 cmds = [
   "npx prisma generate",
   "npm run build",
+  "mkdir -p dist/assets/fonts && cp -r src/assets/fonts/* dist/assets/fonts/ 2>/dev/null || true",
   "ls -la dist/ || (echo 'ERROR: dist directory not found' && exit 1)",
   "test -f dist/index.js || (echo 'ERROR: dist/index.js not found' && exit 1)",
   "echo '✅ Build completed successfully'"

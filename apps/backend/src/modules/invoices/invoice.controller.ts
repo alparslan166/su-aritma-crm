@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { getAdminId } from "@/lib/tenant";
 import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
+import { AppError } from "@/middleware/error-handler";
 
 import { invoiceService } from "./invoice.service";
 import { invoicePdfService } from "./invoice-pdf.service";
@@ -22,9 +24,12 @@ const updateSchema = z.object({
   customerAddress: z.string().min(3).optional(),
   customerEmail: z.string().email().optional().or(z.literal("")),
   jobTitle: z.string().min(2).optional(),
-  jobDate: z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
-    message: "jobDate must be ISO date string",
-  }).optional(),
+  jobDate: z
+    .string()
+    .refine((value) => !Number.isNaN(Date.parse(value)), {
+      message: "jobDate must be ISO date string",
+    })
+    .optional(),
   subtotal: z.number().nonnegative().optional(),
   tax: z.number().nonnegative().optional(),
   total: z.number().nonnegative().optional(),
@@ -32,11 +37,7 @@ const updateSchema = z.object({
   isDraft: z.boolean().optional(),
 });
 
-export const createInvoiceHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const createInvoiceHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
     const payload = createSchema.parse(req.body);
@@ -54,11 +55,7 @@ export const createInvoiceHandler = async (
   }
 };
 
-export const updateInvoiceHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const updateInvoiceHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
     const payload = updateSchema.parse(req.body);
@@ -73,11 +70,7 @@ export const updateInvoiceHandler = async (
   }
 };
 
-export const getInvoiceHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const getInvoiceHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
     const invoice = await invoiceService.getById(adminId, req.params.id);
@@ -87,11 +80,7 @@ export const getInvoiceHandler = async (
   }
 };
 
-export const listInvoicesHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const listInvoicesHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
     const invoices = await invoiceService.list(adminId);
@@ -101,11 +90,7 @@ export const listInvoicesHandler = async (
   }
 };
 
-export const deleteInvoiceHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const deleteInvoiceHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
     await invoiceService.delete(adminId, req.params.id);
@@ -121,10 +106,31 @@ export const generateInvoicePdfHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const adminId = getAdminId(req);
     const { jobId } = req.params;
 
     logger.debug("🔄 Generating invoice PDF for job:", jobId);
+
+    // Get adminId from job (for browser access, x-admin-id header may not be present)
+    // Try to get from header first (for API calls), otherwise get from job
+    let adminId: string | undefined;
+    try {
+      adminId = getAdminId(req);
+    } catch (error) {
+      // Header not present (browser access), get adminId from job
+      logger.debug("⚠️ x-admin-id header not found, getting adminId from job");
+      const job = await prisma.job.findUnique({
+        where: { id: jobId },
+        select: { adminId: true },
+      });
+      if (!job) {
+        throw new AppError("İş bulunamadı", 404);
+      }
+      adminId = job.adminId;
+    }
+
+    if (!adminId) {
+      throw new AppError("Admin ID bulunamadı", 400);
+    }
 
     // Get invoice data for PDF
     const invoiceData = await invoiceService.createAndGeneratePdf(adminId, jobId);
@@ -138,7 +144,7 @@ export const generateInvoicePdfHandler = async (
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `inline; filename="fatura-${invoiceData.invoiceNumber}.pdf"`
+      `inline; filename="fatura-${invoiceData.invoiceNumber}.pdf"`,
     );
 
     // Handle PDF stream errors
@@ -147,7 +153,7 @@ export const generateInvoicePdfHandler = async (
       if (!res.headersSent) {
         res.status(500).json({
           success: false,
-          message: "PDF oluşturulurken hata oluştu",
+          message: "PDF oluşturulurken hata oluştu. Lütfen tekrar deneyin.",
           error: error.message,
         });
       }
@@ -162,4 +168,3 @@ export const generateInvoicePdfHandler = async (
     next(error as Error);
   }
 };
-
