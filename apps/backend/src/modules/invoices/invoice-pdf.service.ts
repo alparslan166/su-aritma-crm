@@ -93,13 +93,25 @@ export class InvoicePdfService {
     let fontBold = "Helvetica-Bold";
 
     // Try to register and use NotoSans fonts
+    // Check if file exists and is a valid TTF file (not HTML/text)
     if (notoSansRegular && notoSansRegular.length > 0 && fs.existsSync(notoSansRegular)) {
       try {
-        doc.registerFont("NotoSans", notoSansRegular);
-        fontRegular = "NotoSans";
-        console.log(`✅ Registered NotoSans font from: ${notoSansRegular}`);
+        // Check if file is actually a TTF (starts with TTF magic bytes)
+        const fontBuffer = fs.readFileSync(notoSansRegular);
+        const isTTF = fontBuffer.length > 4 && 
+          (fontBuffer[0] === 0x00 && fontBuffer[1] === 0x01 && fontBuffer[2] === 0x00 && fontBuffer[3] === 0x00) ||
+          (fontBuffer[0] === 0x4F && fontBuffer[1] === 0x54 && fontBuffer[2] === 0x54 && fontBuffer[3] === 0x4F); // OTTO for OTF
+        
+        if (!isTTF) {
+          console.warn(`⚠️ Font file ${notoSansRegular} is not a valid TTF/OTF file, using Helvetica`);
+        } else {
+          doc.registerFont("NotoSans", notoSansRegular);
+          fontRegular = "NotoSans";
+          console.log(`✅ Registered NotoSans font from: ${notoSansRegular}`);
+        }
       } catch (error) {
         console.warn(`⚠️ Failed to register NotoSans font: ${error}`);
+        console.warn(`   Error details: ${error instanceof Error ? error.message : String(error)}`);
       }
     } else {
       console.warn(
@@ -109,11 +121,22 @@ export class InvoicePdfService {
 
     if (notoSansBold && notoSansBold.length > 0 && fs.existsSync(notoSansBold)) {
       try {
-        doc.registerFont("NotoSans-Bold", notoSansBold);
-        fontBold = "NotoSans-Bold";
-        console.log(`✅ Registered NotoSans-Bold font from: ${notoSansBold}`);
+        // Check if file is actually a TTF (starts with TTF magic bytes)
+        const fontBuffer = fs.readFileSync(notoSansBold);
+        const isTTF = fontBuffer.length > 4 && 
+          (fontBuffer[0] === 0x00 && fontBuffer[1] === 0x01 && fontBuffer[2] === 0x00 && fontBuffer[3] === 0x00) ||
+          (fontBuffer[0] === 0x4F && fontBuffer[1] === 0x54 && fontBuffer[2] === 0x54 && fontBuffer[3] === 0x4F); // OTTO for OTF
+        
+        if (!isTTF) {
+          console.warn(`⚠️ Font file ${notoSansBold} is not a valid TTF/OTF file, using Helvetica-Bold`);
+        } else {
+          doc.registerFont("NotoSans-Bold", notoSansBold);
+          fontBold = "NotoSans-Bold";
+          console.log(`✅ Registered NotoSans-Bold font from: ${notoSansBold}`);
+        }
       } catch (error) {
         console.warn(`⚠️ Failed to register NotoSans-Bold font: ${error}`);
+        console.warn(`   Error details: ${error instanceof Error ? error.message : String(error)}`);
       }
     } else {
       console.warn(
