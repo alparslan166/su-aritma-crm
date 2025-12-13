@@ -34,11 +34,12 @@ class PushNotificationService {
 
   Future<void> initialize() async {
     try {
-      // Check if Firebase is initialized
+      // Firebase is initialized in bootstrap(); if not configured, bootstrap catches it.
+      // Still guard here to avoid crashes.
       try {
         Firebase.app();
       } catch (e) {
-        debugPrint("Firebase not initialized, skipping push notifications");
+        debugPrint("Firebase not initialized, skipping push notifications: $e");
         return;
       }
 
@@ -117,8 +118,8 @@ class PushNotificationService {
           _handleNotificationTap(initialMessage.data);
         }
 
-        // Get FCM token and send to backend
-        await _registerToken();
+        // Get FCM token (backend registration will be done after login when headers exist)
+        await _ensureTokenFetched();
 
         // Subscribe to role-based topics
         await _subscribeToTopics();
@@ -131,49 +132,42 @@ class PushNotificationService {
     }
   }
 
-  Future<void> _registerToken() async {
+  Future<void> _ensureTokenFetched() async {
     try {
       final token = await _messaging?.getToken();
       if (token != null) {
         debugPrint("FCM Token: $token");
-        // Platform detection
-        String platform = "android";
-        if (defaultTargetPlatform == TargetPlatform.iOS) {
-          platform = "ios";
-        }
-
-        // Send token to backend
-        try {
-          await _client.post(
-            "/notifications/register-token",
-            data: {"token": token, "platform": platform},
-          );
-          debugPrint("FCM token registered with backend (platform: $platform)");
-        } catch (e) {
-          debugPrint("Failed to register token with backend: $e");
-        }
       }
 
       // Listen for token refresh
       _messaging?.onTokenRefresh.listen((newToken) async {
         debugPrint("FCM token refreshed: $newToken");
-        String platform = "android";
-        if (defaultTargetPlatform == TargetPlatform.iOS) {
-          platform = "ios";
-        }
-        try {
-          await _client.post(
-            "/notifications/register-token",
-            data: {"token": newToken, "platform": platform},
-          );
-          debugPrint("Refreshed FCM token registered with backend");
-        } catch (e) {
+        // Try to register refreshed token (will succeed only if logged in headers exist)
+        await registerTokenWithBackend(tokenOverride: newToken).catchError((e) {
           debugPrint("Failed to register refreshed token: $e");
-        }
+        });
       });
     } catch (e) {
       debugPrint("Token registration error: $e");
     }
+  }
+
+  /// Register the current FCM token with backend.
+  /// Requires auth headers (x-admin-id / x-personnel-id) which are set after login.
+  Future<void> registerTokenWithBackend({String? tokenOverride}) async {
+    final token = tokenOverride ?? await _messaging?.getToken();
+    if (token == null || token.isEmpty) return;
+
+    String platform = "android";
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      platform = "ios";
+    }
+
+    await _client.post(
+      "/notifications/register-token",
+      data: {"token": token, "platform": platform},
+    );
+    debugPrint("FCM token registered with backend (platform: $platform)");
   }
 
   Future<void> _subscribeToTopics() async {

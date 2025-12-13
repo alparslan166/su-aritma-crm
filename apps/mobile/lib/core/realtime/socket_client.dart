@@ -28,9 +28,9 @@ final socketClientProvider = Provider<sio.Socket?>((ref) {
   // Build socket URL properly
   final apiUrl = AppConfig.apiBaseUrl;
   final uri = Uri.parse(apiUrl);
-  final scheme = uri.scheme == "https" ? "wss" : "ws";
-  final socketUrl =
-      "${scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}";
+  // IMPORTANT: socket.io-client expects http/https here (it upgrades to websocket internally)
+  final scheme = uri.scheme == "https" ? "https" : "http";
+  final socketUrl = "${scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}";
 
   debugPrint("🔌 Socket: Connecting to $socketUrl");
   debugPrint("🔌 Socket: Role: $roleStr, Identifier: $userIdStr");
