@@ -4,6 +4,7 @@ import "package:intl/intl.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 
 import "../../../../core/error/error_handler.dart";
+import "../../../dashboard/presentation/home_page_provider.dart";
 import "../../application/job_list_notifier.dart";
 import "../../application/personnel_list_notifier.dart";
 import "../../data/admin_repository.dart";
@@ -244,6 +245,8 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
               ),
             ),
           ],
+          // Bottom padding for phones with navigation buttons
+          const SizedBox(height: 80),
         ],
       ),
     );
@@ -267,9 +270,15 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
         Navigator.of(context).pop();
       }
 
-      // Refresh job detail
+      // Refresh job detail and job list
       ref.invalidate(_jobDetailProvider(widget.jobId));
       ref.invalidate(jobListProvider);
+
+      // Ana sayfa grafik ve istatistiklerini statik olarak yenile
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(customerCategoryDataProvider);
+      ref.invalidate(overduePaymentsCustomersProvider);
+      ref.invalidate(upcomingMaintenanceProvider);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -425,7 +434,7 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
                           text: scheduledAt != null
                               ? DateFormat("dd.MM.yyyy").format(scheduledAt!)
                               : "",
-                            ),
+                        ),
                         decoration: InputDecoration(
                           labelText: "Planlanan Tarih",
                           hintText: "Tarih seçin",

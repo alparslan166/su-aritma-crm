@@ -1,6 +1,7 @@
 import "dart:async";
 import "dart:math" as math;
 
+import "package:flutter/foundation.dart" show debugPrint;
 import "package:flutter/material.dart";
 import "package:flutter_map/flutter_map.dart";
 import "package:geolocator/geolocator.dart";
@@ -34,6 +35,7 @@ class _InteractiveLocationPickerState extends State<InteractiveLocationPicker>
   late AnimationController _bounceController;
   late Animation<double> _bounceAnimation;
   bool _hasInitializedLocation = false;
+  Timer? _updateTimer;
 
   @override
   void initState() {
@@ -52,26 +54,35 @@ class _InteractiveLocationPickerState extends State<InteractiveLocationPicker>
     );
 
     // Listen to map camera changes to update marker position
+    // Throttle updates to prevent excessive setState calls
     _mapController.mapEventStream.listen((event) {
       if (mounted) {
-        _updateMarkerScreenPosition();
+        // Debounce updates to prevent excessive setState calls
+        _updateTimer?.cancel();
+        _updateTimer = Timer(const Duration(milliseconds: 50), () {
+          if (mounted) {
+            _updateMarkerScreenPosition();
+          }
+        });
       }
     });
   }
 
   void _updateMarkerScreenPosition() {
+    if (!mounted) return;
     try {
       final point = _mapController.camera.latLngToScreenPoint(
         _selectedLocation,
       );
-      setState(() {
-        // Görselin tam ortası konum olacak şekilde ayarla
-        // Marker icon 50px yüksekliğinde, görsel 60px
-        // Görselin merkezi marker konumuna gelecek
-        _markerScreenPosition = Offset(point.x, point.y);
-      });
+      // Validate point coordinates
+      if (point.x.isFinite && point.y.isFinite) {
+        setState(() {
+          _markerScreenPosition = Offset(point.x, point.y);
+        });
+      }
     } catch (e) {
-      // Ignore errors
+      // Silently handle errors to prevent crashes
+      debugPrint("Marker position update error: $e");
     }
   }
 
@@ -145,23 +156,32 @@ class _InteractiveLocationPickerState extends State<InteractiveLocationPicker>
 
   @override
   void dispose() {
+    _updateTimer?.cancel();
     _bounceController.dispose();
     _mapController.dispose();
     super.dispose();
   }
 
   void _zoomIn() {
-    _mapController.move(
-      _mapController.camera.center,
-      _mapController.camera.zoom + 1,
-    );
+    final currentZoom = _mapController.camera.zoom;
+    final maxZoom = 19.0; // TileLayer maxZoom ile uyumlu
+    if (currentZoom < maxZoom) {
+      _mapController.move(
+        _mapController.camera.center,
+        (currentZoom + 1).clamp(3.0, maxZoom),
+      );
+    }
   }
 
   void _zoomOut() {
-    _mapController.move(
-      _mapController.camera.center,
-      _mapController.camera.zoom - 1,
-    );
+    final currentZoom = _mapController.camera.zoom;
+    final minZoom = 3.0; // TileLayer minZoom ile uyumlu
+    if (currentZoom > minZoom) {
+      _mapController.move(
+        _mapController.camera.center,
+        (currentZoom - 1).clamp(minZoom, 19.0),
+      );
+    }
   }
 
   Future<void> _goToCurrentLocation() async {
@@ -369,6 +389,8 @@ class _InteractiveLocationPickerState extends State<InteractiveLocationPicker>
                   options: MapOptions(
                     initialCenter: _selectedLocation,
                     initialZoom: 15.0,
+                    minZoom: 3.0,
+                    maxZoom: 19.0,
                     onTap: _onMapTap,
                     interactionOptions: InteractionOptions(
                       flags: _isDragging
@@ -389,7 +411,9 @@ class _InteractiveLocationPickerState extends State<InteractiveLocationPicker>
                   ],
                 ),
                 // Draggable marker overlay with bounce animation
-                if (_markerScreenPosition != null)
+                if (_markerScreenPosition != null &&
+                    _markerScreenPosition!.dx.isFinite &&
+                    _markerScreenPosition!.dy.isFinite)
                   Positioned(
                     // Görselin tam ortası konum olacak şekilde ayarla
                     // Marker icon 50px, görsel 40px

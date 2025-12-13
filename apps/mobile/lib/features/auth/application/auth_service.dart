@@ -44,9 +44,11 @@ class SignUpResult {
     required this.email,
     required this.name,
     required this.emailVerified,
+    this.adminId,
   });
 
   final String id;
+  final String? adminId;
   final String email;
   final String name;
   final bool emailVerified;
@@ -130,8 +132,10 @@ class ApiAuthService implements AuthService {
       );
       final data = response.data["data"] as Map<String, dynamic>;
       debugPrint("Signed up as admin (${data["id"]})");
+      debugPrint("Admin ID: ${data["adminId"]}");
       return SignUpResult(
         id: data["id"] as String,
+        adminId: data["adminId"] as String?,
         email: data["email"] as String,
         name: data["name"] as String,
         emailVerified: data["emailVerified"] as bool? ?? false,
@@ -217,7 +221,10 @@ class ApiAuthService implements AuthService {
   @override
   Future<void> confirmAccountDeletion(String code) async {
     try {
-      await _client.post("/auth/confirm-account-deletion", data: {"code": code});
+      await _client.post(
+        "/auth/confirm-account-deletion",
+        data: {"code": code},
+      );
     } on DioException catch (error) {
       throw AuthException(
         message: _parseErrorMessage(error, "Hesap silinemedi"),
@@ -287,6 +294,7 @@ class MockAuthService implements AuthService {
     debugPrint("Signed up as admin ($email)");
     return SignUpResult(
       id: "mock-id",
+      adminId: "MOCK123",
       email: email,
       name: name,
       emailVerified: false,

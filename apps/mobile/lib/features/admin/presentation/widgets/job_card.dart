@@ -3,6 +3,8 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 
 import "../../../../core/error/error_handler.dart";
+import "../../../dashboard/presentation/home_page_provider.dart";
+import "../../application/job_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/job.dart";
 
@@ -487,6 +489,15 @@ class JobCard extends ConsumerWidget {
       if (context.mounted) {
         Navigator.of(context).pop();
       }
+
+      // Refresh job list
+      ref.invalidate(jobListProvider);
+
+      // Ana sayfa grafik ve istatistiklerini statik olarak yenile
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(customerCategoryDataProvider);
+      ref.invalidate(overduePaymentsCustomersProvider);
+      ref.invalidate(upcomingMaintenanceProvider);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

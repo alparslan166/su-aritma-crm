@@ -76,6 +76,8 @@ class _AdminInventoryDetailPageState
               ),
             ),
           ),
+          // Bottom padding for phones with navigation buttons
+          const SizedBox(height: 80),
         ],
       ),
     );
