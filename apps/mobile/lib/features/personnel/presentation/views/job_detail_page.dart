@@ -85,6 +85,8 @@ class PersonnelJobDetailPage extends HookConsumerWidget {
                 status: detail.job.status,
                 readOnly: detail.job.readOnly,
               ),
+              // Bottom padding for phones with navigation buttons
+              const SizedBox(height: 80),
             ],
           ),
         ),
