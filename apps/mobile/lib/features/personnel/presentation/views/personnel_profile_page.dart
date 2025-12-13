@@ -3,6 +3,7 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 import "package:intl/date_symbol_data_local.dart";
 
+import "../../../../services/location_tracking_service.dart";
 import "../../data/personnel_repository.dart";
 
 class PersonnelProfilePage extends ConsumerStatefulWidget {
@@ -56,6 +57,13 @@ class _PersonnelProfilePageState extends ConsumerState<PersonnelProfilePage> {
           _profile = profile;
           _loading = false;
         });
+
+        // Start location tracking if canShareLocation is true
+        final canShareLocation = profile["canShareLocation"] as bool? ?? false;
+        if (canShareLocation) {
+          final trackingService = ref.read(locationTrackingServiceProvider);
+          await trackingService?.startTracking();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -179,7 +187,9 @@ class _PersonnelProfilePageState extends ConsumerState<PersonnelProfilePage> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                              color: const Color(
+                                0xFF2563EB,
+                              ).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(
@@ -203,7 +213,8 @@ class _PersonnelProfilePageState extends ConsumerState<PersonnelProfilePage> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  (_profile!["canShareLocation"] as bool? ?? false)
+                                  (_profile!["canShareLocation"] as bool? ??
+                                          false)
                                       ? "Admin konumunuzu görebilir"
                                       : "Admin konumunuzu göremez",
                                   style: const TextStyle(
@@ -222,8 +233,11 @@ class _PersonnelProfilePageState extends ConsumerState<PersonnelProfilePage> {
                             )
                           else
                             Switch(
-                              value: _profile!["canShareLocation"] as bool? ?? false,
-                              onChanged: (value) => _updateLocationSharing(value),
+                              value:
+                                  _profile!["canShareLocation"] as bool? ??
+                                  false,
+                              onChanged: (value) =>
+                                  _updateLocationSharing(value),
                             ),
                         ],
                       ),
@@ -244,19 +258,25 @@ class _PersonnelProfilePageState extends ConsumerState<PersonnelProfilePage> {
       final updated = await ref
           .read(personnelRepositoryProvider)
           .updateMyProfile(canShareLocation: value);
-      
+
       if (mounted) {
         setState(() {
           _profile = updated;
           _updatingLocation = false;
         });
-        
+
+        // Start or stop location tracking based on canShareLocation
+        final trackingService = ref.read(locationTrackingServiceProvider);
+        if (value) {
+          await trackingService?.startTracking();
+        } else {
+          trackingService?.stopTracking();
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              value
-                  ? "Konum paylaşımı açıldı"
-                  : "Konum paylaşımı kapatıldı",
+              value ? "Konum paylaşımı açıldı" : "Konum paylaşımı kapatıldı",
             ),
             backgroundColor: Colors.green,
           ),
@@ -267,7 +287,7 @@ class _PersonnelProfilePageState extends ConsumerState<PersonnelProfilePage> {
         setState(() {
           _updatingLocation = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Hata: ${e.toString()}"),

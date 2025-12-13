@@ -63,14 +63,20 @@ class PersonnelRepository {
     return response.data["data"] as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> updateMyProfile({
-    bool? canShareLocation,
-  }) async {
+  Future<Map<String, dynamic>> updateMyProfile({bool? canShareLocation}) async {
     final data = <String, dynamic>{};
     if (canShareLocation != null) {
       data["canShareLocation"] = canShareLocation;
     }
     final response = await _client.patch("/personnel/me/profile", data: data);
     return response.data["data"] as Map<String, dynamic>;
+  }
+
+  Future<void> updateLocation(double lat, double lng, {String? jobId}) async {
+    final data = <String, dynamic>{"lat": lat, "lng": lng};
+    if (jobId != null) {
+      data["jobId"] = jobId;
+    }
+    await _client.post("/personnel/location", data: data);
   }
 }

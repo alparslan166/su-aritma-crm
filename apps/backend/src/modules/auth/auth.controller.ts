@@ -274,6 +274,7 @@ export const registerHandler = async (req: Request, res: Response, next: NextFun
       success: true,
       data: {
         id: admin.id,
+        adminId: admin.adminId ?? null,
         name: admin.name,
         email: admin.email,
         role: admin.role,

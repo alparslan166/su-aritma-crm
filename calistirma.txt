@@ -34,3 +34,4 @@ flutter build web --release --dart-define=API_BASE_URL=https://su-aritma-crm-pro
 # apps/mobile/pubspec.yaml  -->  version: x.y.z+build
 cd apps/mobile
 flutter build apk --release --dart-define=API_BASE_URL=https://su-aritma-crm-production-5d49.up.railway.app/api
+apps/mobile/build/app/outputs/flutter-apk/app-release.apk

@@ -71,6 +71,24 @@ class RealtimeGateway {
   emitMaintenanceReminder(payload: unknown) {
     this.emitToRole("admin", "maintenance-reminder", payload);
   }
+
+  emitPersonnelLocation(
+    adminId: string,
+    personnelId: string,
+    location: { lat: number; lng: number; timestamp: string; jobId?: string },
+  ) {
+    const payload = {
+      personnelId,
+      lat: location.lat,
+      lng: location.lng,
+      timestamp: location.timestamp,
+      jobId: location.jobId,
+    };
+    logger.info(
+      `📍 Emitting personnel location update: adminId=${adminId}, personnelId=${personnelId}`,
+    );
+    this.emitToAdmin(adminId, "personnel-location-update", payload);
+  }
 }
 
 export const realtimeGateway = new RealtimeGateway();

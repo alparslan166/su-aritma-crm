@@ -236,13 +236,13 @@ class _ActionButtons extends HookConsumerWidget {
         if (!mounted()) return;
         await ref.read(personnelJobDetailProvider(jobId).notifier).refresh();
         ref.invalidate(personnelJobsProvider);
-        
+
         // Ana sayfa grafik ve istatistiklerini statik olarak yenile
         ref.invalidate(dashboardStatsProvider);
         ref.invalidate(customerCategoryDataProvider);
         ref.invalidate(overduePaymentsCustomersProvider);
         ref.invalidate(upcomingMaintenanceProvider);
-        
+
         if (context.mounted && mounted()) {
           ScaffoldMessenger.of(
             context,

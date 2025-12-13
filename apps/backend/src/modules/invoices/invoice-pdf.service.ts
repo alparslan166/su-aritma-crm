@@ -248,9 +248,9 @@ export class InvoicePdfService {
       .font(fontRegular)
       .fontSize(10)
       .fillColor("#333")
-      .text(data.companyName, 320, custY + 35)
-      .text(data.companyAddress, 320, custY + 50, { width: 210 })
-      .text(`Tel: ${data.companyPhone}`, 320, custY + 80)
+      .text(`Firma: ${data.companyName}`, 320, custY + 35)
+      .text(`Adres: ${data.companyAddress}`, 320, custY + 50, { width: 210 })
+      .text(`Telefon: ${data.companyPhone}`, 320, custY + 80)
       .text(`E-posta: ${data.companyEmail}`, 320, custY + 95);
 
     // Job Info
@@ -288,11 +288,7 @@ export class InvoicePdfService {
 
     // Collected Amount (Alınan Ücret)
     if (data.collectedAmount !== null && data.collectedAmount !== undefined) {
-      doc
-        .font(fontBold)
-        .fontSize(12)
-        .fillColor(textDark)
-        .text("Alınan Ücret", 50, currentY);
+      doc.font(fontBold).fontSize(12).fillColor(textDark).text("Alınan Ücret", 50, currentY);
       currentY += 20;
 
       doc

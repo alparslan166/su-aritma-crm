@@ -7,6 +7,7 @@ import "core/session/session_provider.dart";
 import "core/theme/app_theme.dart";
 import "features/personnel/application/personnel_notifications_notifier.dart";
 import "routing/app_router.dart";
+import "services/location_tracking_service.dart";
 
 class SuAritmaApp extends HookConsumerWidget {
   const SuAritmaApp({super.key});

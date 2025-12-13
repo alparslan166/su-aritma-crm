@@ -176,7 +176,7 @@ class PersonnelService {
       if (payload.loginCode === "") {
         data.loginCode = generateLoginCode();
       } else {
-      data.loginCode = payload.loginCode;
+        data.loginCode = payload.loginCode;
       }
       data.loginCodeUpdatedAt = new Date();
     }
@@ -193,7 +193,7 @@ class PersonnelService {
   // Personel kendi profilini güncelleyebilir (sadece canShareLocation)
   async updateMyProfile(personnelId: string, payload: { canShareLocation?: boolean }) {
     const data: Prisma.PersonnelUpdateInput = {};
-    
+
     if (payload.canShareLocation !== undefined) {
       data.canShareLocation = payload.canShareLocation;
     }
@@ -264,6 +264,135 @@ class PersonnelService {
     }
     await prisma.personnelLeave.delete({
       where: { id: leaveId },
+    });
+  }
+
+  async updateLocation(personnelId: string, lat: number, lng: number, jobId?: string) {
+    // Get personnel to check canShareLocation and get adminId
+    const personnel = await prisma.personnel.findUnique({
+      where: { id: personnelId },
+      select: {
+        id: true,
+        adminId: true,
+        canShareLocation: true,
+        status: true,
+      },
+    });
+
+    if (!personnel) {
+      throw new AppError("Personnel not found", 404);
+    }
+
+    // Check if location sharing is enabled
+    if (!personnel.canShareLocation) {
+      throw new AppError("Location sharing is disabled", 403);
+    }
+
+    // Check if personnel is active
+    if (personnel.status !== "ACTIVE") {
+      throw new AppError("Only active personnel can share location", 403);
+    }
+
+    // If jobId is provided, verify the personnel is assigned to that job
+    if (jobId) {
+      const assignment = await prisma.jobPersonnel.findUnique({
+        where: {
+          jobId_personnelId: {
+            jobId,
+            personnelId,
+          },
+        },
+      });
+
+      if (!assignment) {
+        throw new AppError("Personnel is not assigned to this job", 403);
+      }
+
+      // Update or create LocationLog for this job
+      const existingLog = await prisma.locationLog.findFirst({
+        where: {
+          jobId,
+          personnelId,
+          endedAt: null, // Active log
+        },
+        orderBy: { startedAt: "desc" },
+      });
+
+      if (existingLog) {
+        // Update existing log (update lat/lng but keep startedAt)
+        await prisma.locationLog.update({
+          where: { id: existingLog.id },
+          data: {
+            lat,
+            lng,
+          },
+        });
+      } else {
+        // Create new log entry
+        await prisma.locationLog.create({
+          data: {
+            jobId,
+            personnelId,
+            lat,
+            lng,
+            startedAt: new Date(),
+            consent: true,
+          },
+        });
+      }
+    } else {
+      // No jobId - create a general location log entry
+      // We'll use a special job or create a LocationLog without jobId
+      // For now, we'll create a LocationLog with a dummy job or use the most recent active job
+      const activeJob = await prisma.jobPersonnel.findFirst({
+        where: {
+          personnelId,
+          job: {
+            status: "IN_PROGRESS",
+          },
+        },
+        orderBy: { assignedAt: "desc" },
+        select: { jobId: true },
+      });
+
+      if (activeJob) {
+        // Use the active job
+        const existingLog = await prisma.locationLog.findFirst({
+          where: {
+            jobId: activeJob.jobId,
+            personnelId,
+            endedAt: null,
+          },
+          orderBy: { startedAt: "desc" },
+        });
+
+        if (existingLog) {
+          await prisma.locationLog.update({
+            where: { id: existingLog.id },
+            data: { lat, lng },
+          });
+        } else {
+          await prisma.locationLog.create({
+            data: {
+              jobId: activeJob.jobId,
+              personnelId,
+              lat,
+              lng,
+              startedAt: new Date(),
+              consent: true,
+            },
+          });
+        }
+      }
+    }
+
+    // Broadcast location update via Socket.IO
+    const { realtimeGateway } = await import("@/modules/realtime/realtime.gateway");
+    realtimeGateway.emitPersonnelLocation(personnel.adminId, personnelId, {
+      lat,
+      lng,
+      timestamp: new Date().toISOString(),
+      jobId: jobId || undefined,
     });
   }
 }

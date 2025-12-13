@@ -11,6 +11,7 @@ import {
   resetPersonnelCodeHandler,
   updatePersonnelHandler,
   updateMyProfileHandler,
+  updateLocationHandler,
 } from "./personnel.controller";
 
 const router = Router();
@@ -25,10 +26,12 @@ router.post("/:id/reset-code", resetPersonnelCodeHandler);
 // Personel kendi profilini güncelleyebilir
 router.patch("/me/profile", updateMyProfileHandler);
 
+// Konum güncelleme endpoint'i
+router.post("/location", updateLocationHandler);
+
 // Leave routes
 router.get("/:id/leaves", listPersonnelLeavesHandler);
 router.post("/:id/leaves", createPersonnelLeaveHandler);
 router.delete("/:id/leaves/:leaveId", deletePersonnelLeaveHandler);
 
 export const personnelRouter = router;
-

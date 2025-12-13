@@ -199,19 +199,37 @@ export const deletePersonnelLeaveHandler = async (
 };
 
 // Personel kendi profilini güncelleyebilir (sadece canShareLocation)
-export const updateMyProfileHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const updateMyProfileHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const personnelId = getPersonnelId(req);
-    const payload = z.object({
-      canShareLocation: z.boolean().optional(),
-    }).parse(req.body);
-    
+    const payload = z
+      .object({
+        canShareLocation: z.boolean().optional(),
+      })
+      .parse(req.body);
+
     const updated = await personnelService.updateMyProfile(personnelId, payload);
     res.json({ success: true, data: updated });
+  } catch (error) {
+    next(error as Error);
+  }
+};
+
+// Konum güncelleme endpoint'i
+const locationUpdateSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  jobId: z.string().optional(),
+});
+
+export const updateLocationHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const personnelId = getPersonnelId(req);
+    const payload = locationUpdateSchema.parse(req.body);
+
+    await personnelService.updateLocation(personnelId, payload.lat, payload.lng, payload.jobId);
+
+    res.json({ success: true, message: "Location updated" });
   } catch (error) {
     next(error as Error);
   }

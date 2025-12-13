@@ -16,6 +16,7 @@ import "full_screen_map_page.dart";
 import "../../../../core/constants/app_config.dart";
 import "../../../../core/error/error_handler.dart";
 import "../../../../core/network/api_client.dart" show apiClientProvider;
+import "../../../../core/realtime/socket_client.dart";
 import "../../application/job_list_notifier.dart";
 import "../../application/personnel_detail_provider.dart";
 import "../../application/personnel_list_notifier.dart";
@@ -1348,15 +1349,87 @@ class _PersonnelMapSection extends ConsumerStatefulWidget {
       _PersonnelMapSectionState();
 }
 
-class _PersonnelMapSectionState extends ConsumerState<_PersonnelMapSection> {
+class _PersonnelMapSectionState extends ConsumerState<_PersonnelMapSection>
+    with SingleTickerProviderStateMixin {
   LatLng? _personnelLocation;
   bool _isLoading = false;
   String? _error;
+  final MapController _mapController = MapController();
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+    _pulseAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
     _loadLocation();
+    _setupRealtimeListener();
+  }
+
+  @override
+  void dispose() {
+    // Remove socket listener
+    final socket = ref.read(socketClientProvider);
+    if (socket != null) {
+      socket.off("personnel-location-update", _handleLocationUpdate);
+    }
+    _pulseController.dispose();
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  void _setupRealtimeListener() {
+    // Listen to Socket.IO for real-time location updates
+    final socket = ref.read(socketClientProvider);
+    if (socket != null) {
+      socket.on("personnel-location-update", _handleLocationUpdate);
+      debugPrint("📍 Socket listener set up for personnel location updates");
+    }
+
+    // Also listen to socket provider changes
+    ref.listen(socketClientProvider, (previous, next) {
+      if (previous != null) {
+        previous.off("personnel-location-update", _handleLocationUpdate);
+      }
+      if (next != null) {
+        next.on("personnel-location-update", _handleLocationUpdate);
+        debugPrint("📍 Socket listener updated for personnel location updates");
+      }
+    });
+  }
+
+  void _handleLocationUpdate(dynamic data) {
+    try {
+      final personnelId = data["personnelId"] as String?;
+      if (personnelId != widget.personnel.id) {
+        return; // Not for this personnel
+      }
+
+      final lat = data["lat"] as num?;
+      final lng = data["lng"] as num?;
+
+      if (lat != null && lng != null && mounted) {
+        final newLocation = LatLng(lat.toDouble(), lng.toDouble());
+        setState(() {
+          _personnelLocation = newLocation;
+          _isLoading = false;
+          _error = null;
+        });
+
+        // Animate map to new location
+        _mapController.move(newLocation, 15.0);
+
+        debugPrint("📍 Real-time location update: $lat, $lng");
+      }
+    } catch (e) {
+      debugPrint("❌ Error handling location update: $e");
+    }
   }
 
   Future<void> _loadLocation() async {
@@ -1444,11 +1517,24 @@ class _PersonnelMapSectionState extends ConsumerState<_PersonnelMapSection> {
               children: [
                 const Icon(Icons.map, color: Color(0xFF2563EB)),
                 const SizedBox(width: 8),
-                Text(
-                  "Son Bilinen Konum",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Canlı Konum",
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (_personnelLocation != null)
+                      Text(
+                        "Gerçek zamanlı takip aktif",
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.green,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
                 ),
                 const Spacer(),
                 if (_error != null || _isLoading)
@@ -1518,6 +1604,7 @@ class _PersonnelMapSectionState extends ConsumerState<_PersonnelMapSection> {
                         );
                         return ClipRect(
                           child: FlutterMap(
+                            mapController: _mapController,
                             key: ValueKey(
                               "${_personnelLocation!.latitude}_${_personnelLocation!.longitude}",
                             ),
@@ -1540,12 +1627,52 @@ class _PersonnelMapSectionState extends ConsumerState<_PersonnelMapSection> {
                                 markers: [
                                   Marker(
                                     point: _personnelLocation!,
-                                    width: 40,
-                                    height: 40,
-                                    child: const Icon(
-                                      Icons.person_pin_circle,
-                                      color: Color(0xFF2563EB),
-                                      size: 40,
+                                    width: 60,
+                                    height: 60,
+                                    child: AnimatedBuilder(
+                                      animation: _pulseAnimation,
+                                      builder: (context, child) {
+                                        return Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            // Pulse effect
+                                            Container(
+                                              width: 60 * _pulseAnimation.value,
+                                              height: 60 * _pulseAnimation.value,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF2563EB)
+                                                    .withValues(alpha: 0.3 * (1 - _pulseAnimation.value)),
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            // Main marker
+                                            Container(
+                                              width: 40,
+                                              height: 40,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: const Color(0xFF2563EB),
+                                                  width: 3,
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withValues(alpha: 0.3),
+                                                    blurRadius: 8,
+                                                    spreadRadius: 2,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Icon(
+                                                Icons.person,
+                                                color: Color(0xFF2563EB),
+                                                size: 24,
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
                                     ),
                                   ),
                                 ],
