@@ -54,7 +54,9 @@ class SuAritmaApp extends HookConsumerWidget {
     useEffect(() {
       ref.listen<AuthSession?>(authSessionProvider, (previous, next) async {
         if (previous != null && previous.role != next?.role) {
-          pushService.unsubscribeFromRoleTopic(previous.role.name).catchError((error) {
+          pushService.unsubscribeFromRoleTopic(previous.role.name).catchError((
+            error,
+          ) {
             debugPrint("Failed to unsubscribe from topic: $error");
           });
         }
@@ -77,15 +79,17 @@ class SuAritmaApp extends HookConsumerWidget {
               ref.read(subscriptionLockRequiredProvider.notifier).state =
                   lockRequired;
 
-              if (!context.mounted) return;
+              final navContext =
+                  ref.read(appRouterProvider).routerDelegate.navigatorKey.currentContext;
+              if (navContext == null || !navContext.mounted) return;
 
               // One-time trial started notice
               final showTrialNotice =
                   subscription?["shouldShowTrialStartedNotice"] as bool? ??
-                      false;
+                  false;
               if (showTrialNotice) {
                 await showDialog<void>(
-                  context: context,
+                  context: navContext,
                   builder: (ctx) => AlertDialog(
                     title: const Text("Deneme süresi başladı"),
                     content: const Text(
@@ -108,11 +112,10 @@ class SuAritmaApp extends HookConsumerWidget {
               // Last 3 days warning (shown every login when <=3 days)
               final showExpiryWarning =
                   subscription?["shouldShowExpiryWarning"] as bool? ?? false;
-              final daysRemaining =
-                  subscription?["daysRemaining"] as int?;
+              final daysRemaining = subscription?["daysRemaining"] as int?;
               if (showExpiryWarning && daysRemaining != null) {
                 await showDialog<void>(
-                  context: context,
+                  context: navContext,
                   builder: (ctx) => AlertDialog(
                     title: const Text("Abonelik uyarısı"),
                     content: Text(
@@ -137,7 +140,9 @@ class SuAritmaApp extends HookConsumerWidget {
             ref.read(subscriptionLockRequiredProvider.notifier).state = false;
           }
         } else if (previous != null) {
-          pushService.unsubscribeFromRoleTopic(previous.role.name).catchError((error) {
+          pushService.unsubscribeFromRoleTopic(previous.role.name).catchError((
+            error,
+          ) {
             debugPrint("Failed to unsubscribe from topic: $error");
           });
           ref.read(subscriptionLockRequiredProvider.notifier).state = false;
