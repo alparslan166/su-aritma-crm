@@ -5,6 +5,7 @@ import {
   cancelSubscriptionHandler,
   getAllSubscriptionsHandler,
   getSubscriptionHandler,
+  markTrialNoticeSeenHandler,
   renewSubscriptionHandler,
 } from "./subscription.controller";
 
@@ -24,6 +25,9 @@ router.post("/renew", renewSubscriptionHandler);
 
 // Cancel subscription
 router.post("/cancel", cancelSubscriptionHandler);
+
+// Mark trial started notice as seen (one-time)
+router.post("/mark-trial-notice-seen", markTrialNoticeSeenHandler);
 
 export const subscriptionRouter = router;
 

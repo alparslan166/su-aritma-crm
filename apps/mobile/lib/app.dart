@@ -7,8 +7,10 @@ import "core/realtime/socket_client.dart";
 import "core/session/session_provider.dart";
 import "core/theme/app_theme.dart";
 import "features/admin/application/admin_notifications_notifier.dart";
+import "features/admin/data/admin_repository.dart";
 import "features/personnel/application/personnel_notifications_notifier.dart";
 import "routing/app_router.dart";
+import "core/subscription/subscription_lock_provider.dart";
 
 class SuAritmaApp extends HookConsumerWidget {
   const SuAritmaApp({super.key});
@@ -48,33 +50,101 @@ class SuAritmaApp extends HookConsumerWidget {
     }
 
     // Subscribe/unsubscribe to role-based topics and (re)register push token after login
-    ref.listen<AuthSession?>(authSessionProvider, (previous, next) {
-      if (previous != null && previous.role != next?.role) {
-        // Unsubscribe from previous role
-        pushService.unsubscribeFromRoleTopic(previous.role.name).catchError((
-          error,
-        ) {
-          debugPrint("Failed to unsubscribe from topic: $error");
-        });
-      }
-      if (next != null) {
-        // Subscribe to new role
-        pushService.subscribeToRoleTopic(next.role.name).catchError((error) {
-          debugPrint("Failed to subscribe to topic: $error");
-        });
-        // After login: register token with backend (needs x-admin-id / x-personnel-id headers)
-        pushService.registerTokenWithBackend().catchError((error) {
-          debugPrint("Failed to register token after login: $error");
-        });
-      } else if (previous != null) {
-        // Logged out - unsubscribe from previous role
-        pushService.unsubscribeFromRoleTopic(previous.role.name).catchError((
-          error,
-        ) {
-          debugPrint("Failed to unsubscribe from topic: $error");
-        });
-      }
-    });
+    // Also check subscription on admin login to show notices and enforce lock.
+    useEffect(() {
+      ref.listen<AuthSession?>(authSessionProvider, (previous, next) async {
+        if (previous != null && previous.role != next?.role) {
+          pushService.unsubscribeFromRoleTopic(previous.role.name).catchError((error) {
+            debugPrint("Failed to unsubscribe from topic: $error");
+          });
+        }
+
+        if (next != null) {
+          pushService.subscribeToRoleTopic(next.role.name).catchError((error) {
+            debugPrint("Failed to subscribe to topic: $error");
+          });
+          pushService.registerTokenWithBackend().catchError((error) {
+            debugPrint("Failed to register token after login: $error");
+          });
+
+          // Admin subscription gating (trial notice, last 3 days warning, lock)
+          if (next.role.name == "admin") {
+            final repo = ref.read(adminRepositoryProvider);
+            try {
+              final subscription = await repo.getSubscription();
+              final lockRequired =
+                  subscription?["lockRequired"] as bool? ?? false;
+              ref.read(subscriptionLockRequiredProvider.notifier).state =
+                  lockRequired;
+
+              if (!context.mounted) return;
+
+              // One-time trial started notice
+              final showTrialNotice =
+                  subscription?["shouldShowTrialStartedNotice"] as bool? ??
+                      false;
+              if (showTrialNotice) {
+                await showDialog<void>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text("Deneme süresi başladı"),
+                    content: const Text(
+                      "30 günlük deneme süreniz başladı. Detayları profil sayfasında görebilirsiniz.",
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text("Tamam"),
+                      ),
+                    ],
+                  ),
+                );
+                // Mark as seen in backend
+                await repo.markTrialNoticeSeen().catchError((e) {
+                  debugPrint("Failed to mark trial notice seen: $e");
+                });
+              }
+
+              // Last 3 days warning (shown every login when <=3 days)
+              final showExpiryWarning =
+                  subscription?["shouldShowExpiryWarning"] as bool? ?? false;
+              final daysRemaining =
+                  subscription?["daysRemaining"] as int?;
+              if (showExpiryWarning && daysRemaining != null) {
+                await showDialog<void>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text("Abonelik uyarısı"),
+                    content: Text(
+                      "Aboneliğinizin bitmesine $daysRemaining gün kaldı.",
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text("Tamam"),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            } catch (e) {
+              // If subscription cannot be fetched, don't lock.
+              debugPrint("Subscription check failed: $e");
+              ref.read(subscriptionLockRequiredProvider.notifier).state = false;
+            }
+          } else {
+            // Personnel doesn't use subscription lock
+            ref.read(subscriptionLockRequiredProvider.notifier).state = false;
+          }
+        } else if (previous != null) {
+          pushService.unsubscribeFromRoleTopic(previous.role.name).catchError((error) {
+            debugPrint("Failed to unsubscribe from topic: $error");
+          });
+          ref.read(subscriptionLockRequiredProvider.notifier).state = false;
+        }
+      });
+      return null;
+    }, const []);
 
     return MaterialApp.router(
       title: "Su Arıtma",

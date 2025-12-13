@@ -325,6 +325,7 @@ model Subscription {
   startDate DateTime
   endDate   DateTime
   trialEnds DateTime?
+  trialStartedNoticeSeenAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }

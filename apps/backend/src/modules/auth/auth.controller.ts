@@ -240,7 +240,13 @@ export const registerHandler = async (req: Request, res: Response, next: NextFun
         await subscriptionService.startTrial(admin.id);
         console.log(`✅ Started 30-day trial for admin: ${admin.id}`);
       } catch (error) {
-        console.error("❌ Failed to start trial:", error);
+        // Idempotent behavior: if subscription already exists, ignore.
+        const msg = error instanceof Error ? error.message : String(error);
+        if (msg.includes("Subscription already exists")) {
+          console.log(`ℹ️ Trial already exists for admin: ${admin.id}`);
+        } else {
+          console.error("❌ Failed to start trial:", error);
+        }
         // Don't fail registration if trial creation fails
       }
     }

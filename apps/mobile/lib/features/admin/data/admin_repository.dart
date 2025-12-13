@@ -798,6 +798,10 @@ class AdminRepository {
     }
   }
 
+  Future<void> markTrialNoticeSeen() async {
+    await _client.post("/subscriptions/mark-trial-notice-seen");
+  }
+
   Future<Map<String, dynamic>> updateProfile({
     String? name,
     String? phone,

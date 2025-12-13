@@ -132,3 +132,18 @@ export const cancelSubscriptionHandler = async (
   }
 };
 
+// Mark trial started notice as seen (one-time)
+export const markTrialNoticeSeenHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const adminId = getAdminId(req);
+    await subscriptionService.markTrialNoticeSeen(adminId);
+    res.json({ success: true });
+  } catch (error) {
+    next(error as Error);
+  }
+};
+

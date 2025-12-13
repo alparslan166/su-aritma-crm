@@ -84,12 +84,24 @@ export class SubscriptionService {
 
     const daysRemaining = this.calculateDaysRemaining(subscription, now);
 
+    const shouldShowTrialStartedNotice =
+      currentStatus === "trial" && !subscription.trialStartedNoticeSeenAt;
+    const shouldShowExpiryWarning =
+      (currentStatus === "trial" || currentStatus === "active") &&
+      typeof daysRemaining === "number" &&
+      daysRemaining > 0 &&
+      daysRemaining <= 3;
+    const lockRequired = !(currentStatus === "trial" || currentStatus === "active");
+
     return {
       ...subscription,
       status: currentStatus,
       daysRemaining,
       isActive: currentStatus === "trial" || currentStatus === "active",
       isExpired: currentStatus === "expired",
+      shouldShowTrialStartedNotice,
+      shouldShowExpiryWarning,
+      lockRequired,
     };
   }
 
@@ -179,6 +191,25 @@ export class SubscriptionService {
     });
 
     console.log(`✅ Cancelled subscription for admin: ${adminId}`);
+  }
+
+  /**
+   * Mark trial started notice as seen (one-time)
+   */
+  async markTrialNoticeSeen(adminId: string): Promise<void> {
+    const subscription = await prisma.subscription.findUnique({
+      where: { adminId },
+    });
+    if (!subscription) {
+      throw new AppError("Subscription not found", 404);
+    }
+    if (subscription.trialStartedNoticeSeenAt) {
+      return;
+    }
+    await prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { trialStartedNoticeSeenAt: new Date() },
+    });
   }
 
   /**

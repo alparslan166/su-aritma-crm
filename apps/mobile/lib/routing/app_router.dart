@@ -2,6 +2,7 @@ import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
 import "../core/session/session_provider.dart";
+import "../core/subscription/subscription_lock_provider.dart";
 import "../features/admin/data/models/customer.dart";
 import "../features/admin/data/models/inventory_item.dart";
 import "../features/admin/data/models/job.dart";
@@ -18,20 +19,25 @@ import "../features/auth/presentation/register_page.dart";
 import "../features/dashboard/presentation/admin_dashboard_page.dart";
 import "../features/dashboard/presentation/personnel_dashboard_page.dart";
 import "../features/personnel/presentation/views/job_detail_page.dart";
+import "../features/subscription/presentation/subscription_lock_page.dart";
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   // Session state'ini dinle - bu router'ı yeniden oluşturur
   ref.watch(authSessionProvider);
+  // Subscription lock state'ini dinle - redirect için
+  ref.watch(subscriptionLockRequiredProvider);
 
   return GoRouter(
     redirect: (context, state) {
       final currentSession = ref.read(authSessionProvider);
+      final lockRequired = ref.read(subscriptionLockRequiredProvider);
       final isLogin = state.matchedLocation == "/";
       final isRegister = state.matchedLocation == "/register";
       final isEmailVerification = state.matchedLocation.startsWith(
         "/email-verification",
       );
       final isForgotPassword = state.matchedLocation == "/forgot-password";
+      final isSubscriptionLock = state.matchedLocation == "/subscription/lock";
 
       // Public routes that don't require authentication
       if (currentSession == null &&
@@ -40,6 +46,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           !isEmailVerification &&
           !isForgotPassword) {
         return "/";
+      }
+
+      // If subscription lock is required for admin, redirect everything to lock page
+      if (currentSession != null &&
+          currentSession.role == AuthRole.admin &&
+          lockRequired == true &&
+          !isSubscriptionLock) {
+        return "/subscription/lock";
       }
 
       if (currentSession != null && (isLogin || isRegister)) {
@@ -87,6 +101,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: "/dashboard/personnel",
         name: PersonnelDashboardPage.routeName,
         builder: (context, state) => const PersonnelDashboardPage(),
+      ),
+      GoRoute(
+        path: "/subscription/lock",
+        name: "subscription-lock",
+        builder: (context, state) => const SubscriptionLockPage(),
       ),
       GoRoute(
         path: "/personnel/jobs/:id",
