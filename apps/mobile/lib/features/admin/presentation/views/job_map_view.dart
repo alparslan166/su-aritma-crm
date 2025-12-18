@@ -102,9 +102,19 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
           );
 
       if (mounted) {
+        final newLocation = LatLng(position.latitude, position.longitude);
         setState(() {
-          _userLocation = LatLng(position.latitude, position.longitude);
+          _userLocation = newLocation;
         });
+        // Kullanıcı konumu alındığında haritayı oraya taşı
+        // (eğer initialCustomerLocation yoksa ve marker yoksa)
+        if (widget.initialCustomerLocation == null && _initialized) {
+          try {
+            _mapController.move(newLocation, 12.0);
+          } catch (e) {
+            debugPrint("Harita taşınamadı: $e");
+          }
+        }
       }
     } catch (e) {
       debugPrint("Kullanıcı konumu alınamadı: $e");
