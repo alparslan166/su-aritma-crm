@@ -2,7 +2,12 @@ import bcrypt from "bcryptjs";
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-import { generateVerificationCode } from "@/lib/email.service";
+import {
+  generateVerificationCode,
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendAccountDeletionEmail,
+} from "@/lib/email.service";
 import { generateAdminId } from "@/lib/generators";
 import { prisma } from "@/lib/prisma";
 import { getAdminId } from "@/lib/tenant";
@@ -265,16 +270,14 @@ export const registerHandler = async (req: Request, res: Response, next: NextFun
     });
 
     // Send verification email
-    // TODO: Email gönderme geçici olarak devre dışı - domain doğrulaması bekleniyor
-    // const emailResult = await sendVerificationEmail(admin.email, verificationCode, admin.name);
-    // if (!emailResult.success) {
-    //   console.error("❌ Failed to send verification email:", emailResult.error);
-    //   // Don't fail registration if email fails, but log the error
-    //   // The user can request a new code later
-    // }
-    console.log(
-      `⚠️ Email gönderme devre dışı. Verification code: ${verificationCode} (sadece log için)`,
-    );
+    const emailResult = await sendVerificationEmail(admin.email, verificationCode, admin.name);
+    if (!emailResult.success) {
+      console.error("❌ Failed to send verification email:", emailResult.error);
+      // Don't fail registration if email fails, but log the error
+      // The user can request a new code later
+    } else {
+      console.log(`📧 Verification email sent to: ${admin.email}`);
+    }
 
     res.status(201).json({
       success: true,
@@ -342,24 +345,21 @@ export const sendVerificationCodeHandler = async (
     });
 
     // Send verification email
-    // TODO: Email gönderme geçici olarak devre dışı - domain doğrulaması bekleniyor
-    // const emailResult = await sendVerificationEmail(email, verificationCode, admin.name);
-    // if (!emailResult.success) {
-    //   // Check if it's a domain verification error
-    //   if (emailResult.error === "EMAIL_DOMAIN_NOT_VERIFIED") {
-    //     throw new AppError(
-    //       "E-posta gönderilemedi. Domain doğrulaması gerekiyor. Lütfen sistem yöneticisine başvurun.",
-    //       500,
-    //     );
-    //   }
-    //   throw new AppError(
-    //     `E-posta gönderilemedi: ${emailResult.error || "Bilinmeyen hata"}. Lütfen tekrar deneyin.`,
-    //     500,
-    //   );
-    // }
-    console.log(
-      `⚠️ Email gönderme devre dışı. Verification code for ${email}: ${verificationCode} (sadece log için)`,
-    );
+    const emailResult = await sendVerificationEmail(email, verificationCode, admin.name);
+    if (!emailResult.success) {
+      // Check if it's a domain verification error
+      if (emailResult.error === "EMAIL_DOMAIN_NOT_VERIFIED") {
+        throw new AppError(
+          "E-posta gönderilemedi. Domain doğrulaması gerekiyor. Lütfen sistem yöneticisine başvurun.",
+          500,
+        );
+      }
+      throw new AppError(
+        `E-posta gönderilemedi: ${emailResult.error || "Bilinmeyen hata"}. Lütfen tekrar deneyin.`,
+        500,
+      );
+    }
+    console.log(`📧 Verification code sent to: ${email}`);
 
     res.json({
       success: true,
@@ -471,18 +471,14 @@ export const forgotPasswordHandler = async (req: Request, res: Response, next: N
     });
 
     // Send password reset email
-    // TODO: Email gönderme geçici olarak devre dışı - domain doğrulaması bekleniyor
-    // const emailResult = await sendPasswordResetEmail(email, resetCode, admin.name);
-    // if (!emailResult.success) {
-    //   console.error("❌ Failed to send password reset email:", emailResult.error);
-    //   // Don't fail the request, but log the error
-    //   // The user can try again later
-    // } else {
-    //   console.log(`📧 Password reset code sent to: ${email}`);
-    // }
-    console.log(
-      `⚠️ Email gönderme devre dışı. Password reset code for ${email}: ${resetCode} (sadece log için)`,
-    );
+    const emailResult = await sendPasswordResetEmail(email, resetCode, admin.name);
+    if (!emailResult.success) {
+      console.error("❌ Failed to send password reset email:", emailResult.error);
+      // Don't fail the request, but log the error
+      // The user can try again later
+    } else {
+      console.log(`📧 Password reset code sent to: ${email}`);
+    }
 
     res.json({
       success: true,
@@ -658,23 +654,20 @@ export const requestAccountDeletionHandler = async (
     });
 
     // Send account deletion email
-    // TODO: Email gönderme geçici olarak devre dışı - domain doğrulaması bekleniyor
-    // const emailResult = await sendAccountDeletionEmail(admin.email, deletionCode, admin.name);
-    // if (!emailResult.success) {
-    //   if (emailResult.error === "EMAIL_DOMAIN_NOT_VERIFIED") {
-    //     throw new AppError(
-    //       "E-posta gönderilemedi. Domain doğrulaması gerekiyor. Lütfen sistem yöneticisine başvurun.",
-    //       500,
-    //     );
-    //   }
-    //   throw new AppError(
-    //     `E-posta gönderilemedi: ${emailResult.error || "Bilinmeyen hata"}. Lütfen tekrar deneyin.`,
-    //     500,
-    //   );
-    // }
-    console.log(
-      `⚠️ Email gönderme devre dışı. Account deletion code for ${admin.email}: ${deletionCode} (sadece log için)`,
-    );
+    const emailResult = await sendAccountDeletionEmail(admin.email, deletionCode, admin.name);
+    if (!emailResult.success) {
+      if (emailResult.error === "EMAIL_DOMAIN_NOT_VERIFIED") {
+        throw new AppError(
+          "E-posta gönderilemedi. Domain doğrulaması gerekiyor. Lütfen sistem yöneticisine başvurun.",
+          500,
+        );
+      }
+      throw new AppError(
+        `E-posta gönderilemedi: ${emailResult.error || "Bilinmeyen hata"}. Lütfen tekrar deneyin.`,
+        500,
+      );
+    }
+    console.log(`📧 Account deletion code sent to: ${admin.email}`);
 
     res.json({
       success: true,
@@ -686,10 +679,9 @@ export const requestAccountDeletionHandler = async (
 };
 
 // Hesap silme - onaylama ve silme
-// GEÇİCİ: Schema validation bypass edildi
-// const confirmAccountDeletionSchema = z.object({
-//   code: z.string().length(6, "Doğrulama kodu 6 haneli olmalıdır"),
-// });
+const confirmAccountDeletionSchema = z.object({
+  code: z.string().length(6, "Doğrulama kodu 6 haneli olmalıdır"),
+});
 
 export const confirmAccountDeletionHandler = async (
   req: Request,
@@ -698,9 +690,7 @@ export const confirmAccountDeletionHandler = async (
 ) => {
   try {
     const adminId = getAdminId(req);
-    // Geçici olarak doğrulama kodunu bypass et
-    const payload = req.body;
-    const code = payload?.code;
+    const { code } = confirmAccountDeletionSchema.parse(req.body);
 
     const admin = await prisma.admin.findUnique({
       where: { id: adminId },
@@ -710,33 +700,26 @@ export const confirmAccountDeletionHandler = async (
       throw new AppError("Admin bulunamadı", 404);
     }
 
-    // GEÇİCİ: Doğrulama kodunu bypass et (production'da kaldırılmalı)
-    const SKIP_VERIFICATION = true;
+    // Verify the deletion code
+    const verificationRecord = await prisma.verificationCode.findFirst({
+      where: {
+        email: admin.email,
+        code,
+        type: "account_deletion",
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+    });
 
-    if (!SKIP_VERIFICATION) {
-      // Verify the deletion code
-      const verificationRecord = await prisma.verificationCode.findFirst({
-        where: {
-          email: admin.email,
-          code,
-          type: "account_deletion",
-          used: false,
-          expiresAt: { gt: new Date() },
-        },
-      });
-
-      if (!verificationRecord) {
-        throw new AppError("Geçersiz veya süresi dolmuş doğrulama kodu", 400);
-      }
-
-      // Mark code as used
-      await prisma.verificationCode.update({
-        where: { id: verificationRecord.id },
-        data: { used: true },
-      });
-    } else {
-      console.log("⚠️ GEÇİCİ: Hesap silme doğrulama kodu bypass edildi");
+    if (!verificationRecord) {
+      throw new AppError("Geçersiz veya süresi dolmuş doğrulama kodu", 400);
     }
+
+    // Mark code as used
+    await prisma.verificationCode.update({
+      where: { id: verificationRecord.id },
+      data: { used: true },
+    });
 
     console.log(`🗑️ Starting account deletion for admin: ${admin.name} (${admin.email})`);
 
