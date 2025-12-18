@@ -1,3 +1,4 @@
+import "package:flutter/foundation.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:socket_io_client/socket_io_client.dart" as sio;
 
@@ -13,19 +14,35 @@ class AdminNotificationsNotifier
     extends AutoDisposeNotifier<List<AdminNotification>> {
   @override
   List<AdminNotification> build() {
+    debugPrint("📢 AdminNotificationsNotifier: build() called");
     _listenSocket();
     return const [];
   }
 
   void _listenSocket() {
+    // Get current socket and setup listeners immediately
+    final currentSocket = ref.read(socketClientProvider);
+    if (currentSocket != null) {
+      _setupSocketListeners(currentSocket);
+    }
+    
+    // Listen for socket changes
     ref.listen<sio.Socket?>(socketClientProvider, (previous, next) {
-      previous
-        ?..off("notification", _handleNotification)
-        ..off("maintenance-reminder", _handleMaintenanceReminder);
-      next
-        ?..on("notification", _handleNotification)
-        ..on("maintenance-reminder", _handleMaintenanceReminder);
+      debugPrint("📢 Socket changed: previous=${previous != null}, next=${next != null}");
+      if (previous != null) {
+        previous.off("notification", _handleNotification);
+        previous.off("maintenance-reminder", _handleMaintenanceReminder);
+      }
+      if (next != null) {
+        _setupSocketListeners(next);
+      }
     });
+  }
+  
+  void _setupSocketListeners(sio.Socket socket) {
+    debugPrint("📢 Setting up socket listeners for notifications");
+    socket.on("notification", _handleNotification);
+    socket.on("maintenance-reminder", _handleMaintenanceReminder);
   }
 
   void _handleNotification(dynamic data) {

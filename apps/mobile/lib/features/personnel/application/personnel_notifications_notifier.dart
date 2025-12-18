@@ -44,14 +44,22 @@ final personnelNotificationsProvider =
 class PersonnelNotificationsNotifier
     extends StateNotifier<List<PersonnelNotification>> {
   PersonnelNotificationsNotifier(this.ref) : super([]) {
+    debugPrint("📢 PersonnelNotificationsNotifier: initialized");
     _listenRealtime();
   }
 
   final Ref ref;
 
   void _listenRealtime() {
+    // Get current socket and setup listeners immediately
+    final currentSocket = ref.read(socketClientProvider);
+    if (currentSocket != null) {
+      _setupSocketListeners(currentSocket);
+    }
+    
     // Watch socket provider and setup listener when socket is available
     ref.listen<sio.Socket?>(socketClientProvider, (previous, next) {
+      debugPrint("📢 Socket changed: previous=${previous != null}, next=${next != null}");
       // Remove listener from previous socket
       if (previous != null) {
         previous.off("notification", _handleNotification);
@@ -61,20 +69,24 @@ class PersonnelNotificationsNotifier
       }
 
       if (next != null) {
-        debugPrint("🔔 Setting up notification listener for socket");
-        // Setup listeners
-        next.on("notification", _handleNotification);
-        next.on("connect", _onSocketConnect);
-        next.on("disconnect", _onSocketDisconnect);
-
-        // If socket is already connected, log it
-        if (next.connected) {
-          debugPrint("✅ Notification listener: Socket already connected");
-        }
+        _setupSocketListeners(next);
       } else {
         debugPrint("⚠️ Notification listener: Socket is null");
       }
     });
+  }
+  
+  void _setupSocketListeners(sio.Socket socket) {
+    debugPrint("🔔 Setting up notification listener for socket");
+    // Setup listeners
+    socket.on("notification", _handleNotification);
+    socket.on("connect", _onSocketConnect);
+    socket.on("disconnect", _onSocketDisconnect);
+
+    // If socket is already connected, log it
+    if (socket.connected) {
+      debugPrint("✅ Notification listener: Socket already connected");
+    }
   }
 
   void _onSocketConnect(_) {
