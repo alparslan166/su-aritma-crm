@@ -6,23 +6,21 @@ import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
 import { registerMaintenanceQueue } from "@/queues/maintenance.queue";
+import { fcmAdminService } from "@/modules/notifications/fcm-admin.service";
+
+logger.info("🔥 Checking Firebase Admin SDK status...");
 
 const app = createApp();
 const server = createServer(app);
 
 realtimeGateway.initialize(server);
 
-// Initialize Firebase Admin SDK for push notifications
-try {
-  // Dynamic import to catch any errors during module loading
-  const { fcmAdminService } = require("@/modules/notifications/fcm-admin.service");
-  if (fcmAdminService.initialized) {
-    logger.info("✅ Firebase Admin SDK ready for push notifications");
-  } else {
-    logger.warn("⚠️ Firebase Admin SDK not initialized - push notifications will be disabled");
-  }
-} catch (error) {
-  logger.error("❌ Failed to load FCM Admin Service:", error);
+// Log Firebase Admin SDK status
+logger.info(`🔥 Firebase initialized: ${fcmAdminService.initialized}`);
+if (fcmAdminService.initialized) {
+  logger.info("✅ Firebase Admin SDK ready for push notifications");
+} else {
+  logger.warn("⚠️ Firebase Admin SDK not initialized - push notifications will be disabled");
 }
 
 const start = async () => {
