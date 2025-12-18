@@ -539,23 +539,27 @@ class _DeliverySheet extends HookConsumerWidget {
                           final uploadUrl =
                               presignedResponse.data["data"]["uploadUrl"]
                                   as String;
+                          final photoKey =
+                              presignedResponse.data["data"]["key"] as String;
 
                           // Upload to S3 using presigned URL
                           final uploadClient = Dio();
                           await uploadClient.put(
                             uploadUrl,
-                            data: Stream.fromIterable([bytes]),
+                            data: bytes,
                             options: Options(
                               headers: {"Content-Type": contentType},
                               contentType: contentType,
+                              validateStatus: (status) => status != null && status < 600,
                             ),
                           );
 
-                          // Use presigned URL as the photo URL (it's valid for 5 minutes, enough for upload)
-                          // In production, you'd want to get the public URL after upload
-                          photoUrls.add(uploadUrl);
+                          // Save the S3 key (not presigned URL) for permanent storage
+                          photoUrls.add(photoKey);
+                          debugPrint("📸 Photo uploaded: $photoKey");
                         }
                       } catch (error) {
+                        debugPrint("❌ Photo upload error: $error");
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(

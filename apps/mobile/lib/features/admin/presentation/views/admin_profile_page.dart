@@ -111,30 +111,33 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
 
     try {
       final client = ref.read(apiClientProvider);
-      // Get presigned URL
+      // Get presigned URL from /media/sign endpoint
       final presignedResponse = await client.post(
-        "/media/presigned-url",
+        "/media/sign",
         data: {
-          "fileName": "logo_${DateTime.now().millisecondsSinceEpoch}.jpg",
           "contentType": "image/jpeg",
+          "prefix": "admin-logos",
         },
       );
 
       final uploadUrl = presignedResponse.data["data"]["uploadUrl"] as String;
       final key = presignedResponse.data["data"]["key"] as String;
 
-      // Upload to S3
-      await client.put(
+      // Upload to S3 using a separate Dio instance (without interceptors)
+      final uploadClient = Dio();
+      await uploadClient.put(
         uploadUrl,
         data: _selectedLogoBytes,
         options: Options(
           headers: {"Content-Type": "image/jpeg"},
+          contentType: "image/jpeg",
           validateStatus: (status) => status != null && status < 600,
         ),
       );
 
       return key;
     } catch (e) {
+      debugPrint("Logo upload error: $e");
       if (mounted) {
         ScaffoldMessenger.of(
           context,
