@@ -9,6 +9,7 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:intl/intl.dart";
 import "package:latlong2/latlong.dart";
 import "package:mobile/core/constants/app_config.dart";
+import "package:mobile/core/realtime/socket_client.dart";
 import "package:mobile/widgets/admin_app_bar.dart";
 import "package:mobile/widgets/empty_state.dart";
 
@@ -47,12 +48,18 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
   bool _isSheetExpanded = false; // Sheet'in açık/kapalı durumu
   bool _isToggling = false; // Toggle işlemi devam ediyor mu?
   LatLng? _userLocation; // Kullanıcının konumu
+  
+  // Personel canlı konum takibi
+  final Map<String, LatLng> _livePersonnelLocations = {};
+  final Map<String, DateTime> _livePersonnelTimestamps = {};
 
   @override
   void initState() {
     super.initState();
     // Kullanıcının konumunu al
     _getUserLocation();
+    // Socket dinleyicisini kur (personel canlı konum takibi)
+    _setupRealtimeListener();
     // Initialize customer and personnel lists when map view is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -68,6 +75,55 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
         });
       }
     });
+  }
+
+  void _setupRealtimeListener() {
+    // Listen to Socket.IO for real-time personnel location updates
+    final socket = ref.read(socketClientProvider);
+    if (socket != null) {
+      socket.on("personnel-location-update", _handlePersonnelLocationUpdate);
+      debugPrint("📍 Map: Socket listener set up for personnel location updates");
+    }
+
+    // Also listen to socket provider changes
+    ref.listenManual(socketClientProvider, (previous, next) {
+      if (previous != null) {
+        previous.off("personnel-location-update", _handlePersonnelLocationUpdate);
+      }
+      if (next != null) {
+        next.on("personnel-location-update", _handlePersonnelLocationUpdate);
+        debugPrint("📍 Map: Socket listener updated for personnel location updates");
+      }
+    });
+  }
+
+  void _handlePersonnelLocationUpdate(dynamic data) {
+    if (!mounted) return;
+    
+    try {
+      final personnelId = data["personnelId"] as String?;
+      final lat = (data["lat"] as num?)?.toDouble();
+      final lng = (data["lng"] as num?)?.toDouble();
+      final timestampStr = data["timestamp"] as String?;
+
+      if (personnelId == null || lat == null || lng == null) {
+        debugPrint("⚠️ Map: Invalid location update data: $data");
+        return;
+      }
+
+      debugPrint("📍 Map: Real-time location update for $personnelId: $lat, $lng");
+
+      setState(() {
+        _livePersonnelLocations[personnelId] = LatLng(lat, lng);
+        if (timestampStr != null) {
+          _livePersonnelTimestamps[personnelId] = DateTime.parse(timestampStr);
+        } else {
+          _livePersonnelTimestamps[personnelId] = DateTime.now();
+        }
+      });
+    } catch (e) {
+      debugPrint("❌ Map: Error parsing location update: $e");
+    }
   }
 
   Future<void> _getUserLocation() async {
@@ -233,6 +289,11 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
 
   @override
   void dispose() {
+    // Remove socket listener
+    final socket = ref.read(socketClientProvider);
+    if (socket != null) {
+      socket.off("personnel-location-update", _handlePersonnelLocationUpdate);
+    }
     _sheetController.dispose();
     super.dispose();
   }
@@ -283,9 +344,10 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
       return c.location != null || _resolvedLocations.containsKey(c.id);
     }).toList();
 
-    // Get all personnel with location
+    // Get all personnel with location (canlı konum veya son bilinen konum)
     final personnelWithLocation = personnel
-        .where((p) => p.canShareLocation && p.lastKnownLocation != null)
+        .where((p) => p.canShareLocation && 
+            (_livePersonnelLocations.containsKey(p.id) || p.lastKnownLocation != null))
         .toList();
 
     // Apply filter
@@ -314,14 +376,28 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
         );
       }).whereType<Marker>(),
       ...visiblePersonnel.map((person) {
-        final location = person.lastKnownLocation!;
+        // Öncelik: Canlı konum > Son bilinen konum
+        final liveLocation = _livePersonnelLocations[person.id];
+        final lastKnown = person.lastKnownLocation;
+        final location = liveLocation ?? 
+            (lastKnown != null ? LatLng(lastKnown.lat, lastKnown.lng) : null);
+        
+        if (location == null) return null;
+        
+        final isLive = liveLocation != null;
+        final timestamp = isLive 
+            ? _livePersonnelTimestamps[person.id] 
+            : lastKnown?.timestamp;
+        
         return _personnelMarker(
           context,
           person,
-          LatLng(location.lat, location.lng),
+          location,
           () => _showPersonnelInfoSheet(context, person),
+          isLive: isLive,
+          timestamp: timestamp,
         );
-      }),
+      }).whereType<Marker>(),
     ];
 
     // Always show map with default center (user location or Istanbul) if no data
@@ -617,19 +693,64 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                                     ),
                                     const SizedBox(height: 8),
                                     ...visiblePersonnel.map((person) {
-                                      final location =
-                                          person.lastKnownLocation!;
-                                      final subtitle =
-                                          location.timestamp != null
-                                          ? "Son konum: ${location.timestamp!.toLocal()}"
-                                          : "Son konum zamanı bilinmiyor";
+                                      // Canlı konum kontrolü
+                                      final liveLocation = _livePersonnelLocations[person.id];
+                                      final isLive = liveLocation != null;
+                                      final timestamp = isLive 
+                                          ? _livePersonnelTimestamps[person.id]
+                                          : person.lastKnownLocation?.timestamp;
+                                      
+                                      String subtitle;
+                                      if (timestamp != null) {
+                                        final diff = DateTime.now().difference(timestamp);
+                                        if (diff.inMinutes < 1) {
+                                          subtitle = "Şimdi";
+                                        } else if (diff.inMinutes < 60) {
+                                          subtitle = "${diff.inMinutes} dk önce";
+                                        } else {
+                                          subtitle = DateFormat("dd MMM HH:mm").format(timestamp.toLocal());
+                                        }
+                                      } else {
+                                        subtitle = "Konum zamanı bilinmiyor";
+                                      }
+                                      
                                       return ListTile(
                                         contentPadding: EdgeInsets.zero,
-                                        leading: const Icon(
+                                        leading: Icon(
                                           Icons.person_pin_circle,
-                                          color: Color(0xFF2563EB),
+                                          color: isLive 
+                                              ? const Color(0xFF10B981) 
+                                              : const Color(0xFF2563EB),
                                         ),
-                                        title: Text(person.name),
+                                        title: Row(
+                                          children: [
+                                            Flexible(child: Text(person.name)),
+                                            if (isLive) ...[
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 6,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  border: Border.all(
+                                                    color: const Color(0xFF10B981),
+                                                  ),
+                                                ),
+                                                child: const Text(
+                                                  "CANLI",
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF10B981),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
                                         subtitle: Text(subtitle),
                                         onTap: () =>
                                             _focusOnPersonnelLocation(person),
@@ -804,10 +925,18 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
   }
 
   void _focusOnPersonnelLocation(Personnel personnel) {
-    // Personel konumunu bul
-    final location = personnel.lastKnownLocation;
-    if (location != null) {
-      final latLng = LatLng(location.lat, location.lng);
+    // Personel konumunu bul - öncelik: canlı konum > son bilinen konum
+    final liveLocation = _livePersonnelLocations[personnel.id];
+    final lastKnown = personnel.lastKnownLocation;
+    
+    LatLng? latLng;
+    if (liveLocation != null) {
+      latLng = liveLocation;
+    } else if (lastKnown != null) {
+      latLng = LatLng(lastKnown.lat, lastKnown.lng);
+    }
+    
+    if (latLng != null) {
       // Haritayı personel konumuna odakla
       _mapController.move(latLng, 15.0);
       // Sheet'i küçült
@@ -1116,34 +1245,104 @@ Marker _personnelMarker(
   BuildContext context,
   Personnel person,
   LatLng location,
-  VoidCallback onTap,
-) {
+  VoidCallback onTap, {
+  bool isLive = false,
+  DateTime? timestamp,
+}) {
   return Marker(
     point: location,
-    width: 40,
-    height: 40,
+    width: isLive ? 56 : 40,
+    height: isLive ? 56 : 40,
     child: GestureDetector(
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Canlı konum göstergesi (pulsing ring)
+          if (isLive)
+            _LiveLocationIndicator(size: 56),
+          // Avatar
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isLive ? const Color(0xFF10B981) : Colors.white, 
+                width: isLive ? 3 : 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: isLive 
+                      ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                      : Colors.black.withValues(alpha: 0.3),
+                  blurRadius: isLive ? 8 : 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: _PersonnelAvatar(
-          photoUrl: person.photoUrl,
-          name: person.name,
-          size: 36,
-        ),
+            child: _PersonnelAvatar(
+              photoUrl: person.photoUrl,
+              name: person.name,
+              size: 34,
+            ),
+          ),
+        ],
       ),
     ),
   );
+}
+
+// Canlı konum göstergesi - pulsing animation
+class _LiveLocationIndicator extends StatefulWidget {
+  const _LiveLocationIndicator({required this.size});
+  final double size;
+
+  @override
+  State<_LiveLocationIndicator> createState() => _LiveLocationIndicatorState();
+}
+
+class _LiveLocationIndicatorState extends State<_LiveLocationIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat();
+    _animation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Container(
+          width: widget.size * _animation.value,
+          height: widget.size * _animation.value,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0xFF10B981).withValues(
+              alpha: 0.3 * (1 - _animation.value + 0.4),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _PersonnelAvatar extends StatelessWidget {
