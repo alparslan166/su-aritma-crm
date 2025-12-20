@@ -2,6 +2,7 @@ import { fcmService } from "./fcm.service";
 import { fcmAdminService } from "./fcm-admin.service";
 import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
 import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/prisma";
 
 type NotificationPayload = {
   title: string;
@@ -31,12 +32,64 @@ export class NotificationService {
   }
 
   /**
+   * Helper method to save notification to database and emit via Socket.IO
+   */
+  private async saveAndEmitNotification(
+    adminId: string,
+    targetRole: "admin" | "personnel",
+    targetUserId: string,
+    type: string,
+    payload: NotificationPayload,
+    jobId?: string,
+  ) {
+    try {
+      // Save to database
+      const notification = await prisma.notification.create({
+        data: {
+          adminId,
+          jobId: jobId || null,
+          targetRole,
+          type,
+          payload: {
+            title: payload.title,
+            body: payload.body,
+            ...payload.data,
+          },
+        },
+      });
+
+      logger.info(`✅ Notification saved to DB: ${notification.id}`);
+
+      // Emit via Socket.IO
+      const socketPayload = {
+        id: notification.id,
+        title: payload.title,
+        body: payload.body,
+        type,
+        receivedAt: notification.createdAt.toISOString(),
+        meta: payload.data || {},
+      };
+
+      if (targetRole === "admin") {
+        realtimeGateway.emitToAdmin(adminId, "notification", socketPayload);
+      } else {
+        realtimeGateway.emitToPersonnel(targetUserId, "notification", socketPayload);
+      }
+
+      logger.info(`✅ Notification emitted via Socket.IO to ${targetRole}:${targetUserId}`);
+    } catch (error) {
+      logger.error("❌ Failed to save/emit notification:", error);
+      // Don't throw - notification should still be sent via FCM even if DB/Socket fails
+    }
+  }
+
+  /**
    * Send notification when job is assigned to personnel
    */
   async sendJobAssignedToEmployee(personnelId: string, jobId: string, jobTitle: string) {
     const payload: NotificationPayload = {
       title: "Yeni İş Atandı",
-      body: `${jobTitle} işi size atandı`,
+      body: `"${jobTitle}" başlıklı yeni bir iş size atandı.`,
       data: {
         type: "job_assigned",
         jobId,
@@ -45,8 +98,29 @@ export class NotificationService {
       },
     };
 
+    // Get adminId from personnel
+    const personnel = await prisma.personnel.findUnique({
+      where: { id: personnelId },
+      select: { adminId: true },
+    });
+
+    if (!personnel) {
+      logger.error(`❌ Personnel not found: ${personnelId}`);
+      return;
+    }
+
     const service = this.getFCMService();
     await service.sendToUser(personnelId, "personnel", payload);
+
+    // Save to DB and emit via Socket.IO
+    await this.saveAndEmitNotification(
+      personnel.adminId,
+      "personnel",
+      personnelId,
+      "job_assigned",
+      payload,
+      jobId,
+    );
   }
 
   /**
@@ -61,7 +135,7 @@ export class NotificationService {
   ) {
     const payload: NotificationPayload = {
       title: "İş Başlatıldı",
-      body: `${personnelName} "${jobTitle}" işine başladı`,
+      body: `${personnelName}, "${jobTitle}" işine başladı.`,
       data: {
         type: "job_started",
         jobId,
@@ -74,6 +148,16 @@ export class NotificationService {
 
     const service = this.getFCMService();
     await service.sendToUser(adminId, "admin", payload);
+
+    // Save to DB and emit via Socket.IO
+    await this.saveAndEmitNotification(
+      adminId,
+      "admin",
+      adminId,
+      "job_started",
+      payload,
+      jobId,
+    );
   }
 
   /**
@@ -88,7 +172,7 @@ export class NotificationService {
   ) {
     const payload: NotificationPayload = {
       title: "İş Tamamlandı",
-      body: `${personnelName} "${jobTitle}" işini tamamladı`,
+      body: `${personnelName}, "${jobTitle}" işini başarıyla tamamladı.`,
       data: {
         type: "job_completed",
         jobId,
@@ -101,6 +185,16 @@ export class NotificationService {
 
     const service = this.getFCMService();
     await service.sendToUser(adminId, "admin", payload);
+
+    // Save to DB and emit via Socket.IO
+    await this.saveAndEmitNotification(
+      adminId,
+      "admin",
+      adminId,
+      "job_completed",
+      payload,
+      jobId,
+    );
   }
 
   /**
@@ -115,7 +209,7 @@ export class NotificationService {
   ) {
     const payload: NotificationPayload = {
       title: "Yeni Müşteri Eklendi",
-      body: `${personnelName} "${customerName}" adlı yeni bir müşteri ekledi`,
+      body: `${personnelName}, "${customerName}" adlı yeni bir müşteri kaydı oluşturdu.`,
       data: {
         type: "customer_created",
         customerId,
@@ -128,6 +222,15 @@ export class NotificationService {
 
     const service = this.getFCMService();
     await service.sendToUser(adminId, "admin", payload);
+
+    // Save to DB and emit via Socket.IO
+    await this.saveAndEmitNotification(
+      adminId,
+      "admin",
+      adminId,
+      "customer_created",
+      payload,
+    );
   }
 }
 

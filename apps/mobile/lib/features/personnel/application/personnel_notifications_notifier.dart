@@ -3,6 +3,7 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 import "package:socket_io_client/socket_io_client.dart" as sio;
 
 import "../../../core/realtime/socket_client.dart";
+import "../data/personnel_repository.dart";
 
 class PersonnelNotification {
   PersonnelNotification({
@@ -22,15 +23,42 @@ class PersonnelNotification {
   final String? jobId;
 
   factory PersonnelNotification.fromJson(Map<String, dynamic> json) {
+    // Support both API format and Socket.IO format
+    final id = json["id"] as String? ?? "";
+    final title = json["title"] as String? ?? "Bildirim";
+    final body = json["body"] as String? ?? "";
+    final type = json["type"] as String? ?? "job";
+    
+    // receivedAt can come from API or Socket.IO
+    DateTime receivedAt;
+    if (json["receivedAt"] != null) {
+      try {
+        receivedAt = DateTime.parse(json["receivedAt"] as String);
+      } catch (_) {
+        receivedAt = DateTime.now();
+      }
+    } else {
+      receivedAt = DateTime.now();
+    }
+
+    // jobId can be in meta/data or directly in json
+    String? jobId = json["jobId"] as String?;
+    if (jobId == null && json["meta"] is Map<String, dynamic>) {
+      final meta = json["meta"] as Map<String, dynamic>;
+      jobId = meta["jobId"] as String?;
+    }
+    if (jobId == null && json["data"] is Map<String, dynamic>) {
+      final data = json["data"] as Map<String, dynamic>;
+      jobId = data["jobId"] as String?;
+    }
+
     return PersonnelNotification(
-      id: json["id"] as String? ?? "",
-      title: json["title"] as String? ?? "",
-      body: json["body"] as String? ?? "",
-      type: json["type"] as String? ?? "job",
-      receivedAt: json["receivedAt"] != null
-          ? DateTime.parse(json["receivedAt"] as String)
-          : DateTime.now(),
-      jobId: json["jobId"] as String?,
+      id: id,
+      title: title,
+      body: body,
+      type: type,
+      receivedAt: receivedAt,
+      jobId: jobId,
     );
   }
 }
@@ -45,10 +73,31 @@ class PersonnelNotificationsNotifier
     extends StateNotifier<List<PersonnelNotification>> {
   PersonnelNotificationsNotifier(this.ref) : super([]) {
     debugPrint("📢 PersonnelNotificationsNotifier: initialized");
+    _loadNotifications();
     _listenRealtime();
   }
 
   final Ref ref;
+
+  Future<void> _loadNotifications() async {
+    try {
+      debugPrint("📢 Loading personnel notifications from API...");
+      final repository = ref.read(personnelRepositoryProvider);
+      final notifications = await repository.fetchNotifications();
+      final formatted = notifications
+          .map((n) => PersonnelNotification.fromJson(n))
+          .toList();
+      state = formatted;
+      debugPrint("📢 Loaded ${formatted.length} personnel notifications from API");
+    } catch (e) {
+      debugPrint("❌ Failed to load personnel notifications: $e");
+      // Don't set state on error - keep existing notifications
+    }
+  }
+
+  Future<void> refresh() async {
+    await _loadNotifications();
+  }
 
   void _listenRealtime() {
     // Get current socket and setup listeners immediately
@@ -143,7 +192,7 @@ class PersonnelNotificationsNotifier
       debugPrint(
         "✅ Added notification: ${notification.title} - ${notification.body}",
       );
-      state = [notification, ...state];
+      _addNotification(notification);
     } catch (error, stackTrace) {
       debugPrint("❌ Failed to handle notification: $error");
       debugPrint("Stack trace: $stackTrace");
@@ -151,8 +200,27 @@ class PersonnelNotificationsNotifier
     }
   }
 
+  void _addNotification(PersonnelNotification notification) {
+    // Check if notification already exists (avoid duplicates)
+    final exists = state.any((n) => n.id == notification.id);
+    if (exists) {
+      debugPrint("📢 Notification already exists, skipping: ${notification.id}");
+      return;
+    }
+    final updated = [notification, ...state];
+    // Keep last 200 notifications (increased for persistence)
+    state = updated.take(200).toList();
+  }
+
+  /// Public method to add notification (for push notifications)
+  void addNotification(PersonnelNotification notification) {
+    _addNotification(notification);
+  }
+
   void clear() {
-    state = [];
+    // Don't clear - notifications should persist
+    // Instead, just refresh from API
+    refresh();
   }
 
   void remove(String id) {

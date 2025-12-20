@@ -79,4 +79,12 @@ class PersonnelRepository {
     }
     await _client.post("/personnel/location", data: data);
   }
+
+  Future<List<Map<String, dynamic>>> fetchNotifications() async {
+    final response = await _client.get("/notifications");
+    final items = response.data["data"] as List<dynamic>? ?? [];
+    return items
+        .map((e) => Map<String, dynamic>.from(e as Map<String, dynamic>))
+        .toList();
+  }
 }

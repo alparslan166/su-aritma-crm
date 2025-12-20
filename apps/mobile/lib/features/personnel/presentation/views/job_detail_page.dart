@@ -243,9 +243,24 @@ class _ActionButtons extends HookConsumerWidget {
         ref.invalidate(upcomingMaintenanceProvider);
 
         if (context.mounted && mounted()) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text("İş teslim edildi")));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "İş başarıyla teslim edildi!",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
         }
       } catch (error) {
         if (context.mounted && mounted()) {

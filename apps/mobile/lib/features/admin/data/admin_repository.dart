@@ -829,6 +829,14 @@ class AdminRepository {
     return response.data["data"] as Map<String, dynamic>;
   }
 
+  Future<List<Map<String, dynamic>>> fetchNotifications() async {
+    final response = await _client.get("/notifications");
+    final items = response.data["data"] as List<dynamic>? ?? [];
+    return items
+        .map((e) => Map<String, dynamic>.from(e as Map<String, dynamic>))
+        .toList();
+  }
+
   // Helper function to write bytes to file (only works on non-Web platforms)
   /// Generate invoice PDF - opens directly from URL, never saves to device
   Future<String> generateInvoicePdf(String jobId) async {

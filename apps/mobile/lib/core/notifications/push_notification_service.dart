@@ -7,8 +7,11 @@ import "package:flutter_local_notifications/flutter_local_notifications.dart";
 import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
+import "../../features/admin/application/admin_notifications_notifier.dart";
+import "../../features/personnel/application/personnel_notifications_notifier.dart";
 import "../../routing/app_router.dart";
 import "../network/api_client.dart";
+import "../session/session_provider.dart";
 
 // Background message handler (must be top-level function)
 @pragma("vm:entry-point")
@@ -23,14 +26,16 @@ final pushNotificationServiceProvider = Provider<PushNotificationService>((
   return PushNotificationService(
     ref.read(apiClientProvider),
     ref.read(appRouterProvider),
+    ref,
   );
 });
 
 class PushNotificationService {
-  PushNotificationService(this._client, this._router);
+  PushNotificationService(this._client, this._router, this._ref);
 
   final dynamic _client;
   final GoRouter _router;
+  final Ref _ref;
   FirebaseMessaging? _messaging;
   FlutterLocalNotificationsPlugin? _localNotifications;
 
@@ -95,6 +100,7 @@ class PushNotificationService {
         // Setup foreground message handler
         FirebaseMessaging.onMessage.listen((RemoteMessage message) {
           debugPrint("Foreground message received: ${message.messageId}");
+          _addNotificationToPanel(message);
           _showLocalNotification(message);
         });
 
@@ -199,6 +205,49 @@ class PushNotificationService {
       debugPrint("Unsubscribed from topic: $topic");
     } catch (e) {
       debugPrint("Topic unsubscription error: $e");
+    }
+  }
+
+  void _addNotificationToPanel(RemoteMessage message) {
+    try {
+      // Get current session to determine role
+      final session = _ref.read(authSessionProvider);
+      if (session == null) return;
+
+      final title =
+          message.notification?.title ??
+          message.data["title"] as String? ??
+          "Bildirim";
+      final body =
+          message.notification?.body ?? message.data["body"] as String? ?? "";
+      final type = message.data["type"] as String? ?? "general";
+      final jobId = message.data["jobId"] as String?;
+      final customerId = message.data["customerId"] as String?;
+
+      final notificationData = <String, dynamic>{
+        "id":
+            message.messageId ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
+        "title": title,
+        "body": body,
+        "type": type,
+        "receivedAt": DateTime.now().toIso8601String(),
+        if (jobId != null) "jobId": jobId,
+        if (customerId != null) "customerId": customerId,
+        ...message.data,
+      };
+
+      if (session.role.name == "admin") {
+        final notifier = _ref.read(adminNotificationsProvider.notifier);
+        final notification = AdminNotification.fromJson(notificationData);
+        notifier.addNotification(notification);
+      } else if (session.role.name == "personnel") {
+        final notifier = _ref.read(personnelNotificationsProvider.notifier);
+        final notification = PersonnelNotification.fromJson(notificationData);
+        notifier.addNotification(notification);
+      }
+    } catch (e) {
+      debugPrint("❌ Failed to add notification to panel: $e");
     }
   }
 

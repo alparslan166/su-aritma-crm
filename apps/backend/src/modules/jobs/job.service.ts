@@ -12,6 +12,7 @@ import {
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/middleware/error-handler";
+import { mediaService } from "@/modules/media/media.service";
 import { notificationService } from "@/modules/notifications/notification.service";
 import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
 
@@ -730,6 +731,25 @@ class JobService {
         }
       }
 
+      // Transform photo S3 keys to long-lived URLs and save to database
+      // Long-lived URLs (7 days) are stored in DB and auto-refreshed when needed
+      let photoUrls: string[] = [];
+      if (payload.photoUrls && payload.photoUrls.length > 0) {
+        logger.debug(`📸 Transforming ${payload.photoUrls.length} photo keys to long-lived URLs`);
+        const urlPromises = payload.photoUrls.map(async (key) => {
+          // Use longLived=true to get 7-day presigned URLs or S3_MEDIA_BASE_URL
+          const url = await mediaService.getMediaUrl(key, true);
+          if (url) {
+            logger.debug(`📸 Key "${key}" -> URL: ${url.substring(0, 100)}...`);
+            return url;
+          }
+          logger.warn(`⚠️ Failed to get URL for key: ${key}`);
+          return null;
+        });
+        photoUrls = (await Promise.all(urlPromises)).filter((url): url is string => url !== null);
+        logger.debug(`✅ Transformed ${photoUrls.length} valid URLs out of ${payload.photoUrls.length} keys`);
+      }
+
       await tx.job.update({
         where: { id: jobId },
         data: {
@@ -738,7 +758,7 @@ class JobService {
             : undefined,
           paymentStatus: paymentStatus,
           deliveryNote: payload.note,
-          deliveryMediaUrls: (payload.photoUrls ?? []) as Prisma.InputJsonValue,
+          deliveryMediaUrls: photoUrls.length > 0 ? (photoUrls as Prisma.InputJsonValue) : null,
           maintenanceDueAt: maintenanceDate ?? assignment.job.maintenanceDueAt,
           nextMaintenanceIntervalMonths: payload.maintenanceIntervalMonths,
           deliveredAt: now, // Personel teslim ettiği andaki saat

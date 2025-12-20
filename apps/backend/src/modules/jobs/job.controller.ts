@@ -8,22 +8,52 @@ import { mediaService } from "@/modules/media/media.service";
 
 import { jobService } from "./job.service";
 
-// Helper function to transform deliveryMediaUrls from S3 keys to full URLs
+// Helper function to transform deliveryMediaUrls - now URLs should already be in DB, but handle legacy S3 keys
 async function transformJobMediaUrls<T extends { deliveryMediaUrls?: unknown }>(job: T): Promise<T> {
   if (!job) return job;
   
-  const mediaUrls = job.deliveryMediaUrls as string[] | null | undefined;
-  if (!mediaUrls || !Array.isArray(mediaUrls) || mediaUrls.length === 0) {
+  // Handle Prisma JsonValue type - can be string, number, boolean, object, array, or null
+  let mediaUrls: string[] | null | undefined;
+  
+  const rawUrls = job.deliveryMediaUrls;
+  if (rawUrls === null || rawUrls === undefined) {
+    return job;
+  }
+  
+  // If it's already an array, use it directly
+  if (Array.isArray(rawUrls)) {
+    mediaUrls = rawUrls.filter((item): item is string => typeof item === "string");
+  } else if (typeof rawUrls === "string") {
+    // If it's a single string, wrap it in an array
+    mediaUrls = [rawUrls];
+  } else {
+    // Skip if it's not a valid format
+    return job;
+  }
+  
+  if (!mediaUrls || mediaUrls.length === 0) {
     return job;
   }
 
+  // Check if URLs are already full URLs (start with http/https) or still S3 keys
+  // If they're already URLs, check if expired and refresh if needed. Otherwise transform S3 keys.
   const transformedUrls = await Promise.all(
-    mediaUrls.map((key) => mediaService.getMediaUrl(key))
+    mediaUrls.map(async (key) => {
+      // If already a URL, check if expired and refresh if needed
+      if (key.startsWith("http://") || key.startsWith("https://")) {
+        // getMediaUrl will automatically refresh expired URLs if longLived=true
+        return await mediaService.getMediaUrl(key, true);
+      }
+      // Otherwise transform from S3 key to URL (long-lived)
+      return await mediaService.getMediaUrl(key, true);
+    })
   );
 
+  const validUrls = transformedUrls.filter((url): url is string => url !== null);
+  
   return {
     ...job,
-    deliveryMediaUrls: transformedUrls.filter((url): url is string => url !== null),
+    deliveryMediaUrls: validUrls.length > 0 ? validUrls : undefined,
   };
 }
 

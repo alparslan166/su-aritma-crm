@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
 import { getAdminId, getPersonnelId } from "@/lib/tenant";
+import { prisma } from "@/lib/prisma";
 import { notificationService } from "./notification.service";
 import { fcmService } from "./fcm.service";
 import { fcmAdminService } from "./fcm-admin.service";
@@ -97,6 +98,140 @@ export const unregisterTokenHandler = async (req: Request, res: Response, next: 
     }
 
     res.json({ success: true, message: "Token unregistered successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const listNotificationsHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Get user role and ID
+    let adminId: string | undefined;
+    let personnelId: string | undefined;
+    let targetRole: "admin" | "personnel" | undefined;
+    let userId: string | undefined;
+
+    try {
+      adminId = getAdminId(req);
+      targetRole = "admin";
+      userId = adminId;
+    } catch {
+      try {
+        personnelId = getPersonnelId(req);
+        targetRole = "personnel";
+        userId = personnelId;
+        
+        // Get adminId from personnel
+        const personnel = await prisma.personnel.findUnique({
+          where: { id: personnelId },
+          select: { adminId: true },
+        });
+        if (personnel) {
+          adminId = personnel.adminId;
+        }
+      } catch {
+        return res.status(401).json({
+          success: false,
+          error: "Authentication required",
+        });
+      }
+    }
+
+    if (!adminId || !targetRole) {
+      return res.status(401).json({
+        success: false,
+        error: "User identification required",
+      });
+    }
+
+    // Fetch notifications for this admin/role
+    const notifications = await prisma.notification.findMany({
+      where: {
+        adminId,
+        targetRole,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 100, // Limit to last 100 notifications
+    });
+
+    // Transform notifications to match mobile app format
+    const formattedNotifications = notifications.map((n) => {
+      const payload = n.payload as Record<string, unknown>;
+      return {
+        id: n.id,
+        title: payload.title as string,
+        body: payload.body as string,
+        type: n.type,
+        receivedAt: n.createdAt.toISOString(),
+        readAt: n.readAt?.toISOString() || null,
+        meta: {
+          ...payload,
+          // Remove title/body from meta as they're already top-level
+          title: undefined,
+          body: undefined,
+        },
+      };
+    });
+
+    res.json({ success: true, data: formattedNotifications });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const markNotificationReadHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const notificationId = req.params.id;
+
+    // Verify user has access to this notification
+    let adminId: string | undefined;
+    let personnelId: string | undefined;
+
+    try {
+      adminId = getAdminId(req);
+    } catch {
+      try {
+        personnelId = getPersonnelId(req);
+        const personnel = await prisma.personnel.findUnique({
+          where: { id: personnelId },
+          select: { adminId: true },
+        });
+        if (personnel) {
+          adminId = personnel.adminId;
+        }
+      } catch {
+        return res.status(401).json({
+          success: false,
+          error: "Authentication required",
+        });
+      }
+    }
+
+    if (!adminId) {
+      return res.status(401).json({
+        success: false,
+        error: "User identification required",
+      });
+    }
+
+    // Mark as read
+    await prisma.notification.updateMany({
+      where: {
+        id: notificationId,
+        adminId, // Ensure user owns this notification
+      },
+      data: {
+        readAt: new Date(),
+      },
+    });
+
+    res.json({ success: true });
   } catch (error) {
     next(error);
   }
