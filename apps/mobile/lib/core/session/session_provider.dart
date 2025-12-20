@@ -1,6 +1,13 @@
+import "dart:convert";
+
+import "package:flutter/foundation.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
+import "package:shared_preferences/shared_preferences.dart";
 
 import "../../features/auth/domain/auth_role.dart";
+
+const _sessionKey = "auth_session";
+const _rememberKey = "remember_device";
 
 class AuthSession {
   AuthSession({required this.role, required this.identifier});
@@ -29,21 +36,62 @@ final authSessionProvider =
 
 class AuthSessionNotifier extends StateNotifier<AuthSession?> {
   AuthSessionNotifier() : super(null) {
-    // No persistent storage - session only in memory
-    // All data should be stored in database, not on device
+    // Load saved session on initialization
+    _loadSavedSession();
   }
 
-  /// Set session - stored only in memory (no device storage)
-  /// "remember" parameter is kept for API compatibility but has no effect
-  /// Session will be lost when app is closed or uninstalled
+  Future<void> _loadSavedSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final remembered = prefs.getBool(_rememberKey) ?? false;
+      
+      if (remembered) {
+        final sessionJson = prefs.getString(_sessionKey);
+        if (sessionJson != null) {
+          final sessionData = jsonDecode(sessionJson) as Map<String, dynamic>;
+          state = AuthSession.fromJson(sessionData);
+          debugPrint("✅ Session restored from storage");
+        }
+      }
+    } catch (e) {
+      debugPrint("❌ Failed to load saved session: $e");
+    }
+  }
+
+  /// Set session - if remember is true, saves to device storage
   Future<void> setSession(AuthSession? session, {bool remember = false}) async {
-    // Store session only in memory - no device storage
-    // All authentication data should come from database
     state = session;
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      if (session != null && remember) {
+        // Save session to device storage
+        await prefs.setString(_sessionKey, jsonEncode(session.toJson()));
+        await prefs.setBool(_rememberKey, true);
+        debugPrint("✅ Session saved to storage (remember=true)");
+      } else {
+        // Clear saved session if not remembering
+        await prefs.remove(_sessionKey);
+        await prefs.setBool(_rememberKey, false);
+        debugPrint("🔄 Session not saved (remember=false)");
+      }
+    } catch (e) {
+      debugPrint("❌ Failed to save session: $e");
+    }
   }
 
-  /// Clear session from memory
+  /// Clear session from memory and storage
   Future<void> clearSession() async {
     state = null;
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_sessionKey);
+      await prefs.setBool(_rememberKey, false);
+      debugPrint("✅ Session cleared from storage");
+    } catch (e) {
+      debugPrint("❌ Failed to clear session: $e");
+    }
   }
 }
