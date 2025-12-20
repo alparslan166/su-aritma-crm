@@ -1,11 +1,11 @@
 import { createServer } from "http";
 
-import { createApp } from "@/app";
-import { config } from "@/config/env";
-import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/prisma";
-import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
-import { registerMaintenanceQueue } from "@/queues/maintenance.queue";
+import { createApp } from "./app";
+import { config } from "./config/env";
+import { logger } from "./lib/logger";
+import { prisma } from "./lib/prisma";
+import { realtimeGateway } from "./modules/realtime/realtime.gateway";
+import { registerMaintenanceQueue } from "./queues/maintenance.queue";
 
 console.log("🔥 [STARTUP] About to import fcmAdminService...");
 
