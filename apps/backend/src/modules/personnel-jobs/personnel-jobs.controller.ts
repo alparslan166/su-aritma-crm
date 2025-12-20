@@ -22,7 +22,8 @@ const deliverSchema = z.object({
       }),
     )
     .optional(),
-  photoUrls: z.array(z.string().url()).optional(),
+  // S3 keys (not full URLs) - e.g. "job-deliveries/uuid"
+  photoUrls: z.array(z.string().min(1)).optional(),
 });
 
 export const listAssignedJobsHandler = async (req: Request, res: Response, next: NextFunction) => {
