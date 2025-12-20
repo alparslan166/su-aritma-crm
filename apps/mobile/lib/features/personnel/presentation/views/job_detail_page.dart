@@ -529,6 +529,9 @@ class _DeliverySheet extends HookConsumerWidget {
 
                           // Get presigned URL from backend
                           final client = ref.read(apiClientProvider);
+                          debugPrint("📸 Requesting presigned URL for photo upload...");
+                          debugPrint("📸 Content-Type: $contentType");
+                          
                           final presignedResponse = await client.post(
                             "/media/sign",
                             data: {
@@ -536,27 +539,48 @@ class _DeliverySheet extends HookConsumerWidget {
                               "prefix": "job-deliveries",
                             },
                           );
+                          
+                          debugPrint("📸 Presigned response: ${presignedResponse.data}");
+                          
                           final uploadUrl =
                               presignedResponse.data["data"]["uploadUrl"]
                                   as String;
                           final photoKey =
                               presignedResponse.data["data"]["key"] as String;
+                          
+                          debugPrint("📸 Upload URL: $uploadUrl");
+                          debugPrint("📸 Photo Key: $photoKey");
 
                           // Upload to S3 using presigned URL
-                          final uploadClient = Dio();
-                          await uploadClient.put(
-                            uploadUrl,
-                            data: bytes,
-                            options: Options(
-                              headers: {"Content-Type": contentType},
-                              contentType: contentType,
-                              validateStatus: (status) => status != null && status < 600,
-                            ),
-                          );
+                          debugPrint("📸 Uploading to S3...");
+                          final uploadClient = Dio(BaseOptions(
+                            followRedirects: true,
+                            maxRedirects: 5,
+                          ));
+                          try {
+                            final s3Response = await uploadClient.put(
+                              uploadUrl,
+                              data: Stream.fromIterable([bytes]),
+                              options: Options(
+                                headers: {
+                                  "Content-Type": contentType,
+                                  "Content-Length": bytes.length.toString(),
+                                },
+                                contentType: contentType,
+                                validateStatus: (status) => status != null && status < 400,
+                              ),
+                            );
+                            debugPrint("📸 S3 upload response status: ${s3Response.statusCode}");
+                          } catch (e) {
+                            debugPrint("❌ S3 upload error: $e");
+                            rethrow;
+                          } finally {
+                            uploadClient.close();
+                          }
 
                           // Save the S3 key (not presigned URL) for permanent storage
                           photoUrls.add(photoKey);
-                          debugPrint("📸 Photo uploaded: $photoKey");
+                          debugPrint("📸 Photo uploaded successfully: $photoKey");
                         }
                       } catch (error) {
                         debugPrint("❌ Photo upload error: $error");

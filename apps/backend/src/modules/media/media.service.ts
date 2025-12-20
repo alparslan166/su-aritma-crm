@@ -10,7 +10,13 @@ type PresignOptions = {
 };
 
 export class MediaService {
-  constructor(private readonly client = new S3Client({ region: config.aws.region })) {}
+  constructor(
+    private readonly client = new S3Client({
+      region: config.aws.region,
+      // Use path-style URLs to avoid DNS issues with new buckets
+      forcePathStyle: true,
+    }),
+  ) {}
 
   async createPresignedUpload({ contentType, prefix = "uploads" }: PresignOptions) {
     const objectKey = `${prefix}/${randomUUID()}`;
