@@ -1,3 +1,5 @@
+import "dart:convert";
+
 import "package:firebase_core/firebase_core.dart";
 import "package:firebase_messaging/firebase_messaging.dart";
 import "package:flutter/foundation.dart";
@@ -223,10 +225,15 @@ class PushNotificationService {
       iOS: iosDetails,
     );
 
-    // Convert data map to JSON string for payload
-    final payload = message.data.isNotEmpty
-        ? message.data.toString()
-        : message.notification?.title ?? "";
+    // Convert data map to JSON string for payload (so we can parse it back)
+    String payload = "";
+    if (message.data.isNotEmpty) {
+      try {
+        payload = jsonEncode(message.data);
+      } catch (e) {
+        payload = message.data.toString();
+      }
+    }
 
     await _localNotifications!.show(
       message.hashCode,
@@ -243,44 +250,52 @@ class PushNotificationService {
 
     // Handle both String and Map payloads
     Map<String, dynamic>? data;
-    if (payload is String) {
+    if (payload is String && payload.isNotEmpty) {
       // Try to parse JSON string
       try {
         debugPrint("String payload: $payload");
-        // String payload genellikle data.toString() formatında gelir
-        // Bu durumda Map'e çevirmek zor, sadece log yapıyoruz
+        data = jsonDecode(payload) as Map<String, dynamic>;
       } catch (e) {
-        debugPrint("Failed to parse payload: $e");
+        debugPrint("Failed to parse payload as JSON: $e");
       }
     } else if (payload is Map<String, dynamic>) {
       data = payload;
-      debugPrint("Map payload: $data");
+    } else if (payload is Map) {
+      data = Map<String, dynamic>.from(payload);
+    }
 
-      // Navigate based on notification type
-      final type = data['type'] as String?;
-      final jobId = data['jobId'] as String?;
+    if (data == null) {
+      debugPrint("Could not parse notification data");
+      return;
+    }
 
-      if (type == "job_assigned" && jobId != null) {
-        // Navigate to personnel job detail page
-        _router.pushNamed(
-          "personnel-job-detail",
-          pathParameters: {"id": jobId},
-        );
-      } else if (type == "job_started" && jobId != null) {
-        // Navigate to admin job detail page
-        _router.pushNamed("admin-job-detail", pathParameters: {"id": jobId});
-      } else if (type == "job_completed" && jobId != null) {
-        // Navigate to admin job detail page
-        _router.pushNamed("admin-job-detail", pathParameters: {"id": jobId});
-      } else if (type == "customer_created") {
-        final customerId = data['customerId'] as String?;
-        if (customerId != null) {
-          _router.pushNamed(
-            "admin-customer-detail",
-            pathParameters: {"id": customerId},
-          );
-        }
-      }
+    debugPrint("Parsed notification data: $data");
+
+    // Navigate based on notification type
+    final type = data['type'] as String?;
+    final jobId = data['jobId'] as String?;
+    final customerId = data['customerId'] as String?;
+
+    debugPrint("Notification type: $type, jobId: $jobId, customerId: $customerId");
+
+    if (type == "job_assigned" && jobId != null) {
+      // Navigate to personnel job detail page
+      _router.push("/personnel/jobs/$jobId");
+    } else if ((type == "job_started" || type == "job_completed" || type == "job_status_updated") && jobId != null) {
+      // Navigate to admin job detail page
+      _router.push("/admin/jobs/$jobId");
+    } else if (type == "customer_created" && customerId != null) {
+      // Navigate to customer detail page
+      _router.push("/admin/customers/$customerId");
+    } else if ((type == "maintenance" || type == "maintenance-reminder") && jobId != null) {
+      // Navigate to job detail for maintenance
+      _router.push("/admin/jobs/$jobId");
+    } else if (type == "maintenance" || type == "maintenance-reminder") {
+      // Navigate to maintenance view if no jobId
+      _router.go("/admin/maintenance");
+    } else if (jobId != null) {
+      // Fallback: if we have jobId, navigate to job detail
+      _router.push("/admin/jobs/$jobId");
     }
   }
 }

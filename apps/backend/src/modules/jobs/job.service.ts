@@ -493,7 +493,12 @@ class JobService {
       await notificationService.notifyRole("admin", {
         title: "İş Durumu Değişti",
         body: `"${job.title}" işi ${statusText} durumuna güncellendi`,
-        data: { jobId, status: payload.status },
+        data: { 
+          type: "job_status_updated",
+          jobId, 
+          status: payload.status,
+          title: job.title,
+        },
       });
     } catch (error) {
       // Notification hatası job update'i engellememeli
