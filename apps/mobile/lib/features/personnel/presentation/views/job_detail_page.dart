@@ -1,6 +1,5 @@
 import "dart:io";
 
-import "package:dio/dio.dart";
 import "package:flutter/material.dart";
 import "package:flutter_map/flutter_map.dart";
 import "package:flutter_hooks/flutter_hooks.dart";
@@ -303,6 +302,7 @@ class _DeliverySheet extends HookConsumerWidget {
     final selectedPhotos = useState<List<XFile>>([]);
     final selectedMaterials = useState<Map<String, int>>({});
     final imagePicker = ImagePicker();
+    final isSubmitting = useState(false);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -513,109 +513,127 @@ class _DeliverySheet extends HookConsumerWidget {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () async {
-                    // Upload photos to S3
-                    final photoUrls = <String>[];
-                    if (selectedPhotos.value.isNotEmpty) {
-                      try {
-                        for (final photo in selectedPhotos.value) {
-                          final file = File(photo.path);
-                          final bytes = await file.readAsBytes();
-                          final contentType =
-                              photo.path.endsWith(".jpg") ||
-                                  photo.path.endsWith(".jpeg")
-                              ? "image/jpeg"
-                              : "image/png";
-
-                          // Get presigned URL from backend
-                          final client = ref.read(apiClientProvider);
-                          debugPrint("📸 Requesting presigned URL for photo upload...");
-                          debugPrint("📸 Content-Type: $contentType");
+                  onPressed: isSubmitting.value
+                      ? null
+                      : () async {
+                          debugPrint("📤 Gönder butonuna basıldı");
+                          isSubmitting.value = true;
                           
-                          final presignedResponse = await client.post(
-                            "/media/sign",
-                            data: {
-                              "contentType": contentType,
-                              "prefix": "job-deliveries",
-                            },
-                          );
-                          
-                          debugPrint("📸 Presigned response: ${presignedResponse.data}");
-                          
-                          final uploadUrl =
-                              presignedResponse.data["data"]["uploadUrl"]
-                                  as String;
-                          final photoKey =
-                              presignedResponse.data["data"]["key"] as String;
-                          
-                          debugPrint("📸 Upload URL: $uploadUrl");
-                          debugPrint("📸 Photo Key: $photoKey");
-
-                          // Upload to S3 using presigned URL
-                          debugPrint("📸 Uploading to S3...");
-                          final uploadClient = Dio(BaseOptions(
-                            followRedirects: true,
-                            maxRedirects: 5,
-                          ));
                           try {
-                            final s3Response = await uploadClient.put(
-                              uploadUrl,
-                              data: Stream.fromIterable([bytes]),
-                              options: Options(
-                                headers: {
-                                  "Content-Type": contentType,
-                                  "Content-Length": bytes.length.toString(),
-                                },
-                                contentType: contentType,
-                                validateStatus: (status) => status != null && status < 400,
+                            // Upload photos to S3
+                            final photoUrls = <String>[];
+                            if (selectedPhotos.value.isNotEmpty) {
+                              debugPrint("📸 ${selectedPhotos.value.length} fotoğraf yüklenecek");
+                              for (final photo in selectedPhotos.value) {
+                                final file = File(photo.path);
+                                final bytes = await file.readAsBytes();
+                                final contentType =
+                                    photo.path.endsWith(".jpg") ||
+                                        photo.path.endsWith(".jpeg")
+                                    ? "image/jpeg"
+                                    : "image/png";
+
+                                // Get presigned URL from backend
+                                final client = ref.read(apiClientProvider);
+                                debugPrint("📸 Requesting presigned URL for photo upload...");
+                                
+                                final presignedResponse = await client.post(
+                                  "/media/sign",
+                                  data: {
+                                    "contentType": contentType,
+                                    "prefix": "job-deliveries",
+                                  },
+                                );
+                                
+                                debugPrint("📸 Presigned response: ${presignedResponse.data}");
+                                
+                                final uploadUrl =
+                                    presignedResponse.data["data"]["uploadUrl"]
+                                        as String;
+                                final photoKey =
+                                    presignedResponse.data["data"]["key"] as String;
+                                
+                                debugPrint("📸 Upload URL: $uploadUrl");
+                                debugPrint("📸 Photo Key: $photoKey");
+
+                                // Upload to S3 using presigned URL with native HttpClient
+                                debugPrint("📸 Uploading to S3...");
+                                final httpClient = HttpClient();
+                                httpClient.autoUncompress = false;
+                                
+                                try {
+                                  final uri = Uri.parse(uploadUrl);
+                                  final request = await httpClient.putUrl(uri);
+                                  request.headers.set("Content-Type", contentType);
+                                  request.headers.set("Content-Length", bytes.length.toString());
+                                  request.add(bytes);
+                                  
+                                  final response = await request.close();
+                                  debugPrint("📸 S3 upload response status: ${response.statusCode}");
+                                  
+                                  if (response.statusCode >= 400) {
+                                    final bodyBytes = await response.fold<List<int>>(
+                                      <int>[],
+                                      (list, chunk) => list..addAll(chunk),
+                                    );
+                                    final body = String.fromCharCodes(bodyBytes);
+                                    debugPrint("❌ S3 upload failed: $body");
+                                    throw Exception("Fotoğraf yükleme başarısız: ${response.statusCode}");
+                                  }
+                                  
+                                  // Save the S3 key (not presigned URL) for permanent storage
+                                  photoUrls.add(photoKey);
+                                  debugPrint("📸 Photo uploaded successfully: $photoKey");
+                                } finally {
+                                  httpClient.close();
+                                }
+                              }
+                            }
+
+                            final payload = DeliveryPayload(
+                              note: noteController.text.trim().isEmpty
+                                  ? null
+                                  : noteController.text.trim(),
+                              collectedAmount: amountController.text.trim().isEmpty
+                                  ? null
+                                  : double.tryParse(amountController.text.trim()),
+                              maintenanceIntervalMonths: interval.value,
+                              photoUrls: photoUrls,
+                              usedMaterials: selectedMaterials.value.entries
+                                  .map(
+                                    (e) => DeliveryMaterial(
+                                      inventoryItemId: e.key,
+                                      quantity: e.value,
+                                    ),
+                                  )
+                                  .toList(),
+                            );
+                            
+                            debugPrint("📤 Payload hazır, sheet kapatılıyor");
+                            if (!context.mounted) return;
+                            Navigator.of(context).pop(payload);
+                          } catch (error) {
+                            debugPrint("❌ Teslim hatası: $error");
+                            isSubmitting.value = false;
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("Hata: $error"),
+                                backgroundColor: Colors.red,
                               ),
                             );
-                            debugPrint("📸 S3 upload response status: ${s3Response.statusCode}");
-                          } catch (e) {
-                            debugPrint("❌ S3 upload error: $e");
-                            rethrow;
-                          } finally {
-                            uploadClient.close();
                           }
-
-                          // Save the S3 key (not presigned URL) for permanent storage
-                          photoUrls.add(photoKey);
-                          debugPrint("📸 Photo uploaded successfully: $photoKey");
-                        }
-                      } catch (error) {
-                        debugPrint("❌ Photo upload error: $error");
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("Fotoğraf yükleme hatası: $error"),
+                        },
+                  child: isSubmitting.value
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
                           ),
-                        );
-                        return;
-                      }
-                    }
-
-                    final payload = DeliveryPayload(
-                      note: noteController.text.trim().isEmpty
-                          ? null
-                          : noteController.text.trim(),
-                      collectedAmount: amountController.text.trim().isEmpty
-                          ? null
-                          : double.tryParse(amountController.text.trim()),
-                      maintenanceIntervalMonths: interval.value,
-                      photoUrls: photoUrls,
-                      usedMaterials: selectedMaterials.value.entries
-                          .map(
-                            (e) => DeliveryMaterial(
-                              inventoryItemId: e.key,
-                              quantity: e.value,
-                            ),
-                          )
-                          .toList(),
-                    );
-                    if (!context.mounted) return;
-                    Navigator.of(context).pop(payload);
-                  },
-                  child: const Text("Gönder"),
+                        )
+                      : const Text("Gönder"),
                 ),
               ),
             ],
