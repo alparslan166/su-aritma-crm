@@ -4,8 +4,28 @@ import { z } from "zod";
 
 import { getAdminId } from "@/lib/tenant";
 import { logger } from "@/lib/logger";
+import { mediaService } from "@/modules/media/media.service";
 
 import { jobService } from "./job.service";
+
+// Helper function to transform deliveryMediaUrls from S3 keys to full URLs
+async function transformJobMediaUrls<T extends { deliveryMediaUrls?: unknown }>(job: T): Promise<T> {
+  if (!job) return job;
+  
+  const mediaUrls = job.deliveryMediaUrls as string[] | null | undefined;
+  if (!mediaUrls || !Array.isArray(mediaUrls) || mediaUrls.length === 0) {
+    return job;
+  }
+
+  const transformedUrls = await Promise.all(
+    mediaUrls.map((key) => mediaService.getMediaUrl(key))
+  );
+
+  return {
+    ...job,
+    deliveryMediaUrls: transformedUrls.filter((url): url is string => url !== null),
+  };
+}
 
 const listQuerySchema = z.object({
   status: z.nativeEnum(JobStatus).optional(),
@@ -72,11 +92,13 @@ export const listJobsHandler = async (req: Request, res: Response, next: NextFun
   try {
     const adminId = getAdminId(req);
     const filters = listQuerySchema.parse(req.query);
-    const data = await jobService.list(adminId, {
+    const jobs = await jobService.list(adminId, {
       status: filters.status,
       search: filters.search,
       personnelId: filters.personnelId,
     });
+    // Transform deliveryMediaUrls from S3 keys to full URLs
+    const data = await Promise.all(jobs.map(transformJobMediaUrls));
     res.json({ success: true, data });
   } catch (error) {
     next(error as Error);
@@ -86,10 +108,12 @@ export const listJobsHandler = async (req: Request, res: Response, next: NextFun
 export const getJobHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
-    const data = await jobService.getById(adminId, req.params.id);
-    if (!data) {
+    const job = await jobService.getById(adminId, req.params.id);
+    if (!job) {
       return res.status(404).json({ success: false, message: "Job not found" });
     }
+    // Transform deliveryMediaUrls from S3 keys to full URLs
+    const data = await transformJobMediaUrls(job);
     res.json({ success: true, data });
   } catch (error) {
     next(error as Error);
