@@ -2,8 +2,8 @@ import { JobStatus } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-import { getPersonnelId } from "@/lib/tenant";
-import { jobService } from "@/modules/jobs/job.service";
+import { getPersonnelId } from "../../lib/tenant";
+import { jobService } from "../jobs/job.service";
 
 const listQuerySchema = z.object({
   status: z.nativeEnum(JobStatus).optional(),

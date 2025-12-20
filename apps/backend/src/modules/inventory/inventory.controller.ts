@@ -2,8 +2,8 @@ import { InventoryTransactionType } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-import { getAdminId, getPersonnelId } from "@/lib/tenant";
-import { prisma } from "@/lib/prisma";
+import { getAdminId, getPersonnelId } from "../../lib/tenant";
+import { prisma } from "../../lib/prisma";
 
 import { inventoryService } from "./inventory.service";
 

@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import { AppError } from "@/middleware/error-handler";
+import { prisma } from "../../lib/prisma";
+import { AppError } from "../../middleware/error-handler";
 
 export class AdminService {
   /**

@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-import { getAdminId } from "@/lib/tenant";
-import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/prisma";
-import { AppError } from "@/middleware/error-handler";
+import { getAdminId } from "../../lib/tenant";
+import { logger } from "../../lib/logger";
+import { prisma } from "../../lib/prisma";
+import { AppError } from "../../middleware/error-handler";
 
 import { invoiceService } from "./invoice.service";
 import { invoicePdfService } from "./invoice-pdf.service";

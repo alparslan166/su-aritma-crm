@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 
-import { getAdminId } from "@/lib/tenant";
-import { AppError } from "@/middleware/error-handler";
+import { getAdminId } from "../../lib/tenant";
+import { AppError } from "../../middleware/error-handler";
 import { AdminService } from "./admin.service";
 
 const adminService = new AdminService();
@@ -16,7 +16,7 @@ export const getAllAdminsHandler = async (
 ) => {
   try {
     const currentAdminId = getAdminId(req);
-    const { prisma } = await import("@/lib/prisma");
+    const { prisma } = await import("../../lib/prisma");
     
     // Verify current admin is ANA admin
     const currentAdmin = await prisma.admin.findUnique({
@@ -48,7 +48,7 @@ export const getAdminByIdHandler = async (
 ) => {
   try {
     const currentAdminId = getAdminId(req);
-    const { prisma } = await import("@/lib/prisma");
+    const { prisma } = await import("../../lib/prisma");
     
     // Verify current admin is ANA admin
     const currentAdmin = await prisma.admin.findUnique({
@@ -81,7 +81,7 @@ export const deleteAdminHandler = async (
 ) => {
   try {
     const currentAdminId = getAdminId(req);
-    const { prisma } = await import("@/lib/prisma");
+    const { prisma } = await import("../../lib/prisma");
     
     // Verify current admin is ANA admin
     const currentAdmin = await prisma.admin.findUnique({

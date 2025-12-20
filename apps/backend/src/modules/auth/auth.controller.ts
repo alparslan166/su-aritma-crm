@@ -7,12 +7,12 @@ import {
   sendVerificationEmail,
   sendPasswordResetEmail,
   sendAccountDeletionEmail,
-} from "@/lib/email.service";
-import { generateAdminId } from "@/lib/generators";
-import { prisma } from "@/lib/prisma";
-import { getAdminId } from "@/lib/tenant";
-import { AppError } from "@/middleware/error-handler";
-import { SubscriptionService } from "@/modules/subscriptions/subscription.service";
+} from "../../lib/email.service";
+import { generateAdminId } from "../../lib/generators";
+import { prisma } from "../../lib/prisma";
+import { getAdminId } from "../../lib/tenant";
+import { AppError } from "../../middleware/error-handler";
+import { SubscriptionService } from "../subscriptions/subscription.service";
 
 const loginSchema = z
   .object({

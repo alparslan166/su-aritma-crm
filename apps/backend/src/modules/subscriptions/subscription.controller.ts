@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-import { getAdminId } from "@/lib/tenant";
-import { AppError } from "@/middleware/error-handler";
+import { getAdminId } from "../../lib/tenant";
+import { AppError } from "../../middleware/error-handler";
 import { SubscriptionService } from "./subscription.service";
 
 const subscriptionService = new SubscriptionService();

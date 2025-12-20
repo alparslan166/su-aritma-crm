@@ -1,6 +1,6 @@
 import type { Server as HTTPServer } from "node:http";
 import { Server as SocketIOServer, type Socket } from "socket.io";
-import { logger } from "@/lib/logger";
+import { logger } from "../../lib/logger";
 
 class RealtimeGateway {
   private io?: SocketIOServer;

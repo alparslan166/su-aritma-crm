@@ -2,9 +2,9 @@ import { JobStatus } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-import { getAdminId } from "@/lib/tenant";
-import { logger } from "@/lib/logger";
-import { mediaService } from "@/modules/media/media.service";
+import { getAdminId } from "../../lib/tenant";
+import { logger } from "../../lib/logger";
+import { mediaService } from "../media/media.service";
 
 import { jobService } from "./job.service";
 

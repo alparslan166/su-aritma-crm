@@ -3,8 +3,8 @@ import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
 import { personnelService } from "./personnel.service";
-import { prisma } from "@/lib/prisma";
-import { getAdminId, getPersonnelId } from "@/lib/tenant";
+import { prisma } from "../../lib/prisma";
+import { getAdminId, getPersonnelId } from "../../lib/tenant";
 
 const listQuerySchema = z.object({
   search: z.string().optional(),

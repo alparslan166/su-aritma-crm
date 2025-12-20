@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 
-import { prisma } from "@/lib/prisma";
-import { getAdminId } from "@/lib/tenant";
+import { prisma } from "../../lib/prisma";
+import { getAdminId } from "../../lib/tenant";
 
 const MS_IN_DAY = 1000 * 60 * 60 * 24;
 

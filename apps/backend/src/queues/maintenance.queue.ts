@@ -1,8 +1,8 @@
 import { Queue, Worker } from "bullmq";
 import IORedis from "ioredis";
 
-import { config } from "@/config/env";
-import { logger } from "@/lib/logger";
+import { config } from "../config/env";
+import { logger } from "../lib/logger";
 
 import { maintenanceReminderProcessor } from "./maintenance.processor";
 

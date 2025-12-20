@@ -9,12 +9,12 @@ import {
   PrismaClient,
 } from "@prisma/client";
 
-import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/prisma";
-import { AppError } from "@/middleware/error-handler";
-import { mediaService } from "@/modules/media/media.service";
-import { notificationService } from "@/modules/notifications/notification.service";
-import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
+import { logger } from "../../lib/logger";
+import { prisma } from "../../lib/prisma";
+import { AppError } from "../../middleware/error-handler";
+import { mediaService } from "../media/media.service";
+import { notificationService } from "../notifications/notification.service";
+import { realtimeGateway } from "../realtime/realtime.gateway";
 
 // Telefon numarasını normalize et (boşlukları ve özel karakterleri temizle)
 function normalizePhoneNumber(phone: string): string {

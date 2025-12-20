@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-import { getAdminId, getPersonnelId } from "@/lib/tenant";
-import { prisma } from "@/lib/prisma";
+import { getAdminId, getPersonnelId } from "../../lib/tenant";
+import { prisma } from "../../lib/prisma";
 import { notificationService } from "./notification.service";
 import { fcmService } from "./fcm.service";
 import { fcmAdminService } from "./fcm-admin.service";

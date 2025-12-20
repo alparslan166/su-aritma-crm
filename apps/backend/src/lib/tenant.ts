@@ -1,6 +1,6 @@
 import { Request } from "express";
 
-import { AppError } from "@/middleware/error-handler";
+import { AppError } from "../middleware/error-handler";
 
 const ADMIN_HEADER = "x-admin-id";
 const PERSONNEL_HEADER = "x-personnel-id";

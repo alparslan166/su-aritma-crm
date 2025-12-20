@@ -1,9 +1,9 @@
 import { Prisma } from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
-import { logger } from "@/lib/logger";
-import { AppError } from "@/middleware/error-handler";
-import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
+import { prisma } from "../../lib/prisma";
+import { logger } from "../../lib/logger";
+import { AppError } from "../../middleware/error-handler";
+import { realtimeGateway } from "../realtime/realtime.gateway";
 
 // Telefon numarasını normalize et (boşlukları ve özel karakterleri temizle)
 function normalizePhoneNumber(phone: string): string {

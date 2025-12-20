@@ -1,8 +1,8 @@
 import * as admin from "firebase-admin";
-import { prisma } from "@/lib/prisma";
-import { logger } from "@/lib/logger";
-import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
-import { config } from "@/config/env";
+import { prisma } from "../../lib/prisma";
+import { logger } from "../../lib/logger";
+import { realtimeGateway } from "../realtime/realtime.gateway";
+import { config } from "../../config/env";
 
 type NotificationPayload = {
   title: string;

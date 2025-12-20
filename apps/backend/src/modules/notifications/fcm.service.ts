@@ -1,7 +1,7 @@
-import { config } from "@/config/env";
-import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/prisma";
-import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
+import { config } from "../../config/env";
+import { logger } from "../../lib/logger";
+import { prisma } from "../../lib/prisma";
+import { realtimeGateway } from "../realtime/realtime.gateway";
 
 type NotificationPayload = {
   title: string;

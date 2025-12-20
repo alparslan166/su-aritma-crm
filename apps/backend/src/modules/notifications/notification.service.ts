@@ -1,8 +1,8 @@
 import { fcmService } from "./fcm.service";
 import { fcmAdminService } from "./fcm-admin.service";
-import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
-import { logger } from "@/lib/logger";
-import { prisma } from "@/lib/prisma";
+import { realtimeGateway } from "../realtime/realtime.gateway";
+import { logger } from "../../lib/logger";
+import { prisma } from "../../lib/prisma";
 
 type NotificationPayload = {
   title: string;

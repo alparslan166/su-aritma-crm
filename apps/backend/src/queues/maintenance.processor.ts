@@ -1,9 +1,9 @@
 import { MaintenanceStatus, MaintenanceWindow } from "@prisma/client";
 import { Job } from "bullmq";
 
-import { prisma } from "@/lib/prisma";
-import { notificationService } from "@/modules/notifications/notification.service";
-import { realtimeGateway } from "@/modules/realtime/realtime.gateway";
+import { prisma } from "../lib/prisma";
+import { notificationService } from "../modules/notifications/notification.service";
+import { realtimeGateway } from "../modules/realtime/realtime.gateway";
 
 const MS_IN_DAY = 1000 * 60 * 60 * 24;
 

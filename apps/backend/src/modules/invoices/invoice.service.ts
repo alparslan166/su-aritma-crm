@@ -1,8 +1,8 @@
 import { Prisma } from "@prisma/client";
 
-import { prisma } from "@/lib/prisma";
-import { AppError } from "@/middleware/error-handler";
-import { jobService } from "@/modules/jobs/job.service";
+import { prisma } from "../../lib/prisma";
+import { AppError } from "../../middleware/error-handler";
+import { jobService } from "../jobs/job.service";
 
 type CreateInvoicePayload = {
   jobId: string;

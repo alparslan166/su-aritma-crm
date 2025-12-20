@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import { AppError } from "@/middleware/error-handler";
+import { prisma } from "../../lib/prisma";
+import { AppError } from "../../middleware/error-handler";
 
 export type SubscriptionStatus = "trial" | "active" | "expired" | "cancelled";
 export type PlanType = "monthly" | "yearly";

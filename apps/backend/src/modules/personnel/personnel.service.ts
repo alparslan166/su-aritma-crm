@@ -1,9 +1,9 @@
 import { PersonnelStatus, Prisma } from "@prisma/client";
 
-import { generateLoginCode, generatePersonnelId } from "@/lib/generators";
-import { prisma } from "@/lib/prisma";
-import { AppError } from "@/middleware/error-handler";
-import { mediaService } from "@/modules/media/media.service";
+import { generateLoginCode, generatePersonnelId } from "../../lib/generators";
+import { prisma } from "../../lib/prisma";
+import { AppError } from "../../middleware/error-handler";
+import { mediaService } from "../media/media.service";
 
 // Telefon numarasını normalize et (boşlukları ve özel karakterleri temizle)
 function normalizePhoneNumber(phone: string): string {
