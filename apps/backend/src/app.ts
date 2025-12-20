@@ -3,10 +3,10 @@ import express, { NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 
-import { config } from "@/config/env";
-import { logger } from "@/lib/logger";
-import { errorHandler, notFoundHandler } from "@/middleware/error-handler";
-import { apiRouter } from "@/routes";
+import { config } from "./config/env";
+import { logger } from "./lib/logger";
+import { errorHandler, notFoundHandler } from "./middleware/error-handler";
+import { apiRouter } from "./routes";
 
 export const createApp = () => {
   const app = express();

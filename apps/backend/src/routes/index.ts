@@ -1,20 +1,20 @@
 import { NextFunction, Request, Response, Router } from "express";
 
-import { logger } from "@/lib/logger";
+import { logger } from "../lib/logger";
 
-import { adminRouter } from "@/modules/admins/admin.router";
-import { authRouter } from "@/modules/auth/auth.router";
-import { customerRouter } from "@/modules/customers/customer.router";
-import { healthRouter } from "@/modules/health/health.router";
-import { inventoryRouter } from "@/modules/inventory/inventory.router";
-import { invoiceRouter } from "@/modules/invoices/invoice.router";
-import { jobRouter } from "@/modules/jobs/job.router";
-import { maintenanceRouter } from "@/modules/maintenance/maintenance.router";
-import { mediaRouter } from "@/modules/media/media.router";
-import { notificationRouter } from "@/modules/notifications/notification.router";
-import { personnelRouter } from "@/modules/personnel/personnel.router";
-import { personnelJobsRouter } from "@/modules/personnel-jobs/personnel-jobs.router";
-import { subscriptionRouter } from "@/modules/subscriptions/subscription.router";
+import { adminRouter } from "../modules/admins/admin.router";
+import { authRouter } from "../modules/auth/auth.router";
+import { customerRouter } from "../modules/customers/customer.router";
+import { healthRouter } from "../modules/health/health.router";
+import { inventoryRouter } from "../modules/inventory/inventory.router";
+import { invoiceRouter } from "../modules/invoices/invoice.router";
+import { jobRouter } from "../modules/jobs/job.router";
+import { maintenanceRouter } from "../modules/maintenance/maintenance.router";
+import { mediaRouter } from "../modules/media/media.router";
+import { notificationRouter } from "../modules/notifications/notification.router";
+import { personnelRouter } from "../modules/personnel/personnel.router";
+import { personnelJobsRouter } from "../modules/personnel-jobs/personnel-jobs.router";
+import { subscriptionRouter } from "../modules/subscriptions/subscription.router";
 
 const router = Router();
 

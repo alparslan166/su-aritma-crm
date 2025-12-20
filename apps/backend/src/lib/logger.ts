@@ -1,4 +1,4 @@
-import { config } from "@/config/env";
+import { config } from "../config/env";
 
 const isDevelopment = config.nodeEnv === "development";
 

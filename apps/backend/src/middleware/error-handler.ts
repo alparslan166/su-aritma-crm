@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 
-import { config } from "@/config/env";
-import { logger } from "@/lib/logger";
+import { config } from "../config/env";
+import { logger } from "../lib/logger";
 
 export class AppError extends Error {
   statusCode: number;
