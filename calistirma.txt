@@ -14,7 +14,7 @@ flutter run -d emulator-5556 --dart-define=API_BASE_URL=https://su-aritma-crm-pr
 # Emülatörleri başlatma
 # İlk emülatör: Medium Phone API 36.1
 flutter emulators --launch Medium_Phone_API_36.1
-
+@
 # İkinci emülatör: Pixel 3a
 flutter emulators --launch Pixel_3a
 

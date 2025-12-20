@@ -45,8 +45,8 @@ class SubscriptionLockPage extends ConsumerWidget {
                 Text(
                   "Abonelik gerekli",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -65,7 +65,9 @@ class SubscriptionLockPage extends ConsumerWidget {
                         _Row(label: "Durum", value: statusText),
                         _Row(
                           label: "Plan",
-                          value: planType == "monthly" ? "Aylık" : (planType ?? "-"),
+                          value: planType == "monthly"
+                              ? "Aylık"
+                              : (planType ?? "-"),
                         ),
                         _Row(
                           label: "Kalan gün",
@@ -108,7 +110,9 @@ class SubscriptionLockPage extends ConsumerWidget {
                     // until lock is removed, but profile details can be accessed from within app
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text("Abonelik yenilenene kadar uygulama kilitli."),
+                        content: Text(
+                          "Abonelik yenilenene kadar uygulama kilitli.",
+                        ),
                       ),
                     );
                   },
@@ -152,7 +156,9 @@ class SubscriptionLockPage extends ConsumerWidget {
   }
 }
 
-final _subscriptionProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
+final _subscriptionProvider = FutureProvider<Map<String, dynamic>?>((
+  ref,
+) async {
   // Ensure lock state remains true when visiting this page
   ref.read(subscriptionLockRequiredProvider.notifier).state = true;
   final repo = ref.read(adminRepositoryProvider);
@@ -176,19 +182,20 @@ class _Row extends StatelessWidget {
             flex: 2,
             child: Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey.shade600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
             ),
           ),
           Expanded(
             flex: 3,
             child: Text(
               value,
-              style: valueStyle ??
-                  Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+              style:
+                  valueStyle ??
+                  Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               textAlign: TextAlign.right,
             ),
           ),
@@ -197,5 +204,4 @@ class _Row extends StatelessWidget {
     );
   }
 }
-
 

@@ -115,7 +115,7 @@ export class SubscriptionService {
   ): Promise<void> {
     const now = new Date();
     const endDate = new Date(now);
-    
+
     if (planType === "monthly") {
       endDate.setMonth(endDate.getMonth() + 1);
     } else {
@@ -263,4 +263,3 @@ export class SubscriptionService {
     });
   }
 }
-

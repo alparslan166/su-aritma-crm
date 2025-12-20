@@ -30,4 +30,3 @@ router.post("/cancel", cancelSubscriptionHandler);
 router.post("/mark-trial-notice-seen", markTrialNoticeSeenHandler);
 
 export const subscriptionRouter = router;
-

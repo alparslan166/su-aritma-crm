@@ -104,6 +104,16 @@ class JobService {
     return job;
   }
 
+  private getStatusText(status: string): string {
+    const statusMap: Record<string, string> = {
+      PENDING: "Beklemede",
+      IN_PROGRESS: "Devam Ediyor",
+      DELIVERED: "Teslim Edildi",
+      ARCHIVED: "Arşivlendi",
+    };
+    return statusMap[status] || status;
+  }
+
   async list(adminId: string, filters: JobListFilters) {
     return prisma.job.findMany({
       where: {
@@ -479,9 +489,10 @@ class JobService {
 
     // Notification göndermeyi try-catch ile sarmalayalım - hata durumunda job update devam etmeli
     try {
+      const statusText = this.getStatusText(payload.status);
       await notificationService.notifyRole("admin", {
-        title: "İş durumu güncellendi",
-        body: `${jobId} durumu ${payload.status} olarak güncellendi`,
+        title: "İş Durumu Değişti",
+        body: `"${job.title}" işi ${statusText} durumuna güncellendi`,
         data: { jobId, status: payload.status },
       });
     } catch (error) {

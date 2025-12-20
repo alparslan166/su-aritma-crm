@@ -4,4 +4,3 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 /// Router redirect uses this synchronously.
 final subscriptionLockRequiredProvider = StateProvider<bool>((ref) => false);
 
-

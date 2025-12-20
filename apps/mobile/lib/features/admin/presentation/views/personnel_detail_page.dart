@@ -1391,17 +1391,7 @@ class _PersonnelMapSectionState extends ConsumerState<_PersonnelMapSection>
       socket.on("personnel-location-update", _handleLocationUpdate);
       debugPrint("📍 Socket listener set up for personnel location updates");
     }
-
-    // Also listen to socket provider changes
-    ref.listen(socketClientProvider, (previous, next) {
-      if (previous != null) {
-        previous.off("personnel-location-update", _handleLocationUpdate);
-      }
-      if (next != null) {
-        next.on("personnel-location-update", _handleLocationUpdate);
-        debugPrint("📍 Socket listener updated for personnel location updates");
-      }
-    });
+    // Note: ref.listen cannot be called in initState, only in build method
   }
 
   void _handleLocationUpdate(dynamic data) {
@@ -1638,10 +1628,17 @@ class _PersonnelMapSectionState extends ConsumerState<_PersonnelMapSection>
                                             // Pulse effect
                                             Container(
                                               width: 60 * _pulseAnimation.value,
-                                              height: 60 * _pulseAnimation.value,
+                                              height:
+                                                  60 * _pulseAnimation.value,
                                               decoration: BoxDecoration(
                                                 color: const Color(0xFF2563EB)
-                                                    .withValues(alpha: 0.3 * (1 - _pulseAnimation.value)),
+                                                    .withValues(
+                                                      alpha:
+                                                          0.3 *
+                                                          (1 -
+                                                              _pulseAnimation
+                                                                  .value),
+                                                    ),
                                                 shape: BoxShape.circle,
                                               ),
                                             ),
@@ -1653,12 +1650,15 @@ class _PersonnelMapSectionState extends ConsumerState<_PersonnelMapSection>
                                                 color: Colors.white,
                                                 shape: BoxShape.circle,
                                                 border: Border.all(
-                                                  color: const Color(0xFF2563EB),
+                                                  color: const Color(
+                                                    0xFF2563EB,
+                                                  ),
                                                   width: 3,
                                                 ),
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: Colors.black.withValues(alpha: 0.3),
+                                                    color: Colors.black
+                                                        .withValues(alpha: 0.3),
                                                     blurRadius: 8,
                                                     spreadRadius: 2,
                                                   ),

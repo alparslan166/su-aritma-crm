@@ -79,8 +79,11 @@ class SuAritmaApp extends HookConsumerWidget {
               ref.read(subscriptionLockRequiredProvider.notifier).state =
                   lockRequired;
 
-              final navContext =
-                  ref.read(appRouterProvider).routerDelegate.navigatorKey.currentContext;
+              final navContext = ref
+                  .read(appRouterProvider)
+                  .routerDelegate
+                  .navigatorKey
+                  .currentContext;
               if (navContext == null || !navContext.mounted) return;
 
               // One-time trial started notice

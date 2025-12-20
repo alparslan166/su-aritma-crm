@@ -7,11 +7,7 @@ import { SubscriptionService } from "./subscription.service";
 
 const subscriptionService = new SubscriptionService();
 
-export const getSubscriptionHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const getSubscriptionHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
     const subscription = await subscriptionService.getSubscription(adminId);
@@ -75,11 +71,7 @@ export const activateSubscriptionHandler = async (
     const adminId = getAdminId(req);
     const payload = activateSchema.parse(req.body);
 
-    await subscriptionService.activateSubscription(
-      adminId,
-      payload.planType,
-      payload.paymentId,
-    );
+    await subscriptionService.activateSubscription(adminId, payload.planType, payload.paymentId);
 
     res.json({
       success: true,
@@ -94,11 +86,7 @@ const renewSchema = z.object({
   planType: z.enum(["monthly", "yearly"]).default("monthly"),
 });
 
-export const renewSubscriptionHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const renewSubscriptionHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
     const payload = renewSchema.parse(req.body);
@@ -146,4 +134,3 @@ export const markTrialNoticeSeenHandler = async (
     next(error as Error);
   }
 };
-

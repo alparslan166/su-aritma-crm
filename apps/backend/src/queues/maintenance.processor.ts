@@ -61,11 +61,27 @@ export const maintenanceReminderProcessor = async (_job: Job) => {
       lastWindowNotified: window,
     };
 
+    const jobTitle = job?.title ?? "İş";
+    let notificationBody: string;
+    let notificationTitle: string;
+
+    if (window === MaintenanceWindow.OVERDUE) {
+      notificationTitle = "⚠️ Bakım Süresi Geçti";
+      notificationBody = `"${jobTitle}" için bakım süresi doldu. Lütfen yeni bir bakım işi oluşturun.`;
+    } else if (diffDays === 1) {
+      notificationTitle = "🔔 Bakım Yarın";
+      notificationBody = `"${jobTitle}" için bakım zamanı yarın. Hazırlıklarınızı tamamlayın.`;
+    } else if (diffDays <= 3) {
+      notificationTitle = "📅 Bakım Yaklaşıyor";
+      notificationBody = `"${jobTitle}" için bakım zamanına ${diffDays} gün kaldı.`;
+    } else {
+      notificationTitle = "📋 Bakım Hatırlatması";
+      notificationBody = `"${jobTitle}" için planlı bakıma ${diffDays} gün kaldı.`;
+    }
+
     await notificationService.notifyRole("admin", {
-      title: `Bakım hatırlatma - ${job?.title ?? reminder.jobId}`,
-      body: window === MaintenanceWindow.OVERDUE
-        ? "Bakım süresi aşıldı. Yeniden iş oluşturmayı unutmayın."
-        : `Bakım için ${Math.max(diffDays, 0)} gün kaldı.`,
+      title: notificationTitle,
+      body: notificationBody,
       data: {
         type: "maintenance",
         jobId: reminder.jobId,
