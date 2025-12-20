@@ -276,18 +276,24 @@ class PushNotificationService {
     final jobId = data['jobId'] as String?;
     final customerId = data['customerId'] as String?;
 
-    debugPrint("Notification type: $type, jobId: $jobId, customerId: $customerId");
+    debugPrint(
+      "Notification type: $type, jobId: $jobId, customerId: $customerId",
+    );
 
     if (type == "job_assigned" && jobId != null) {
       // Navigate to personnel job detail page
       _router.push("/personnel/jobs/$jobId");
-    } else if ((type == "job_started" || type == "job_completed" || type == "job_status_updated") && jobId != null) {
+    } else if ((type == "job_started" ||
+            type == "job_completed" ||
+            type == "job_status_updated") &&
+        jobId != null) {
       // Navigate to admin job detail page
       _router.push("/admin/jobs/$jobId");
     } else if (type == "customer_created" && customerId != null) {
       // Navigate to customer detail page
       _router.push("/admin/customers/$customerId");
-    } else if ((type == "maintenance" || type == "maintenance-reminder") && jobId != null) {
+    } else if ((type == "maintenance" || type == "maintenance-reminder") &&
+        jobId != null) {
       // Navigate to job detail for maintenance
       _router.push("/admin/jobs/$jobId");
     } else if (type == "maintenance" || type == "maintenance-reminder") {

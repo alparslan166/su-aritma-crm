@@ -775,6 +775,76 @@ class JobService {
         data: { deliveredAt: now },
       });
 
+      // Update customer records based on personnel input
+      const customerId = assignment.job.customerId;
+      if (customerId) {
+        const customer = await tx.customer.findUnique({
+          where: { id: customerId },
+          select: {
+            remainingDebtAmount: true,
+            paidDebtAmount: true,
+            hasDebt: true,
+          },
+        });
+
+        if (customer) {
+          const customerUpdateData: Prisma.CustomerUpdateInput = {};
+
+          // 1. If payment was collected, add to debt payment history and update remaining debt
+          if (payload.collectedAmount && payload.collectedAmount > 0) {
+            const collectedDecimal = new Prisma.Decimal(payload.collectedAmount);
+
+            // Create debt payment history record
+            await tx.debtPaymentHistory.create({
+              data: {
+                customerId,
+                amount: collectedDecimal,
+                paidAt: now,
+              },
+            });
+
+            logger.info(
+              `💰 Payment recorded: ${payload.collectedAmount} TL for customer ${customerId}`,
+            );
+
+            // Update remaining debt if customer has debt
+            if (customer.hasDebt && customer.remainingDebtAmount) {
+              const currentRemaining = customer.remainingDebtAmount;
+              const newRemaining = currentRemaining.sub(collectedDecimal);
+              const currentPaid = customer.paidDebtAmount || new Prisma.Decimal(0);
+              const newPaid = currentPaid.add(collectedDecimal);
+
+              customerUpdateData.remainingDebtAmount = newRemaining.gt(0)
+                ? newRemaining
+                : new Prisma.Decimal(0);
+              customerUpdateData.paidDebtAmount = newPaid;
+
+              // If all debt is paid, update hasDebt flag
+              if (newRemaining.lte(0)) {
+                customerUpdateData.hasDebt = false;
+                customerUpdateData.remainingDebtAmount = new Prisma.Decimal(0);
+              }
+            }
+          }
+
+          // 2. Update customer's nextMaintenanceDate if maintenance interval was set
+          if (maintenanceDate) {
+            customerUpdateData.nextMaintenanceDate = maintenanceDate;
+            logger.info(
+              `🔧 Maintenance date updated: ${maintenanceDate.toISOString()} for customer ${customerId}`,
+            );
+          }
+
+          // Apply customer updates if any
+          if (Object.keys(customerUpdateData).length > 0) {
+            await tx.customer.update({
+              where: { id: customerId },
+              data: customerUpdateData,
+            });
+          }
+        }
+      }
+
       const updatedJob = await this.updateStatus(
         adminId,
         jobId,
