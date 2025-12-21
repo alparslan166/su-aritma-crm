@@ -11,7 +11,7 @@ export const generateLoginCode = (length = 6) => {
 };
 
 export const generatePersonnelId = async (adminId: string, length = 6): Promise<string> => {
-  const { prisma } = await import("@/lib/prisma");
+  const { prisma } = await import("./prisma");
   let attempts = 0;
   const maxAttempts = 100;
 
@@ -44,7 +44,7 @@ const ADMIN_ID_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Excluding confu
 
 export const generateAdminId = async (length = 8): Promise<string> => {
   try {
-    const { prisma } = await import("@/lib/prisma");
+    const { prisma } = await import("./prisma");
     let attempts = 0;
     const maxAttempts = 100;
 
