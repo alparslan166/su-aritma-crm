@@ -1106,10 +1106,22 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
             child: const Text("İptal"),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(context).pop();
-              // Geçici olarak doğrulama kodunu atla, direkt sil
-              _deleteAccountDirectly();
+              // Önce doğrulama kodu iste, sonra doğrulama ekranını göster
+              try {
+                await ref.read(authServiceProvider).requestAccountDeletion();
+                if (!mounted) return;
+                _showVerificationCodeDialog();
+              } on AuthException catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(e.message),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: const Text("Hesabı Sil"),
@@ -1119,30 +1131,6 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
     );
   }
 
-  // Geçici olarak doğrulama kodunu atla, direkt sil
-  Future<void> _deleteAccountDirectly() async {
-    try {
-      // Backend'de doğrulama kodu bypass edildi, boş kod gönder
-      await ref.read(authServiceProvider).confirmAccountDeletion("");
-
-      // Clear session and redirect to login
-      await ref.read(authSessionProvider.notifier).clearSession();
-      if (!mounted) return;
-      ref.read(appRouterProvider).go("/");
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Hesabınız başarıyla silindi"),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
-      );
-    }
-  }
 
   void _showVerificationCodeDialog() {
     final codeController = TextEditingController();
