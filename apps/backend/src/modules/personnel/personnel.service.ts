@@ -387,7 +387,7 @@ class PersonnelService {
     }
 
     // Broadcast location update via Socket.IO
-    const { realtimeGateway } = await import("@/modules/realtime/realtime.gateway");
+    const { realtimeGateway } = await import("../realtime/realtime.gateway");
     realtimeGateway.emitPersonnelLocation(personnel.adminId, personnelId, {
       lat,
       lng,

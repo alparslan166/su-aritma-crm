@@ -37,7 +37,7 @@ export const getAllSubscriptionsHandler = async (
   try {
     // Only ANA admin can access this
     const adminId = getAdminId(req);
-    const { prisma } = await import("@/lib/prisma");
+    const { prisma } = await import("../../lib/prisma");
     const admin = await prisma.admin.findUnique({
       where: { id: adminId },
     });
