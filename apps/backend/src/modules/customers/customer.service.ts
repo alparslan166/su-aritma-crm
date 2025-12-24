@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma";
 import { logger } from "../../lib/logger";
 import { AppError } from "../../middleware/error-handler";
 import { realtimeGateway } from "../realtime/realtime.gateway";
+import { installmentService } from "../installments/installment.service";
 
 // Telefon numarasını normalize et (boşlukları ve özel karakterleri temizle)
 function normalizePhoneNumber(phone: string): string {
@@ -300,7 +301,7 @@ class CustomerService {
       remainingDebtAmount = debtAmount;
     }
 
-    return prisma.customer.create({
+    const customer = await prisma.customer.create({
       data: {
         adminId,
         name: payload.name,
@@ -323,6 +324,19 @@ class CustomerService {
         paymentDate,
       },
     });
+
+    // Taksitli satış ise taksitleri oluştur
+    if (hasInstallment && installmentCount && debtAmount && installmentStartDate) {
+      await installmentService.createInstallments(
+        customer.id,
+        installmentCount,
+        Number(debtAmount),
+        installmentStartDate,
+        installmentIntervalDays ?? 30,
+      );
+    }
+
+    return customer;
   }
 
   async update(adminId: string, customerId: string, payload: UpdateCustomerPayload) {

@@ -775,6 +775,18 @@ class AdminRepository {
     return Invoice.fromJson(response.data["data"] as Map<String, dynamic>);
   }
 
+  // Installment methods
+  Future<List<Map<String, dynamic>>> getInstallments(String customerId) async {
+    final response = await _client.get("/installments/customer/$customerId");
+    final data = response.data["data"] as List<dynamic>;
+    return data.cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> payInstallment(String installmentId) async {
+    final response = await _client.post("/installments/$installmentId/pay");
+    return response.data["data"] as Map<String, dynamic>;
+  }
+
   // Profile methods
   Future<Map<String, dynamic>> getProfile() async {
     final response = await _client.get("/auth/profile");

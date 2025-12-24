@@ -6,6 +6,7 @@ import { adminRouter } from "../modules/admins/admin.router";
 import { authRouter } from "../modules/auth/auth.router";
 import { customerRouter } from "../modules/customers/customer.router";
 import { healthRouter } from "../modules/health/health.router";
+import { installmentRouter } from "../modules/installments/installment.router";
 import { inventoryRouter } from "../modules/inventory/inventory.router";
 import { invoiceRouter } from "../modules/invoices/invoice.router";
 import { jobRouter } from "../modules/jobs/job.router";
@@ -29,6 +30,7 @@ router.get("/", (req, res) => {
       auth: "/api/auth",
       admins: "/api/admins",
       customers: "/api/customers",
+      installments: "/api/installments",
       inventory: "/api/inventory",
       invoices: "/api/invoices",
       jobs: "/api/jobs",
@@ -70,6 +72,7 @@ router.use(
   },
   customerRouter,
 );
+router.use("/installments", installmentRouter);
 router.use("/inventory", inventoryRouter);
 router.use("/invoices", invoiceRouter);
 router.use("/jobs", jobRouter);

@@ -1065,6 +1065,89 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                         return null;
                       },
                     ),
+                    // Taksit Önizleme Kutucukları
+                    if (_installmentCountController.text.isNotEmpty &&
+                        int.tryParse(_installmentCountController.text) != null &&
+                        int.parse(_installmentCountController.text) > 0) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        "Taksit Planı Önizlemesi",
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: List.generate(
+                            int.parse(_installmentCountController.text),
+                            (index) {
+                              final installmentNo = index + 1;
+                              final intervalDays = int.tryParse(
+                                    _installmentIntervalDaysController.text,
+                                  ) ??
+                                  30;
+                              final startDate =
+                                  _installmentStartDate ?? DateTime.now();
+                              final dueDate = startDate.add(
+                                Duration(days: intervalDays * installmentNo),
+                              );
+                              final debtAmount = double.tryParse(
+                                    _debtAmountController.text,
+                                  ) ??
+                                  0;
+                              final installmentAmount =
+                                  debtAmount /
+                                  int.parse(_installmentCountController.text);
+
+                              return Container(
+                                margin: const EdgeInsets.only(right: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: const Color(0xFF2563EB).withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      "$installmentNo",
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2563EB),
+                                      ),
+                                    ),
+                                    Text(
+                                      "${installmentAmount.toStringAsFixed(0)}₺",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    Text(
+                                      DateFormat("dd/MM").format(dueDate),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ],
                 const SizedBox(height: 12),
