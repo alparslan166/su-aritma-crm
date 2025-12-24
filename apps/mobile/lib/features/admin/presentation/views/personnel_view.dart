@@ -1048,16 +1048,16 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
                   ),
                 ),
               ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: _canShareLocation,
-                title: const Text("Konum paylaşımı"),
-                onChanged: (value) {
-                  setState(() {
-                    _canShareLocation = value;
-                  });
-                },
-              ),
+              // SwitchListTile(
+              //   contentPadding: EdgeInsets.zero,
+              //   value: _canShareLocation,
+              //   title: const Text("Konum paylaşımı"),
+              //   onChanged: (value) {
+              //     setState(() {
+              //       _canShareLocation = value;
+              //     });
+              //   },
+              // ),
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,

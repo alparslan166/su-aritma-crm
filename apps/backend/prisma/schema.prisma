@@ -305,8 +305,8 @@ model Notification {
 
 model LocationLog {
   id          String    @id @default(cuid())
-  job         Job       @relation(fields: [jobId], references: [id])
-  jobId       String
+  job         Job?      @relation(fields: [jobId], references: [id])
+  jobId       String?
   personnel   Personnel @relation(fields: [personnelId], references: [id])
   personnelId String
   lat         Float

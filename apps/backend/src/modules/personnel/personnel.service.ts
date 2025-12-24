@@ -341,48 +341,35 @@ class PersonnelService {
         });
       }
     } else {
-      // No jobId - create a general location log entry
-      // We'll use a special job or create a LocationLog without jobId
-      // For now, we'll create a LocationLog with a dummy job or use the most recent active job
-      const activeJob = await prisma.jobPersonnel.findFirst({
+      // No jobId provided - save location without job association
+      // First try to find existing general location log (without job)
+      const existingLog = await prisma.locationLog.findFirst({
         where: {
           personnelId,
-          job: {
-            status: "IN_PROGRESS",
-          },
+          jobId: { equals: null }, // General location log without job
+          endedAt: null,
         },
-        orderBy: { assignedAt: "desc" },
-        select: { jobId: true },
+        orderBy: { startedAt: "desc" },
       });
 
-      if (activeJob) {
-        // Use the active job
-        const existingLog = await prisma.locationLog.findFirst({
-          where: {
-            jobId: activeJob.jobId,
-            personnelId,
-            endedAt: null,
-          },
-          orderBy: { startedAt: "desc" },
+      if (existingLog) {
+        // Update existing general log
+        await prisma.locationLog.update({
+          where: { id: existingLog.id },
+          data: { lat, lng },
         });
-
-        if (existingLog) {
-          await prisma.locationLog.update({
-            where: { id: existingLog.id },
-            data: { lat, lng },
-          });
-        } else {
-          await prisma.locationLog.create({
-            data: {
-              jobId: activeJob.jobId,
-              personnelId,
-              lat,
-              lng,
-              startedAt: new Date(),
-              consent: true,
-            },
-          });
-        }
+      } else {
+        // Create new general location log (no job required)
+        await prisma.locationLog.create({
+          data: {
+            personnelId,
+            jobId: null, // Explicitly null - general location tracking
+            lat,
+            lng,
+            startedAt: new Date(),
+            consent: true,
+          },
+        });
       }
     }
 
