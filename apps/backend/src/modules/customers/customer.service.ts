@@ -209,31 +209,17 @@ class CustomerService {
           }
         }
 
-        // 4. Job'lardaki ödenmemiş borçlar
-        // Job'larda ödeme durumu NOT_PAID veya PARTIAL olan ve kalan borç > 0 olan müşteriler
-        let hasUnpaidJob = false;
-        if (customer.jobs && customer.jobs.length > 0) {
-          hasUnpaidJob = customer.jobs.some((job) => {
-            if (!job.price || job.status === "ARCHIVED") return false;
-            const collectedAmount = job.collectedAmount ? Number(job.collectedAmount) : 0;
-            const remaining = Number(job.price) - collectedAmount;
-            // Kalan borç varsa ve ödeme durumu NOT_PAID veya PARTIAL ise
-            if (remaining > 0) {
-              return job.paymentStatus === "NOT_PAID" || job.paymentStatus === "PARTIAL";
-            }
-            return false;
-          });
-        }
+        // 4. Job'lardaki ödenmemiş borçlar - artık "Ödemesi Gelen" filtresine dahil değil
+        // Sadece borç tarihi geçmiş müşteriler gösterilecek
+        // hasUnpaidJob kontrolü kaldırıldı
 
-        // Sonuç: Borç ödeme tarihi geçmiş, borç durumu "Ödeme gecikmiş", taksit ödeme tarihi geçmiş veya job'larda ödenmemiş borç olan müşteriler
-        const result =
-          hasOverdueDebtDate || hasOverdueDebtStatus || hasOverdueInstallment || hasUnpaidJob;
+        // Sonuç: Borç ödeme tarihi geçmiş, borç durumu "Ödeme gecikmiş" veya taksit ödeme tarihi geçmiş müşteriler
+        const result = hasOverdueDebtDate || hasOverdueDebtStatus || hasOverdueInstallment;
 
         // Debug log (tüm müşteriler için - sorun tespiti için)
         if (
           customer.hasDebt ||
-          customer.hasInstallment ||
-          (customer.jobs && customer.jobs.length > 0)
+          customer.hasInstallment
         ) {
           console.log(`[OverduePayment] Customer ${customer.id} (${customer.name}):`, {
             hasDebt: customer.hasDebt,
@@ -245,8 +231,6 @@ class CustomerService {
             installmentStartDate: customer.installmentStartDate,
             installmentIntervalDays: customer.installmentIntervalDays,
             hasOverdueInstallment,
-            hasUnpaidJob,
-            jobsCount: customer.jobs?.length || 0,
             result,
             today: today.toISOString(),
           });
