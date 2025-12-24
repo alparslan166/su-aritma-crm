@@ -41,9 +41,9 @@ class Invoice {
       customerEmail: json["customerEmail"] as String?,
       jobTitle: json["jobTitle"] as String,
       jobDate: DateTime.parse(json["jobDate"] as String),
-      subtotal: (json["subtotal"] as num).toDouble(),
-      tax: json["tax"] != null ? (json["tax"] as num).toDouble() : null,
-      total: (json["total"] as num).toDouble(),
+      subtotal: _parseDouble(json["subtotal"]) ?? 0.0,
+      tax: _parseDouble(json["tax"]),
+      total: _parseDouble(json["total"]) ?? 0.0,
       notes: json["notes"] as String?,
       isDraft: json["isDraft"] as bool? ?? true,
       jobId: json["jobId"] as String?,
@@ -70,3 +70,14 @@ class Invoice {
   }
 }
 
+// Safe double parsing helper
+double? _parseDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  if (value is String) {
+    final parsed = double.tryParse(value);
+    if (parsed != null) return parsed;
+  }
+  return null;
+}
