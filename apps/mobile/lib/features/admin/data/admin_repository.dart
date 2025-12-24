@@ -742,6 +742,39 @@ class AdminRepository {
     await _client.delete("/invoices/$invoiceId");
   }
 
+  // Create customer-only invoice (no job required)
+  Future<Invoice> createCustomerInvoice({
+    required String customerId,
+    required String customerName,
+    required String customerPhone,
+    required String customerAddress,
+    String? customerEmail,
+    required double subtotal,
+    double? tax,
+    required double total,
+    String? notes,
+    DateTime? invoiceDate,
+  }) async {
+    final response = await _client.post(
+      "/invoices/customer",
+      data: {
+        "customerId": customerId,
+        "customerName": customerName,
+        "customerPhone": customerPhone,
+        "customerAddress": customerAddress,
+        if (customerEmail != null && customerEmail.isNotEmpty)
+          "customerEmail": customerEmail,
+        "subtotal": subtotal,
+        if (tax != null) "tax": tax,
+        "total": total,
+        if (notes != null && notes.isNotEmpty) "notes": notes,
+        if (invoiceDate != null)
+          "invoiceDate": invoiceDate.toUtc().toIso8601String(),
+      },
+    );
+    return Invoice.fromJson(response.data["data"] as Map<String, dynamic>);
+  }
+
   // Profile methods
   Future<Map<String, dynamic>> getProfile() async {
     final response = await _client.get("/auth/profile");

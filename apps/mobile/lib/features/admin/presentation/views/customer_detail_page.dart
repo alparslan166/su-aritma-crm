@@ -21,6 +21,7 @@ import "../../../dashboard/presentation/home_page_provider.dart";
 import "edit_customer_sheet.dart";
 import "job_map_view.dart";
 import "customers_view.dart"; // CustomerFilterType enum'ı için
+import "payment_invoice_create_page.dart";
 
 final customerDetailProvider = FutureProvider.family<Customer, String>((
   ref,
@@ -1015,85 +1016,25 @@ class _DebtPaymentHistorySection extends ConsumerWidget {
     return deliveredJobs.first;
   }
 
-  /// Borç ödeme geçmişi için fatura oluştur
+  /// Borç ödeme geçmişi için fatura oluştur (iş gerektirmez)
   Future<void> _createInvoiceForPayment(
     BuildContext context,
     WidgetRef ref,
     Customer customer,
+    DebtPaymentHistory payment,
   ) async {
-    // En son DELIVERED işi bul
-    final latestJob = _findLatestDeliveredJob(customer);
-
-    if (latestJob == null) {
-      // DELIVERED iş yoksa kullanıcıya bilgi ver
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Bu müşteri için teslim edilmiş iş bulunamadı. Fatura oluşturmak için önce bir işi teslim etmeniz gerekir.",
-            ),
-            duration: Duration(seconds: 4),
-          ),
-        );
-      }
-      return;
-    }
-
-    // Job ID kontrolü
-    if (latestJob.id.isEmpty) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("İş bilgisi geçersiz. Lütfen tekrar deneyin."),
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-      return;
-    }
-
-    // Show loading dialog
-    if (context.mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    try {
-      // Generate and open PDF (opens directly from URL, never saved to device)
-      final repository = ref.read(adminRepositoryProvider);
-      await repository.generateInvoicePdf(latestJob.id);
-
-      // Close loading dialog
-      if (context.mounted) {
-        Navigator.of(context).pop();
-      }
-
-      // Refresh customer detail and job list
-      ref.invalidate(customerDetailProvider(customer.id));
-      ref.invalidate(jobListProvider);
-
-      // Ana sayfa grafik ve istatistiklerini statik olarak yenile
-      ref.invalidate(dashboardStatsProvider);
-      ref.invalidate(customerCategoryDataProvider);
-      ref.invalidate(overduePaymentsCustomersProvider);
-      ref.invalidate(upcomingMaintenanceProvider);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Fatura oluşturuldu ve açıldı")),
-        );
-      }
-    } catch (error) {
-      // Close loading dialog
-      if (context.mounted) {
-        Navigator.of(context).pop();
-        ErrorHandler.showError(context, error);
-      }
-    }
+    // Navigate to payment invoice create page
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PaymentInvoiceCreatePage(
+          customer: customer,
+          paymentAmount: payment.amount,
+          paymentDate: payment.paidAt,
+        ),
+      ),
+    );
   }
+
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1390,7 +1331,7 @@ class _DebtPaymentHistorySection extends ConsumerWidget {
                       ),
                       child: IconButton(
                         onPressed: () =>
-                            _createInvoiceForPayment(context, ref, customer),
+                            _createInvoiceForPayment(context, ref, customer, payment),
                         icon: const Icon(Icons.receipt),
                         color: const Color(0xFF2563EB),
                         tooltip: "Fatura Oluştur",

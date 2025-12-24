@@ -18,6 +18,25 @@ const createSchema = z.object({
   notes: z.string().optional(),
 });
 
+// Schema for customer-only invoice (no job required)
+const createCustomerInvoiceSchema = z.object({
+  customerId: z.string(),
+  customerName: z.string().min(2),
+  customerPhone: z.string().min(6),
+  customerAddress: z.string().min(3),
+  customerEmail: z.string().email().optional().or(z.literal("")),
+  subtotal: z.number().nonnegative(),
+  tax: z.number().nonnegative().optional(),
+  total: z.number().nonnegative(),
+  notes: z.string().optional(),
+  invoiceDate: z
+    .string()
+    .refine((value) => !Number.isNaN(Date.parse(value)), {
+      message: "invoiceDate must be ISO date string",
+    })
+    .optional(),
+});
+
 const updateSchema = z.object({
   customerName: z.string().min(2).optional(),
   customerPhone: z.string().min(6).optional(),
@@ -48,6 +67,29 @@ export const createInvoiceHandler = async (req: Request, res: Response, next: Ne
       tax: payload.tax,
       total: payload.total,
       notes: payload.notes,
+    });
+    res.json({ success: true, data: invoice });
+  } catch (error) {
+    next(error as Error);
+  }
+};
+
+// Handler for customer-only invoice (no job required)
+export const createCustomerInvoiceHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const adminId = getAdminId(req);
+    const payload = createCustomerInvoiceSchema.parse(req.body);
+    const invoice = await invoiceService.createCustomerInvoice(adminId, {
+      customerId: payload.customerId,
+      customerName: payload.customerName,
+      customerPhone: payload.customerPhone,
+      customerAddress: payload.customerAddress,
+      customerEmail: payload.customerEmail === "" ? undefined : payload.customerEmail,
+      subtotal: payload.subtotal,
+      tax: payload.tax,
+      total: payload.total,
+      notes: payload.notes,
+      invoiceDate: payload.invoiceDate ? new Date(payload.invoiceDate) : new Date(),
     });
     res.json({ success: true, data: invoice });
   } catch (error) {

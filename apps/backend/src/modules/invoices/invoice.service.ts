@@ -132,6 +132,56 @@ class InvoiceService {
     return invoice;
   }
 
+  // Create invoice for customer payment (no job required)
+  async createCustomerInvoice(
+    adminId: string,
+    payload: {
+      customerId: string;
+      customerName: string;
+      customerPhone: string;
+      customerAddress: string;
+      customerEmail?: string;
+      subtotal: number;
+      tax?: number;
+      total: number;
+      notes?: string;
+      invoiceDate?: Date;
+    }
+  ) {
+    // Verify customer exists
+    const customer = await prisma.customer.findFirst({
+      where: { id: payload.customerId, adminId },
+    });
+    if (!customer) {
+      throw new AppError("Müşteri bulunamadı", 404);
+    }
+
+    const tax = payload.tax ?? 0;
+    const invoiceDate = payload.invoiceDate ?? new Date();
+
+    // Create invoice without job
+    const invoice = await prisma.invoice.create({
+      data: {
+        adminId,
+        jobId: null, // No job for payment invoices
+        invoiceNumber: this.generateInvoiceNumber(adminId),
+        customerName: payload.customerName,
+        customerPhone: payload.customerPhone,
+        customerAddress: payload.customerAddress,
+        customerEmail: payload.customerEmail,
+        jobTitle: "Borç Ödemesi", // Default title for payment invoices
+        jobDate: invoiceDate,
+        subtotal: new Prisma.Decimal(payload.subtotal),
+        tax: tax > 0 ? new Prisma.Decimal(tax) : null,
+        total: new Prisma.Decimal(payload.total),
+        notes: payload.notes,
+        isDraft: false, // Payment invoices are finalized
+      },
+    });
+
+    return invoice;
+  }
+
   async update(adminId: string, invoiceId: string, payload: UpdateInvoicePayload) {
     await this.ensureInvoice(adminId, invoiceId);
 
