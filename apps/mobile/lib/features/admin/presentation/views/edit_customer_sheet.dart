@@ -1076,6 +1076,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                         prefixIcon: Icon(Icons.numbers),
                       ),
                       keyboardType: TextInputType.number,
+                      onChanged: (_) => setState(() {}), // Kutucukları güncelle
                       validator: (value) {
                         if (_debtHasInstallment &&
                             (value == null || value.trim().isEmpty)) {
@@ -1136,6 +1137,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                             "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
                       ),
                       keyboardType: TextInputType.number,
+                      onChanged: (_) => setState(() {}), // Kutucukları güncelle
                       validator: (value) {
                         if (_debtHasInstallment &&
                             (value == null || value.trim().isEmpty)) {

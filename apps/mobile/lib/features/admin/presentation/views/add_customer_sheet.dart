@@ -881,6 +881,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                       prefixIcon: Icon(Icons.attach_money),
                     ),
                     keyboardType: TextInputType.number,
+                    onChanged: (_) => setState(() {}), // Kutucukları güncelle
                     validator: (value) {
                       if (_hasDebt == true &&
                           (value == null || value.trim().isEmpty)) {
@@ -991,6 +992,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                         prefixIcon: Icon(Icons.numbers),
                       ),
                       keyboardType: TextInputType.number,
+                      onChanged: (_) => setState(() {}), // Kutucukları güncelle
                       validator: (value) {
                         if (_debtHasInstallment &&
                             (value == null || value.trim().isEmpty)) {
@@ -1051,6 +1053,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                             "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
                       ),
                       keyboardType: TextInputType.number,
+                      onChanged: (_) => setState(() {}), // Kutucukları güncelle
                       validator: (value) {
                         if (_debtHasInstallment &&
                             (value == null || value.trim().isEmpty)) {
