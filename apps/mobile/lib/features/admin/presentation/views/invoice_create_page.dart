@@ -256,6 +256,209 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
               ),
             ),
             const SizedBox(height: 16),
+            // Personel Bilgisi
+            if (widget.job.assignments.isNotEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.person, size: 20, color: Colors.blue),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Personel Bilgisi",
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...widget.job.assignments.map((assignment) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle, size: 16, color: Colors.green),
+                            const SizedBox(width: 8),
+                            Text(
+                              assignment.personnelName,
+                              style: const TextStyle(fontSize: 15),
+                            ),
+                          ],
+                        ),
+                      )),
+                    ],
+                  ),
+                ),
+              ),
+            if (widget.job.assignments.isNotEmpty) const SizedBox(height: 16),
+            // Kullanılan Malzemeler
+            if (widget.job.materials != null && widget.job.materials!.isNotEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.inventory_2, size: 20, color: Colors.orange),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Kullanılan Malzemeler",
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...widget.job.materials!.map((material) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                material.inventoryItemName,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                            Text(
+                              "${material.quantity} adet",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              "₺${(material.quantity * material.unitPrice).toStringAsFixed(2)}",
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )),
+                      const Divider(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Toplam Malzeme",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            "₺${widget.job.materials!.fold<double>(0, (sum, m) => sum + (m.quantity * m.unitPrice)).toStringAsFixed(2)}",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (widget.job.materials != null && widget.job.materials!.isNotEmpty)
+              const SizedBox(height: 16),
+            // Ödeme Durumu
+            Card(
+              color: _getPaymentStatusColor(widget.job.paymentStatus).withOpacity(0.1),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          _getPaymentStatusIcon(widget.job.paymentStatus),
+                          size: 20,
+                          color: _getPaymentStatusColor(widget.job.paymentStatus),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Ödeme Durumu",
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Durum:"),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _getPaymentStatusColor(widget.job.paymentStatus),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _getPaymentStatusText(widget.job.paymentStatus),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Toplam Tutar:"),
+                        Text(
+                          "₺${widget.job.price?.toStringAsFixed(2) ?? '0.00'}",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Alınan Ücret:"),
+                        Text(
+                          "₺${widget.job.collectedAmount?.toStringAsFixed(2) ?? '0.00'}",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if ((widget.job.price ?? 0) - (widget.job.collectedAmount ?? 0) > 0) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text("Kalan Borç:"),
+                          Text(
+                            "₺${((widget.job.price ?? 0) - (widget.job.collectedAmount ?? 0)).toStringAsFixed(2)}",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -373,5 +576,41 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
         ),
       ),
     );
+  }
+
+  Color _getPaymentStatusColor(String? status) {
+    switch (status) {
+      case "PAID":
+        return Colors.green;
+      case "PARTIAL":
+        return Colors.orange;
+      case "NOT_PAID":
+      default:
+        return Colors.red;
+    }
+  }
+
+  IconData _getPaymentStatusIcon(String? status) {
+    switch (status) {
+      case "PAID":
+        return Icons.check_circle;
+      case "PARTIAL":
+        return Icons.pending;
+      case "NOT_PAID":
+      default:
+        return Icons.cancel;
+    }
+  }
+
+  String _getPaymentStatusText(String? status) {
+    switch (status) {
+      case "PAID":
+        return "Ödendi";
+      case "PARTIAL":
+        return "Kısmi Ödeme";
+      case "NOT_PAID":
+      default:
+        return "Ödenmedi";
+    }
   }
 }
