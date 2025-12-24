@@ -238,22 +238,20 @@ export const registerHandler = async (req: Request, res: Response, next: NextFun
 
     console.log(`✅ Created admin with adminId: ${admin.adminId}`);
 
-    // Start 30-day trial for ALT admins
-    if (admin.role === "ALT") {
-      try {
-        const subscriptionService = new SubscriptionService();
-        await subscriptionService.startTrial(admin.id);
-        console.log(`✅ Started 30-day trial for admin: ${admin.id}`);
-      } catch (error) {
-        // Idempotent behavior: if subscription already exists, ignore.
-        const msg = error instanceof Error ? error.message : String(error);
-        if (msg.includes("Subscription already exists")) {
-          console.log(`ℹ️ Trial already exists for admin: ${admin.id}`);
-        } else {
-          console.error("❌ Failed to start trial:", error);
-        }
-        // Don't fail registration if trial creation fails
+    // Start 30-day trial for all new admins
+    try {
+      const subscriptionService = new SubscriptionService();
+      await subscriptionService.startTrial(admin.id);
+      console.log(`✅ Started 30-day trial for admin: ${admin.id}`);
+    } catch (error) {
+      // Idempotent behavior: if subscription already exists, ignore.
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes("Subscription already exists")) {
+        console.log(`ℹ️ Trial already exists for admin: ${admin.id}`);
+      } else {
+        console.error("❌ Failed to start trial:", error);
       }
+      // Don't fail registration if trial creation fails
     }
 
     // Generate and send verification code
@@ -752,7 +750,21 @@ export const confirmAccountDeletionHandler = async (
       },
     });
 
-    // 5. Delete jobs
+    // 5. Delete job materials (foreign key constraint)
+    await prisma.jobMaterial.deleteMany({
+      where: {
+        job: { adminId },
+      },
+    });
+
+    // 6. Delete job operations (foreign key constraint)
+    await prisma.jobOperation.deleteMany({
+      where: {
+        job: { adminId },
+      },
+    });
+
+    // 7. Delete jobs
     await prisma.job.deleteMany({
       where: { adminId },
     });
