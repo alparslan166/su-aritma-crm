@@ -871,6 +871,55 @@ class AdminRepository {
   }
 
   // Helper function to write bytes to file (only works on non-Web platforms)
+  /// Open invoice PDF by invoice ID - opens directly from URL
+  Future<String> openInvoicePdf(String invoiceId) async {
+    final baseUrl = _client.options.baseUrl;
+    final pdfUrl = "$baseUrl/invoices/$invoiceId/pdf";
+    final uri = Uri.parse(pdfUrl);
+
+    try {
+      bool launched = false;
+      String? lastError;
+
+      // Try externalApplication first (works better for PDFs on Android)
+      try {
+        launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (launched) {
+          debugPrint("✅ PDF opened successfully with externalApplication");
+          return "pdf_$invoiceId";
+        }
+      } catch (e) {
+        lastError = e.toString();
+        debugPrint("⚠️ externalApplication failed: $e");
+      }
+
+      // If externalApplication fails, try platformDefault
+      if (!launched) {
+        try {
+          launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+          if (launched) {
+            debugPrint("✅ PDF opened successfully with platformDefault");
+            return "pdf_$invoiceId";
+          }
+        } catch (e) {
+          lastError = e.toString();
+          debugPrint("⚠️ platformDefault failed: $e");
+        }
+      }
+
+      debugPrint("❌ All launch modes failed. Last error: $lastError");
+      throw Exception(
+        "PDF açılamadı. Lütfen bir web tarayıcısı veya PDF görüntüleyici uygulaması yüklü olduğundan emin olun.",
+      );
+    } catch (e) {
+      debugPrint("❌ PDF açma hatası: $e");
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception("PDF açılamadı: ${e.toString()}. Lütfen tekrar deneyin.");
+    }
+  }
+
   /// Generate invoice PDF - opens directly from URL, never saves to device
   Future<String> generateInvoicePdf(String jobId) async {
     // Always open PDF directly from URL - never save to device storage

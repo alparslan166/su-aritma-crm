@@ -5,6 +5,7 @@ import {
   createCustomerInvoiceHandler,
   deleteInvoiceHandler,
   generateInvoicePdfHandler,
+  generateInvoicePdfByIdHandler,
   getInvoiceHandler,
   listInvoicesHandler,
   updateInvoiceHandler,
@@ -16,8 +17,10 @@ router.get("/", listInvoicesHandler);
 router.post("/", createInvoiceHandler);
 router.post("/customer", createCustomerInvoiceHandler);
 router.get("/:id", getInvoiceHandler);
+router.get("/:invoiceId/pdf", generateInvoicePdfByIdHandler);
 router.get("/job/:jobId/pdf", generateInvoicePdfHandler);
 router.put("/:id", updateInvoiceHandler);
 router.delete("/:id", deleteInvoiceHandler);
 
 export const invoiceRouter = router;
+

@@ -94,7 +94,7 @@ class _PaymentInvoiceCreatePageState
       final repository = ref.read(adminRepositoryProvider);
       
       // Create customer-only invoice (no job required)
-      await repository.createCustomerInvoice(
+      final invoice = await repository.createCustomerInvoice(
         customerId: widget.customer.id,
         customerName: _customerNameController.text.trim(),
         customerPhone: _customerPhoneController.text.trim(),
@@ -111,10 +111,13 @@ class _PaymentInvoiceCreatePageState
         invoiceDate: _paymentDate,
       );
 
+      // Open PDF after creation
+      await repository.openInvoicePdf(invoice.id);
+
       if (mounted) {
         Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Ödeme faturası oluşturuldu")),
+          const SnackBar(content: Text("Ödeme faturası oluşturuldu ve açıldı")),
         );
       }
     } catch (error) {
@@ -127,6 +130,7 @@ class _PaymentInvoiceCreatePageState
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

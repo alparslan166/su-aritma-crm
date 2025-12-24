@@ -210,3 +210,71 @@ export const generateInvoicePdfHandler = async (
     next(error as Error);
   }
 };
+
+// Generate PDF by invoice ID (for customer invoices without job)
+export const generateInvoicePdfByIdHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { invoiceId } = req.params;
+
+    logger.debug("🔄 Generating invoice PDF for invoice:", invoiceId);
+
+    // Get adminId from invoice
+    let adminId: string | undefined;
+    try {
+      adminId = getAdminId(req);
+    } catch (error) {
+      logger.debug("⚠️ x-admin-id header not found, getting adminId from invoice");
+      const invoice = await prisma.invoice.findUnique({
+        where: { id: invoiceId },
+        select: { adminId: true },
+      });
+      if (!invoice) {
+        throw new AppError("Fatura bulunamadı", 404);
+      }
+      adminId = invoice.adminId;
+    }
+
+    if (!adminId) {
+      throw new AppError("Admin ID bulunamadı", 400);
+    }
+
+    // Get invoice data for PDF
+    const invoiceData = await invoiceService.getInvoicePdfById(adminId, invoiceId);
+
+    logger.debug("✅ Invoice data retrieved, generating PDF...");
+
+    // Generate PDF
+    const pdfStream = invoicePdfService.generatePdf(invoiceData);
+
+    // Set response headers
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="fatura-${invoiceData.invoiceNumber}.pdf"`,
+    );
+
+    // Handle PDF stream errors
+    pdfStream.on("error", (error) => {
+      logger.error("❌ PDF stream error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message: "PDF oluşturulurken hata oluştu. Lütfen tekrar deneyin.",
+          error: error.message,
+        });
+      }
+    });
+
+    // Pipe PDF to response
+    pdfStream.pipe(res);
+
+    logger.debug("✅ PDF stream piped to response");
+  } catch (error) {
+    logger.error("❌ Error generating invoice PDF by ID:", error);
+    next(error as Error);
+  }
+};

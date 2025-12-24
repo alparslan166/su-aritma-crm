@@ -383,6 +383,12 @@ class InvoiceService {
     // Get invoice data for PDF
     return this.getInvoiceForPdf(adminId, invoice.id);
   }
+
+  // Get invoice PDF data by invoice ID (for customer invoices without job)
+  async getInvoicePdfById(adminId: string, invoiceId: string) {
+    const invoice = await this.ensureInvoice(adminId, invoiceId);
+    return this.getInvoiceForPdf(adminId, invoice.id);
+  }
 }
 
 export const invoiceService = new InvoiceService();
