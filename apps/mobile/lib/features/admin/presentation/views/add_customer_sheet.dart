@@ -54,6 +54,8 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
     _createdAt = DateTime.now();
     _lastTransactionDate = DateTime.now(); // Varsayılan olarak bugün
     _paymentDate = DateTime.now(); // Varsayılan olarak bugün
+    _installmentStartDate = DateTime.now(); // Varsayılan: bugün
+    _installmentIntervalDaysController.text = "30"; // Varsayılan: 30 gün
   }
 
   @override

@@ -70,7 +70,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       text: customer.installmentCount?.toString() ?? "",
     );
     _installmentIntervalDaysController = TextEditingController(
-      text: customer.installmentIntervalDays?.toString() ?? "",
+      text: customer.installmentIntervalDays?.toString() ?? "30",
     );
     _receivedAmountController = TextEditingController(
       text: customer.receivedAmount?.toStringAsFixed(2) ?? "",
@@ -84,7 +84,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     // yoksa varsayılan olarak 1 ay sonraya ayarla
     _nextDebtDate =
         customer.nextDebtDate ?? DateTime.now().add(const Duration(days: 30));
-    _installmentStartDate = customer.installmentStartDate;
+    _installmentStartDate = customer.installmentStartDate ?? DateTime.now();
     // Bakım tarihi - mevcut değerleri formda göster
     try {
       final nextMaintenance = customer.nextMaintenanceDate;
