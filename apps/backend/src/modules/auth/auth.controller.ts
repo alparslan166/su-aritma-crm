@@ -764,7 +764,14 @@ export const confirmAccountDeletionHandler = async (
       },
     });
 
-    // 7. Delete jobs
+    // 7. Delete location logs that reference jobs (foreign key constraint)
+    await prisma.locationLog.deleteMany({
+      where: {
+        job: { adminId },
+      },
+    });
+
+    // 8. Delete jobs
     await prisma.job.deleteMany({
       where: { adminId },
     });
