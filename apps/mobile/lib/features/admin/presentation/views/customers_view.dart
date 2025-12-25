@@ -484,6 +484,14 @@ class CustomersView extends HookConsumerWidget {
     ValueNotifier<bool> isSelectionMode,
     ValueNotifier<Set<String>> selectedCustomers,
   ) {
+    // Remove duplicates by customer ID
+    final seenIds = <String>{};
+    final uniqueCustomers = customers.where((c) {
+      if (seenIds.contains(c.id)) return false;
+      seenIds.add(c.id);
+      return true;
+    }).toList();
+    
     final scrollController = useScrollController();
     final scrollOffset = useState<double>(0.0);
     final previousScrollOffset = useRef<double>(0.0);
@@ -533,13 +541,13 @@ class CustomersView extends HookConsumerWidget {
       child: ListView.separated(
         controller: scrollController,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        itemCount: customers.length,
+        itemCount: uniqueCustomers.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         cacheExtent: 500,
         addAutomaticKeepAlives: false,
         addRepaintBoundaries: true,
         itemBuilder: (context, index) {
-          final customer = customers[index];
+          final customer = uniqueCustomers[index];
           final isSelected = selectedCustomers.value.contains(customer.id);
           return RepaintBoundary(
             child: _AnimatedCustomerTile(
