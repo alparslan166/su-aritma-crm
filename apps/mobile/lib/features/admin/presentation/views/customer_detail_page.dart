@@ -902,10 +902,9 @@ class _DebtSection extends ConsumerWidget {
                     ),
                   ),
                 ],
-                // Taksit Kutucukları - sadece kalan borç varsa göster
+                // Taksit Kutucukları - her zaman göster
                 if (customer.hasInstallment &&
-                    (customer.installmentCount ?? 0) > 0 &&
-                    (customer.remainingDebtAmount ?? 0) > 0) ...[
+                    (customer.installmentCount ?? 0) > 0) ...[
                   const SizedBox(height: 20),
                   const Divider(),
                   const SizedBox(height: 12),
