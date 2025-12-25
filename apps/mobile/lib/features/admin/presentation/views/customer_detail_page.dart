@@ -709,13 +709,13 @@ class _MaintenanceRow extends StatelessWidget {
   }
 }
 
-class _DebtSection extends ConsumerWidget {
+class _DebtSection extends StatelessWidget {
   const _DebtSection({required this.customer});
 
   final Customer customer;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final isOverdue =
         customer.nextDebtDate != null &&
         customer.nextDebtDate!.isBefore(DateTime.now());
@@ -908,136 +908,96 @@ class _DebtSection extends ConsumerWidget {
                   const SizedBox(height: 20),
                   const Divider(),
                   const SizedBox(height: 12),
-                  FutureBuilder<List<Map<String, dynamic>>>(
-                    future: ref
-                        .read(adminRepositoryProvider)
-                        .getInstallments(customer.id),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+                  Text(
+                    "Taksit Planı",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: List.generate(
+                        customer.installmentCount!,
+                        (index) {
+                          final installmentNo = index + 1;
+                          final intervalDays = customer.installmentIntervalDays ?? 30;
+                          final startDate = customer.installmentStartDate ?? DateTime.now();
+                          final dueDate = startDate.add(
+                            Duration(days: intervalDays * installmentNo),
+                          );
+                          final debtAmount = customer.debtAmount ?? 0;
+                          final installmentAmount = debtAmount / customer.installmentCount!;
+                          // Ödenen taksit sayısını hesapla
+                          final paidAmount = customer.paidDebtAmount ?? 0;
+                          final isPaid = (installmentAmount * installmentNo) <= paidAmount;
 
-                      if (snapshot.hasError ||
-                          !snapshot.hasData ||
-                          snapshot.data!.isEmpty) {
-                        return const SizedBox.shrink();
-                      }
-
-                      final installments = snapshot.data!;
-
-                      return SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: installments.map((installment) {
-                            final isPaid =
-                                installment["isPaid"] as bool? ?? false;
-                            final installmentNo =
-                                installment["installmentNo"] as int;
-                            final amount = double.tryParse(
-                                  installment["amount"]?.toString() ?? "0",
-                                ) ??
-                                0;
-                            final dueDate = DateTime.parse(
-                              installment["dueDate"] as String,
-                            );
-                            final installmentId = installment["id"] as String;
-
-                            return GestureDetector(
-                              onTap: isPaid
-                                  ? null
-                                  : () => _payInstallment(
-                                        context,
-                                        ref,
-                                        installmentId,
-                                        installmentNo,
-                                        amount,
-                                        customer.id,
-                                      ),
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: isPaid
-                                      ? const Color(0xFF10B981)
-                                          .withValues(alpha: 0.15)
-                                      : const Color(0xFF2563EB)
-                                          .withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
+                          return Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isPaid
+                                  ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                  : const Color(0xFF2563EB).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isPaid
+                                    ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                                    : const Color(0xFF2563EB).withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  "$installmentNo",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
                                     color: isPaid
                                         ? const Color(0xFF10B981)
-                                            .withValues(alpha: 0.4)
-                                        : const Color(0xFF2563EB)
-                                            .withValues(alpha: 0.3),
-                                    width: 1.5,
+                                        : const Color(0xFF2563EB),
                                   ),
                                 ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 18,
-                                      height: 18,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: isPaid
-                                            ? const Color(0xFF10B981)
-                                            : Colors.transparent,
-                                        border: Border.all(
-                                          color: isPaid
-                                              ? const Color(0xFF10B981)
-                                              : const Color(0xFF2563EB),
-                                          width: isPaid ? 0 : 1.5,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: isPaid
-                                            ? const Icon(
-                                                Icons.check,
-                                                size: 12,
-                                                color: Colors.white,
-                                              )
-                                            : Text(
-                                                "$installmentNo",
-                                                style: const TextStyle(
-                                                  fontSize: 9,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF2563EB),
-                                                ),
-                                              ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "${amount.toStringAsFixed(0)}₺",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: isPaid
-                                            ? const Color(0xFF10B981)
-                                            : const Color(0xFF2563EB),
-                                        decoration: isPaid
-                                            ? TextDecoration.lineThrough
-                                            : null,
-                                      ),
-                                    ),
-                                    Text(
-                                      DateFormat("dd/MM").format(dueDate),
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        color: isPaid
-                                            ? Colors.grey.shade500
-                                            : Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
+                                Text(
+                                  "${installmentAmount.toStringAsFixed(0)}₺",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isPaid
+                                        ? const Color(0xFF10B981)
+                                        : Colors.grey.shade600,
+                                    decoration: isPaid
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
                                 ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      );
-                    },
+                                Text(
+                                  DateFormat("dd/MM").format(dueDate),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                                if (isPaid)
+                                  const Text(
+                                    "✓",
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF10B981),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ],
               ],
@@ -1064,83 +1024,6 @@ class _DebtSection extends ConsumerWidget {
 
   String _getOverdueDays(DateTime dueDate) {
     return _getOverdueDaysStatic(dueDate);
-  }
-
-  Future<void> _payInstallment(
-    BuildContext context,
-    WidgetRef ref,
-    String installmentId,
-    int installmentNo,
-    double amount,
-    String customerId,
-  ) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Taksit $installmentNo Ödemesi"),
-        content: Text(
-          "${amount.toStringAsFixed(2)} ₺ tutarındaki taksiti ödemek istediğinize emin misiniz?\n\nBu işlem fatura oluşturacaktır.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text("İptal"),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text("Öde"),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    if (context.mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    try {
-      final result = await ref.read(adminRepositoryProvider).payInstallment(
-        installmentId,
-      );
-
-      // Open PDF if invoice was created
-      if (result["invoice"] != null) {
-        final invoiceId = result["invoice"]["id"] as String;
-        await ref.read(adminRepositoryProvider).openInvoicePdf(invoiceId);
-      }
-
-      if (context.mounted) {
-        Navigator.of(context).pop();
-      }
-
-      // Refresh customer detail
-      ref.invalidate(customerDetailProvider(customerId));
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Taksit $installmentNo başarıyla ödendi"),
-            backgroundColor: const Color(0xFF10B981),
-          ),
-        );
-      }
-    } catch (error) {
-      if (context.mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Hata: $error"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 }
 
