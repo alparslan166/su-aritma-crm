@@ -995,9 +995,9 @@ class _DebtSection extends ConsumerWidget {
                                   ),
                                   if (isPaid)
                                     const Text(
-                                      "✓",
+                                      "Ödeme Alındı",
                                       style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 9,
                                         fontWeight: FontWeight.bold,
                                         color: Color(0xFF10B981),
                                       ),
