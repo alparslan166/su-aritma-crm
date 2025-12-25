@@ -987,7 +987,7 @@ class _DebtSection extends ConsumerWidget {
                                     ),
                                   ),
                                   Text(
-                                    DateFormat("dd/MM/yy").format(dueDate),
+                                    DateFormat("dd/MM/yyyy").format(dueDate),
                                     style: TextStyle(
                                       fontSize: 10,
                                       color: Colors.grey.shade500,
