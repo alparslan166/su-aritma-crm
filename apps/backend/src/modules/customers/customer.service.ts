@@ -689,13 +689,18 @@ class CustomerService {
   async payDebt(adminId: string, customerId: string, amount: number, installmentCount?: number) {
     const customer = await this.ensureCustomer(adminId, customerId);
 
-    if (!customer.hasDebt || !customer.remainingDebtAmount) {
+    if (!customer.hasDebt) {
       throw new AppError("Customer has no debt to pay", 400);
+    }
+
+    // Use remainingDebtAmount if available, otherwise fallback to debtAmount (for backward compatibility)
+    const currentRemaining = customer.remainingDebtAmount || customer.debtAmount;
+    if (!currentRemaining || Number(currentRemaining) <= 0) {
+      throw new AppError("Customer has no remaining debt to pay", 400);
     }
 
     const paymentAmount = new Prisma.Decimal(amount);
     const currentPaid = customer.paidDebtAmount || new Prisma.Decimal(0);
-    const currentRemaining = customer.remainingDebtAmount;
 
     // Ensure payment doesn't exceed remaining debt
     if (paymentAmount.gt(currentRemaining)) {
