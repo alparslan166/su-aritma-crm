@@ -123,14 +123,14 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
             const SizedBox(height: 24),
             _DebtSection(customer: customer),
           ],
-          // Borç Ödeme Geçmişi - Borç Ödeme bölümünün üzerinde (her zaman göster)
-          const SizedBox(height: 24),
-          _DebtPaymentHistorySection(customer: customer),
           // Taksit Ödemeleri - sadece taksitli müşteriler için
           if (customer.hasInstallment && (customer.installmentCount ?? 0) > 0) ...[
             const SizedBox(height: 24),
             _InstallmentPaymentsSection(customerId: customer.id, customer: customer),
           ],
+          // Borç Ödeme Geçmişi - Borç Ödeme bölümünün üzerinde (her zaman göster)
+          const SizedBox(height: 24),
+          _DebtPaymentHistorySection(customer: customer),
           // Borç Ödeme formu - sadece borç varsa göster
           if (customer.hasDebt) ...[
             const SizedBox(height: 24),
