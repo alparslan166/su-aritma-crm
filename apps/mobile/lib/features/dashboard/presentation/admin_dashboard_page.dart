@@ -1,13 +1,9 @@
-import "package:flutter/foundation.dart" show kIsWeb;
 import "package:flutter/material.dart";
 import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
-import "../../../core/utils/html_utils.dart" as html;
-
 import "../../../core/session/session_provider.dart";
 import "../../../routing/app_router.dart";
-import "../../admin/data/admin_repository.dart";
 import "../../admin/presentation/views/admin_profile_page.dart";
 import "../../admin/presentation/views/assign_job_sheet.dart";
 import "../../admin/presentation/views/customers_view.dart";
@@ -17,6 +13,7 @@ import "../../admin/presentation/views/jobs_view.dart";
 import "../../admin/presentation/views/notifications_view.dart";
 import "../../admin/presentation/views/past_jobs_view.dart";
 import "../../admin/presentation/views/personnel_view.dart";
+import "../../admin/presentation/views/export_data_page.dart";
 import "home_page_tab.dart";
 
 class AdminDashboardPage extends StatefulWidget {
@@ -419,89 +416,6 @@ class _AssignJobTab extends StatelessWidget {
 class _AdminDrawer extends ConsumerWidget {
   const _AdminDrawer();
 
-  Future<void> _exportData(BuildContext context, WidgetRef ref) async {
-    // Track if dialog is still showing
-    bool dialogShowing = true;
-    
-    // Show loading dialog
-    showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => PopScope(
-        canPop: true,
-        onPopInvokedWithResult: (didPop, result) {
-          dialogShowing = false;
-        },
-        child: AlertDialog(
-          content: Row(
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(width: 20),
-              const Expanded(
-                child: Text("Veriler hazırlanıyor...\nBu işlem birkaç saniye sürebilir."),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    // Close dialog helper
-    void closeDialog() {
-      if (dialogShowing && context.mounted) {
-        dialogShowing = false;
-        Navigator.of(context, rootNavigator: true).pop();
-      }
-    }
-
-    try {
-      final repo = ref.read(adminRepositoryProvider);
-      
-      // Add timeout of 10 seconds
-      final bytes = await repo.downloadExcelExport().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw Exception("İstek zaman aşımına uğradı. Lütfen tekrar deneyin.");
-        },
-      );
-      
-      // Close loading dialog
-      closeDialog();
-      
-      // Download file (web platform)
-      if (kIsWeb) {
-        final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.AnchorElement(href: url)
-          ..setAttribute('download', 'SuAritma_Export_${DateTime.now().toIso8601String().split('T')[0]}.xlsx')
-          ..click();
-        html.Url.revokeObjectUrl(url);
-        
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("✅ Excel dosyası indiriliyor..."),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      // Close loading dialog if still open
-      closeDialog();
-      
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("❌ Dışarı aktarma hatası: $e"),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _performLogout(BuildContext context, WidgetRef ref) async {
     debugPrint("🔴 LOGOUT BUTONU TIKLANDI!");
 
@@ -784,9 +698,11 @@ class _AdminDrawer extends ConsumerWidget {
                 letterSpacing: 0.2,
               ),
             ),
-            onTap: () async {
+            onTap: () {
               Navigator.of(context).pop();
-              await _exportData(context, ref);
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ExportDataPage()),
+              );
             },
           ),
           const Divider(),
