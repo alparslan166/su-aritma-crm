@@ -1,3 +1,5 @@
+import "dart:typed_data";
+
 import "package:dio/dio.dart";
 import "package:flutter/foundation.dart" show debugPrint;
 import "package:hooks_riverpod/hooks_riverpod.dart";
