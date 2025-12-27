@@ -47,6 +47,14 @@ const start = async () => {
     server.listen(config.port, "0.0.0.0", () => {
       logger.info(`✅ API listening on port ${config.port}`);
       logger.info(`✅ Server started successfully`);
+      
+      // Initialize scheduled jobs after server starts
+      try {
+        const { initializeScheduler } = require("./lib/scheduler");
+        initializeScheduler();
+      } catch (error) {
+        logger.error("⚠️ Failed to initialize scheduler (non-critical):", error);
+      }
     });
     
     // Register maintenance queue (non-blocking, Redis optional)
