@@ -151,3 +151,36 @@ export const markTrialNoticeSeenHandler = async (
     next(error as Error);
   }
 };
+
+// Cron endpoint to send expiry notifications
+// This should be called daily by an external scheduler (Railway cron, Vercel cron, etc.)
+export const sendExpiryNotificationsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    // Optional: Add a secret key check for security
+    const cronSecret = req.headers["x-cron-secret"] || req.query.secret;
+    const expectedSecret = process.env.CRON_SECRET;
+    
+    if (expectedSecret && cronSecret !== expectedSecret) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "Unauthorized" 
+      });
+    }
+    
+    console.log("🕐 Running subscription expiry notification check...");
+    const result = await subscriptionService.checkAndSendExpiryNotifications();
+    
+    res.json({
+      success: true,
+      message: "Expiry notification check completed",
+      data: result,
+    });
+  } catch (error) {
+    console.error("❌ Cron job failed:", error);
+    next(error as Error);
+  }
+};

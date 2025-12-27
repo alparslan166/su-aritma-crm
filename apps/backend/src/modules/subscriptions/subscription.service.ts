@@ -262,4 +262,91 @@ export class SubscriptionService {
       },
     });
   }
+
+  /**
+   * Check all subscriptions and send push notifications for expiring ones
+   * Should be called daily by a scheduler/cron job
+   */
+  async checkAndSendExpiryNotifications(): Promise<{ notified: number; errors: number }> {
+    const { fcmAdminService } = await import("../notifications/fcm-admin.service");
+    const { fcmService } = await import("../notifications/fcm.service");
+
+    const now = new Date();
+    const threeDaysFromNow = new Date(now);
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+
+    // Find all subscriptions expiring in exactly 3, 2, or 1 days
+    const expiringSubscriptions = await prisma.subscription.findMany({
+      where: {
+        OR: [
+          {
+            status: "trial",
+            trialEnds: {
+              gte: now,
+              lte: threeDaysFromNow,
+            },
+          },
+          {
+            status: "active",
+            endDate: {
+              gte: now,
+              lte: threeDaysFromNow,
+            },
+          },
+        ],
+      },
+      include: {
+        admin: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    console.log(`📢 Found ${expiringSubscriptions.length} subscriptions expiring within 3 days`);
+
+    let notified = 0;
+    let errors = 0;
+
+    for (const sub of expiringSubscriptions) {
+      try {
+        const endDate = sub.status === "trial" ? sub.trialEnds : sub.endDate;
+        if (!endDate) continue;
+
+        const diff = endDate.getTime() - now.getTime();
+        const daysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+        if (daysRemaining <= 0 || daysRemaining > 3) continue;
+
+        const payload = {
+          title: "Abonelik Uyarısı ⏰",
+          body: daysRemaining === 1
+            ? "Aboneliğinizin bitmesine 1 gün kaldı! Hemen yenileyin."
+            : `Aboneliğinizin bitmesine ${daysRemaining} gün kaldı.`,
+          data: {
+            type: "subscription_expiring",
+            adminId: sub.adminId,
+            daysRemaining: String(daysRemaining),
+          },
+        };
+
+        // Try to send push notification
+        const service = fcmAdminService.initialized ? fcmAdminService : fcmService;
+        await service.sendToUser(sub.adminId, "admin", payload);
+
+        console.log(`✅ Sent expiry notification to admin ${sub.admin.name} (${sub.admin.email}) - ${daysRemaining} days remaining`);
+        notified++;
+      } catch (error) {
+        console.error(`❌ Failed to send expiry notification to ${sub.adminId}:`, error);
+        errors++;
+      }
+    }
+
+    console.log(`📊 Expiry notifications: ${notified} sent, ${errors} errors`);
+    return { notified, errors };
+  }
 }
+
