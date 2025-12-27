@@ -420,31 +420,53 @@ class _AdminDrawer extends ConsumerWidget {
   const _AdminDrawer();
 
   Future<void> _exportData(BuildContext context, WidgetRef ref) async {
+    // Track if dialog is still showing
+    bool dialogShowing = true;
+    
     // Show loading dialog
     showDialog<void>(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        content: Row(
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(width: 20),
-            const Expanded(
-              child: Text("Veriler hazırlanıyor...\nBu işlem birkaç saniye sürebilir."),
-            ),
-          ],
+      barrierDismissible: true,
+      builder: (ctx) => PopScope(
+        canPop: true,
+        onPopInvokedWithResult: (didPop, result) {
+          dialogShowing = false;
+        },
+        child: AlertDialog(
+          content: Row(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(width: 20),
+              const Expanded(
+                child: Text("Veriler hazırlanıyor...\nBu işlem birkaç saniye sürebilir."),
+              ),
+            ],
+          ),
         ),
       ),
     );
 
+    // Close dialog helper
+    void closeDialog() {
+      if (dialogShowing && context.mounted) {
+        dialogShowing = false;
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+
     try {
       final repo = ref.read(adminRepositoryProvider);
-      final bytes = await repo.downloadExcelExport();
+      
+      // Add timeout of 10 seconds
+      final bytes = await repo.downloadExcelExport().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception("İstek zaman aşımına uğradı. Lütfen tekrar deneyin.");
+        },
+      );
       
       // Close loading dialog
-      if (context.mounted) {
-        Navigator.of(context).pop();
-      }
+      closeDialog();
       
       // Download file (web platform)
       if (kIsWeb) {
@@ -466,13 +488,14 @@ class _AdminDrawer extends ConsumerWidget {
       }
     } catch (e) {
       // Close loading dialog if still open
+      closeDialog();
+      
       if (context.mounted) {
-        Navigator.of(context).pop();
-        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("❌ Dışarı aktarma hatası: $e"),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
