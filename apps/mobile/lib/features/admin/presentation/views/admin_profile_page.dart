@@ -701,22 +701,43 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                         data: (subscription) {
                           if (subscription == null) {
                             return Card(
-                              color: Colors.blue.shade50,
+                              color: Colors.orange.shade50,
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
-                                child: Row(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(
-                                      Icons.info_outline,
-                                      color: Colors.blue.shade700,
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.hourglass_empty,
+                                          color: Colors.orange.shade700,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            "Abonelik bilgisi yükleniyor...",
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                              color: Colors.orange.shade900,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        "Abonelik bilgisi bulunamadı. Lütfen yönetici ile iletişime geçin.",
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.blue.shade900,
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: OutlinedButton.icon(
+                                        onPressed: () {
+                                          ref.invalidate(adminSubscriptionProvider);
+                                        },
+                                        icon: const Icon(Icons.refresh),
+                                        label: const Text("Yenile"),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.orange.shade700,
+                                          side: BorderSide(color: Colors.orange.shade300),
                                         ),
                                       ),
                                     ),
@@ -1169,6 +1190,30 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text("E-posta adresinize gönderilen 6 haneli kodu girin:"),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.email_outlined, size: 18, color: Colors.grey.shade600),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _emailController.text,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 16),
               TextField(
                 controller: codeController,

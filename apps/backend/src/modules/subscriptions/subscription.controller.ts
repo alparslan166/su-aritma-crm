@@ -10,7 +10,24 @@ const subscriptionService = new SubscriptionService();
 export const getSubscriptionHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
-    const subscription = await subscriptionService.getSubscription(adminId);
+    let subscription = await subscriptionService.getSubscription(adminId);
+
+    // If no subscription exists, automatically create a trial for this admin
+    // This handles cases where trial creation failed during registration
+    if (!subscription) {
+      console.log(`⚠️ No subscription found for admin ${adminId}, creating trial...`);
+      try {
+        await subscriptionService.startTrial(adminId);
+        console.log(`✅ Auto-created trial for admin ${adminId}`);
+        // Fetch the newly created subscription
+        subscription = await subscriptionService.getSubscription(adminId);
+      } catch (trialError) {
+        const msg = trialError instanceof Error ? trialError.message : String(trialError);
+        if (!msg.includes("Subscription already exists")) {
+          console.error(`❌ Failed to auto-create trial for admin ${adminId}:`, trialError);
+        }
+      }
+    }
 
     if (!subscription) {
       return res.json({
