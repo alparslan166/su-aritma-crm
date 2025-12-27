@@ -995,4 +995,88 @@ class AdminRepository {
       throw Exception("PDF açılamadı: ${e.toString()}. Lütfen tekrar deneyin.");
     }
   }
+
+  /// Export all admin data to Excel and return download URL
+  Future<String> exportAllDataToExcel() async {
+    try {
+      // Get base URL from client options
+      final baseUrl = _client.options.baseUrl;
+      
+      // Get auth token from headers
+      final headers = _client.options.headers;
+      final authHeader = headers["Authorization"] as String?;
+      
+      if (authHeader == null) {
+        throw Exception("Yetkilendirme hatası. Lütfen tekrar giriş yapın.");
+      }
+      
+      // Construct export URL with token as query param for download
+      final token = authHeader.replaceFirst("Bearer ", "");
+      final exportUrl = "$baseUrl/export/excel";
+      
+      debugPrint("📦 Excel export URL: $exportUrl");
+      
+      // Open URL in browser for download
+      final uri = Uri.parse(exportUrl);
+      
+      // Add Authorization header for the download
+      // Since we can't add headers to launchUrl, we'll use a workaround
+      // by making the request and returning the URL that can be opened
+      final response = await _client.get(
+        "/export/excel",
+        options: Options(
+          responseType: ResponseType.bytes,
+          receiveTimeout: const Duration(seconds: 60),
+        ),
+      );
+      
+      // Return the bytes as base64 data URL for download
+      // This is a workaround for web platform
+      final bytes = response.data as List<int>;
+      debugPrint("✅ Excel export successful: ${bytes.length} bytes");
+      
+      // For now, return the bytes count as success indicator
+      return "success:${bytes.length}";
+    } catch (e) {
+      debugPrint("❌ Excel export hatası: $e");
+      if (e is DioException) {
+        if (e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout) {
+          throw Exception("Bağlantı zaman aşımı. Lütfen tekrar deneyin.");
+        }
+        throw Exception("Dışarı aktarma hatası: ${e.message}");
+      }
+      rethrow;
+    }
+  }
+
+  /// Export all data and trigger download
+  Future<Uint8List> downloadExcelExport() async {
+    try {
+      debugPrint("📦 Excel export başlatılıyor...");
+      
+      final response = await _client.get(
+        "/export/excel",
+        options: Options(
+          responseType: ResponseType.bytes,
+          receiveTimeout: const Duration(seconds: 120),
+        ),
+      );
+      
+      final bytes = response.data as List<int>;
+      debugPrint("✅ Excel export tamamlandı: ${bytes.length} bytes");
+      
+      return Uint8List.fromList(bytes);
+    } catch (e) {
+      debugPrint("❌ Excel export hatası: $e");
+      if (e is DioException) {
+        if (e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout) {
+          throw Exception("Bağlantı zaman aşımı. Lütfen tekrar deneyin.");
+        }
+        throw Exception("Dışarı aktarma hatası: ${e.message}");
+      }
+      rethrow;
+    }
+  }
 }

@@ -1,9 +1,13 @@
+import "package:flutter/foundation.dart" show kIsWeb;
 import "package:flutter/material.dart";
 import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
+import "../../../core/utils/html_utils.dart" as html;
+
 import "../../../core/session/session_provider.dart";
 import "../../../routing/app_router.dart";
+import "../../admin/data/admin_repository.dart";
 import "../../admin/presentation/views/admin_profile_page.dart";
 import "../../admin/presentation/views/assign_job_sheet.dart";
 import "../../admin/presentation/views/customers_view.dart";
@@ -415,6 +419,66 @@ class _AssignJobTab extends StatelessWidget {
 class _AdminDrawer extends ConsumerWidget {
   const _AdminDrawer();
 
+  Future<void> _exportData(BuildContext context, WidgetRef ref) async {
+    // Show loading dialog
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 20),
+            const Expanded(
+              child: Text("Veriler hazırlanıyor...\nBu işlem birkaç saniye sürebilir."),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final repo = ref.read(adminRepositoryProvider);
+      final bytes = await repo.downloadExcelExport();
+      
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+      
+      // Download file (web platform)
+      if (kIsWeb) {
+        final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', 'SuAritma_Export_${DateTime.now().toIso8601String().split('T')[0]}.xlsx')
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("✅ Excel dosyası indiriliyor..."),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("❌ Dışarı aktarma hatası: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _performLogout(BuildContext context, WidgetRef ref) async {
     debugPrint("🔴 LOGOUT BUTONU TIKLANDI!");
 
@@ -674,6 +738,32 @@ class _AdminDrawer extends ConsumerWidget {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const NotificationsView()),
               );
+            },
+          ),
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF059669).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.download,
+                color: Color(0xFF059669),
+                size: 24,
+              ),
+            ),
+            title: const Text(
+              "Dışarı Aktar",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              ),
+            ),
+            onTap: () async {
+              Navigator.of(context).pop();
+              await _exportData(context, ref);
             },
           ),
           const Divider(),

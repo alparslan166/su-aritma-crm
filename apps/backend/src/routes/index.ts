@@ -16,6 +16,7 @@ import { notificationRouter } from "../modules/notifications/notification.router
 import { personnelRouter } from "../modules/personnel/personnel.router";
 import { personnelJobsRouter } from "../modules/personnel-jobs/personnel-jobs.router";
 import { subscriptionRouter } from "../modules/subscriptions/subscription.router";
+import { exportRouter } from "../modules/export/export.router";
 
 const router = Router();
 
@@ -40,6 +41,7 @@ router.get("/", (req, res) => {
       personnel: "/api/personnel",
       "personnel-jobs": "/api/personnel/jobs",
       subscriptions: "/api/subscriptions",
+      export: "/api/export",
     },
   });
 });
@@ -82,5 +84,6 @@ router.use("/maintenance", maintenanceRouter);
 router.use("/personnel/jobs", personnelJobsRouter);
 router.use("/personnel", personnelRouter);
 router.use("/subscriptions", subscriptionRouter);
+router.use("/export", exportRouter);
 
 export const apiRouter = router;
