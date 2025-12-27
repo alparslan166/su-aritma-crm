@@ -899,6 +899,7 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                                       formatDate(trialEnds),
                                       Icons.calendar_today,
                                     ),
+
                                     const SizedBox(height: 12),
                                   ],
                                   if (status == "active") ...[
