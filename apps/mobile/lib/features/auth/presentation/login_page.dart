@@ -34,13 +34,40 @@ class LoginPage extends HookConsumerWidget {
       text: loginState.adminId,
     );
     final isPasswordVisible = useState<bool>(false);
+    final savedCredentials = useState<(String?, String?)?>(null);
+    final showSuggestion = useState<bool>(false);
+    
+    // Focus nodes for email and password fields
+    final emailFocusNode = useFocusNode();
+    final passwordFocusNode = useFocusNode();
+
+    // Load saved credentials for suggestion on mount
+    useEffect(() {
+      LoginController.getSavedCredentials().then((creds) {
+        savedCredentials.value = creds;
+      });
+      return null;
+    }, []);
+
+    // Show suggestion when email or password field is focused
+    useEffect(() {
+      void onFocusChange() {
+        showSuggestion.value = emailFocusNode.hasFocus || passwordFocusNode.hasFocus;
+      }
+      emailFocusNode.addListener(onFocusChange);
+      passwordFocusNode.addListener(onFocusChange);
+      return () {
+        emailFocusNode.removeListener(onFocusChange);
+        passwordFocusNode.removeListener(onFocusChange);
+      };
+    }, [emailFocusNode, passwordFocusNode]);
 
     useEffect(() {
       identifierController.text = loginState.identifier;
       secretController.text = loginState.secret;
       adminIdController.text = loginState.adminId;
       return null;
-    }, [loginState.role]);
+    }, [loginState.role, loginState.identifier, loginState.secret]);
 
     ref.listen(loginControllerProvider, (previous, next) {
       final prevStatus = previous?.status;
@@ -125,7 +152,7 @@ class LoginPage extends HookConsumerWidget {
                       _AnimatedLogo(),
                       const SizedBox(height: 20),
                       Text(
-                        "Su Arıtma Platformu",
+                        "FiltreFix",
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.headlineLarge
                             ?.copyWith(
@@ -231,64 +258,149 @@ class LoginPage extends HookConsumerWidget {
                         ),
                         const SizedBox(height: 16),
                       ],
-                      TextField(
-                        controller: identifierController,
-                        decoration: InputDecoration(
-                          labelText: loginState.role == AuthRole.admin
-                              ? "E-posta"
-                              : loginState.role.identifierLabel,
-                          hintText: loginState.role == AuthRole.admin
-                              ? "ör. admin@example.com"
-                              : "ör. PRS-2025-11",
-                          prefixIcon: Icon(
-                            loginState.role == AuthRole.admin
-                                ? Icons.email_outlined
-                                : Icons.person_outline,
-                          ),
-                        ),
-                        keyboardType: loginState.role == AuthRole.admin
-                            ? TextInputType.emailAddress
-                            : TextInputType.text,
-                        textInputAction: TextInputAction.next,
-                        autocorrect: false,
-                        enableSuggestions: false,
-                        onChanged: controller.updateIdentifier,
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: secretController,
-                        decoration: InputDecoration(
-                          labelText: loginState.role.passwordLabel,
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              isPasswordVisible.value
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                            ),
-                            onPressed: () {
-                              isPasswordVisible.value =
-                                  !isPasswordVisible.value;
-                            },
-                            tooltip: isPasswordVisible.value
-                                ? "Şifreyi Gizle"
-                                : "Şifreyi Göster",
-                          ),
-                        ),
-                        obscureText: !isPasswordVisible.value,
-                        keyboardType: loginState.role == AuthRole.admin
-                            ? TextInputType.visiblePassword
-                            : TextInputType.text,
-                        inputFormatters: loginState.role == AuthRole.personnel
-                            ? [
-                                FilteringTextInputFormatter.allow(
-                                  RegExp(r'[a-zA-Z0-9]'),
+                      AutofillGroup(
+                        child: Column(
+                          children: [
+                            // Kayıtlı hesap önerisi - sadece focus varken göster
+                            if (showSuggestion.value &&
+                                loginState.role == AuthRole.admin &&
+                                savedCredentials.value != null &&
+                                savedCredentials.value!.$1 != null &&
+                                savedCredentials.value!.$1!.isNotEmpty &&
+                                loginState.identifier.isEmpty)
+                              GestureDetector(
+                                onTap: () {
+                                  final email = savedCredentials.value!.$1!;
+                                  final password = savedCredentials.value!.$2 ?? "";
+                                  controller.fillSavedCredentials(email, password);
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color(0xFF2563EB).withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.key,
+                                          color: Color(0xFF2563EB),
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              savedCredentials.value!.$1!,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                                color: Color(0xFF1F2937),
+                                              ),
+                                            ),
+                                            const Text(
+                                              "Kayıtlı hesap ile giriş yap",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFF6B7280),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 16,
+                                        color: Color(0xFF2563EB),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ]
-                            : null,
-                        textCapitalization: TextCapitalization.none,
-                        onChanged: controller.updateSecret,
-                        onSubmitted: (_) => controller.submit(),
+                              ),
+                            TextField(
+                              controller: identifierController,
+                              focusNode: emailFocusNode,
+                              decoration: InputDecoration(
+                                labelText: loginState.role == AuthRole.admin
+                                    ? "E-posta"
+                                    : loginState.role.identifierLabel,
+                                hintText: loginState.role == AuthRole.admin
+                                    ? "ör. admin@example.com"
+                                    : "ör. PRS-2025-11",
+                                prefixIcon: Icon(
+                                  loginState.role == AuthRole.admin
+                                      ? Icons.email_outlined
+                                      : Icons.person_outline,
+                                ),
+                              ),
+                              keyboardType: loginState.role == AuthRole.admin
+                                  ? TextInputType.emailAddress
+                                  : TextInputType.text,
+                              textInputAction: TextInputAction.next,
+                              autocorrect: false,
+                              autofillHints: loginState.role == AuthRole.admin
+                                  ? const [AutofillHints.email, AutofillHints.username]
+                                  : null,
+                              onChanged: controller.updateIdentifier,
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: secretController,
+                              focusNode: passwordFocusNode,
+                              decoration: InputDecoration(
+                                labelText: loginState.role.passwordLabel,
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    isPasswordVisible.value
+                                        ? Icons.visibility_outlined
+                                        : Icons.visibility_off_outlined,
+                                  ),
+                                  onPressed: () {
+                                    isPasswordVisible.value =
+                                        !isPasswordVisible.value;
+                                  },
+                                  tooltip: isPasswordVisible.value
+                                      ? "Şifreyi Gizle"
+                                      : "Şifreyi Göster",
+                                ),
+                              ),
+                              obscureText: !isPasswordVisible.value,
+                              keyboardType: loginState.role == AuthRole.admin
+                                  ? TextInputType.visiblePassword
+                                  : TextInputType.text,
+                              inputFormatters: loginState.role == AuthRole.personnel
+                                  ? [
+                                      FilteringTextInputFormatter.allow(
+                                        RegExp(r'[a-zA-Z0-9]'),
+                                      ),
+                                    ]
+                                  : null,
+                              textCapitalization: TextCapitalization.none,
+                              autofillHints: loginState.role == AuthRole.admin
+                                  ? const [AutofillHints.password]
+                                  : null,
+                              onChanged: controller.updateSecret,
+                              onSubmitted: (_) => controller.submit(),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 16),
                       SwitchListTile(

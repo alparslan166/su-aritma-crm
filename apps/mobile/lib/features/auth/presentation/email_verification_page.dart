@@ -255,7 +255,7 @@ class EmailVerificationPage extends HookConsumerWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              "Artık Su Arıtma Platformu'nun tüm özelliklerini kullanabilirsiniz.",
+                              "Artık FiltreFix'in tüm özelliklerini kullanabilirsiniz.",
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 14,

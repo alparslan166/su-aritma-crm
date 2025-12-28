@@ -172,40 +172,35 @@ class CustomerService {
         }
 
         // 3. Taksit ödeme tarihi geçmiş müşteriler
-        // hasInstallment = true ve taksit tekrar günü geçmiş
+        // Installment tablosundaki unpaid taksitleri kontrol et
         let hasOverdueInstallment = false;
-        if (
-          customer.hasInstallment &&
-          customer.installmentStartDate &&
-          customer.installmentIntervalDays &&
-          customer.installmentIntervalDays > 0
-        ) {
-          const startDate = new Date(customer.installmentStartDate);
-          startDate.setHours(0, 0, 0, 0);
-          const intervalDays = customer.installmentIntervalDays;
+        if (customer.hasInstallment) {
+          // Customer'ın ödenmemiş ve due date'i geçmiş taksitleri var mı?
+          // Bu bilgi installment tablosunda tutulur, burada basit bir hesaplama yapıyoruz
+          if (
+            customer.installmentStartDate &&
+            customer.installmentIntervalDays &&
+            customer.installmentIntervalDays > 0
+          ) {
+            const startDate = new Date(customer.installmentStartDate);
+            startDate.setHours(0, 0, 0, 0);
+            const intervalDays = customer.installmentIntervalDays;
 
-          // Başlangıç tarihinden bu yana geçen gün sayısı
-          const daysSinceStart = Math.floor(
-            (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
-          );
+            // Başlangıç tarihinden bu yana geçen gün sayısı
+            const daysSinceStart = Math.floor(
+              (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+            );
 
-          // Eğer başlangıç tarihi bugünden önceyse ve en az bir taksit aralığı geçtiyse kontrol et
-          if (daysSinceStart > 0 && daysSinceStart >= intervalDays) {
-            // Kaç taksit geçti (tam sayı)
-            const installmentsPassed = Math.floor(daysSinceStart / intervalDays);
-
-            if (installmentsPassed > 0) {
-              // Son taksit ödeme tarihini hesapla
-              // Örnek: Başlangıç: 1 Ocak, Aralık: 30 gün, Bugün: 15 Şubat (45 gün geçmiş)
-              // installmentsPassed = 1, Son taksit tarihi = 1 Ocak + 30 gün = 31 Ocak
-              const lastInstallmentDate = new Date(startDate);
-              lastInstallmentDate.setDate(
-                lastInstallmentDate.getDate() + installmentsPassed * intervalDays,
-              );
-              lastInstallmentDate.setHours(0, 0, 0, 0);
-
-              // Son taksit tarihi bugünden önce veya bugüne eşitse, ödeme gecikmiş
-              hasOverdueInstallment = lastInstallmentDate <= today;
+            // Eğer başlangıç tarihi geçtiyse ve en az bir taksit aralığı geçtiyse
+            if (daysSinceStart >= 0) {
+              // İlk taksit tarihi başlangıç tarihi + aralık
+              const firstInstallmentDate = new Date(startDate);
+              firstInstallmentDate.setDate(firstInstallmentDate.getDate() + intervalDays);
+              
+              // İlk taksit tarihi bile geçmişse, taksit ödemesi gecikmiş demektir
+              if (firstInstallmentDate <= today) {
+                hasOverdueInstallment = true;
+              }
             }
           }
         }
@@ -214,8 +209,9 @@ class CustomerService {
         // Sadece borç tarihi geçmiş müşteriler gösterilecek
         // hasUnpaidJob kontrolü kaldırıldı
 
-        // Sonuç: Borç ödeme tarihi geçmiş, borç durumu "Ödeme gecikmiş" veya taksit ödeme tarihi geçmiş müşteriler
-        const result = hasOverdueDebtDate || hasOverdueDebtStatus || hasOverdueInstallment;
+        // Sonuç: Sadece ödeme tarihi geçmiş veya taksit ödeme tarihi geçmiş müşteriler
+        // hasOverdueDebtStatus kaldırıldı - sadece tarih bazlı kontrol yapılıyor
+        const result = hasOverdueDebtDate || hasOverdueInstallment;
 
         // Debug log (tüm müşteriler için - sorun tespiti için)
         if (

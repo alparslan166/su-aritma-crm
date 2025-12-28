@@ -15,7 +15,7 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: SuAritmaApp()));
     await tester.pumpAndSettle();
 
-    expect(find.text("Su Arıtma Platformu"), findsOneWidget);
+    expect(find.text("FiltreFix"), findsOneWidget);
     expect(find.text("Admin Girişi"), findsOneWidget);
     expect(find.text("Personel Girişi"), findsOneWidget);
     expect(find.text("Giriş Yap"), findsOneWidget);

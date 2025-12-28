@@ -156,7 +156,7 @@ class SuAritmaApp extends HookConsumerWidget {
     }, const []);
 
     return MaterialApp.router(
-      title: "Su Arıtma",
+      title: "FiltreFix",
       theme: buildAppTheme(),
       routerConfig: router,
       debugShowCheckedModeBanner: false,
