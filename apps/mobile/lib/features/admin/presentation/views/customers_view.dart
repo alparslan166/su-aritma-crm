@@ -904,8 +904,11 @@ enum CustomerFilterType {
 }
 
 enum _MaintenanceStatus {
-  overdue, // Geçmiş
-  upcoming, // Yaklaşıyor
+  overdue,   // Geçmiş (negatif gün)
+  today,     // Bugün (0 gün)
+  in1Day,    // Son 1 gün (1 gün kaldı)
+  in2Days,   // Son 2 gün (2 gün kaldı)
+  in3Days,   // Son 3 gün (3 gün kaldı)
 }
 
 // Animasyonlu ikon widget'ı
@@ -1006,7 +1009,7 @@ class _CustomerTile extends StatelessWidget {
     return _AnimatedIconWidget(assetPath: assetPath);
   }
 
-  // Bakım durumunu kontrol et (geçmiş mi, yaklaşıyor mu)
+  // Bakım durumunu kontrol et (geçmiş mi, yaklaşıyor mu, kaç gün kaldı)
   _MaintenanceStatus? _getMaintenanceStatus() {
     if (customer.jobs == null || customer.jobs!.isEmpty) return null;
     _MaintenanceStatus? earliestStatus;
@@ -1017,21 +1020,67 @@ class _CustomerTile extends StatelessWidget {
         final daysUntilDue = job.maintenanceDueAt!
             .difference(DateTime.now())
             .inDays;
-        // Öncelik: Geçmiş > Yaklaşıyor
+        // Öncelik: Geçmiş > Bugün > 1 gün > 2 gün > 3 gün
         if (daysUntilDue < 0) {
           // Geçmiş durum her zaman öncelikli
           return _MaintenanceStatus.overdue;
         }
-        if (daysUntilDue <= 30 && daysUntilDue >= 0) {
-          // En yakın bakımı bul
+        // En yakın bakımı bul (sadece 3 gün veya daha az)
+        if (daysUntilDue <= 3) {
           if (earliestDays == null || daysUntilDue < earliestDays) {
             earliestDays = daysUntilDue;
-            earliestStatus = _MaintenanceStatus.upcoming;
+            // Gün sayısına göre durum belirle
+            switch (daysUntilDue) {
+              case 0:
+                earliestStatus = _MaintenanceStatus.today;
+                break;
+              case 1:
+                earliestStatus = _MaintenanceStatus.in1Day;
+                break;
+              case 2:
+                earliestStatus = _MaintenanceStatus.in2Days;
+                break;
+              case 3:
+                earliestStatus = _MaintenanceStatus.in3Days;
+                break;
+            }
           }
         }
       }
     }
     return earliestStatus;
+  }
+
+  // Bakım badge'i oluşturmak için helper fonksiyon
+  Widget _buildMaintenanceBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.access_time, size: 12, color: color),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget? _getStatusBadge() {
@@ -1100,36 +1149,24 @@ class _CustomerTile extends StatelessWidget {
         ),
       );
     }
-    if (maintenanceStatus == _MaintenanceStatus.upcoming ||
-        customer.hasUpcomingMaintenance) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.access_time, size: 12, color: Color(0xFFF59E0B)),
-            const SizedBox(width: 3),
-            Flexible(
-              child: Text(
-                "Bakımı Gelen",
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFFF59E0B),
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      );
+    
+    // Bugün veya yaklaşan bakım durumları
+    if (maintenanceStatus == _MaintenanceStatus.today) {
+      return _buildMaintenanceBadge("Bakımı Bugün", Colors.red);
+    }
+    if (maintenanceStatus == _MaintenanceStatus.in1Day) {
+      return _buildMaintenanceBadge("Son 1 Gün", const Color(0xFFF59E0B));
+    }
+    if (maintenanceStatus == _MaintenanceStatus.in2Days) {
+      return _buildMaintenanceBadge("Son 2 Gün", const Color(0xFFF59E0B));
+    }
+    if (maintenanceStatus == _MaintenanceStatus.in3Days) {
+      return _buildMaintenanceBadge("Son 3 Gün", const Color(0xFFF59E0B));
+    }
+    
+    // hasUpcomingMaintenance flag'i varsa ama status yoksa (eski veriler için)
+    if (customer.hasUpcomingMaintenance) {
+      return _buildMaintenanceBadge("Bakımı Gelen", const Color(0xFFF59E0B));
     }
     if (customer.hasOverdueInstallment) {
       return Container(

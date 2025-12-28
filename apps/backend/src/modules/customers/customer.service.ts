@@ -245,8 +245,8 @@ class CustomerService {
           const daysUntilDue = Math.ceil(
             (reminder.dueAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
           );
-          // Geçmiş veya 30 gün içinde olan bakımlar (geçmiş olanlar da dahil)
-          return daysUntilDue <= 30;
+          // Son 3 gün, bugün veya geçmiş olanlar (daysUntilDue <= 3)
+          return daysUntilDue <= 3;
         });
       });
     }
