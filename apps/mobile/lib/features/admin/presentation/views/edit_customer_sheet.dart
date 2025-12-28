@@ -849,13 +849,68 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                           "Sonraki Bakım Tarihi ?",
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
-                        Text(
-                          "${_nextMaintenanceMonths.toInt()} ay",
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF2563EB),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Minus button
+                            GestureDetector(
+                              onTap: () {
+                                if (_nextMaintenanceMonths > 0) {
+                                  setState(() {
+                                    _nextMaintenanceMonths--;
+                                    _maintenanceDateChanged = true;
+                                  });
+                                }
+                              },
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(
+                                  Icons.remove,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
                               ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              "${_nextMaintenanceMonths.toInt()} ay",
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF2563EB),
+                                  ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Plus button
+                            GestureDetector(
+                              onTap: () {
+                                if (_nextMaintenanceMonths < 12) {
+                                  setState(() {
+                                    _nextMaintenanceMonths++;
+                                    _maintenanceDateChanged = true;
+                                  });
+                                }
+                              },
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(
+                                  Icons.add,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

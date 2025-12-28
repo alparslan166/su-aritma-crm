@@ -61,8 +61,23 @@ class CustomerListNotifier extends StateNotifier<AsyncValue<List<Customer>>> {
         hasUpcomingMaintenance: _hasUpcomingMaintenance,
         hasOverdueInstallment: _hasOverdueInstallment,
       );
-      // print("✅ fetchCustomers başarılı, ${customers.length} müşteri döndü");
-      state = AsyncValue.data(customers);
+      
+      // Remove duplicates by customer ID and by name+phone combination
+      final seenIds = <String>{};
+      final seenNamePhone = <String>{};
+      final uniqueCustomers = customers.where((c) {
+        // Check by ID
+        if (seenIds.contains(c.id)) return false;
+        // Check by name+phone combination (case-insensitive)
+        final namePhoneKey = '${c.name.toLowerCase().trim()}_${c.phone.replaceAll(RegExp(r'\s+'), '')}';
+        if (seenNamePhone.contains(namePhoneKey)) return false;
+        seenIds.add(c.id);
+        seenNamePhone.add(namePhoneKey);
+        return true;
+      }).toList();
+      
+      // print("✅ fetchCustomers başarılı, ${uniqueCustomers.length} müşteri döndü");
+      state = AsyncValue.data(uniqueCustomers);
     } catch (error, stackTrace) {
       print("❌ fetchCustomers hatası: $error");
       state = AsyncValue.error(error, stackTrace);

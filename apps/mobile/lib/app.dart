@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:flutter_hooks/flutter_hooks.dart";
+import "package:flutter_localizations/flutter_localizations.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
 import "core/notifications/push_notification_service.dart";
@@ -159,6 +160,16 @@ class SuAritmaApp extends HookConsumerWidget {
       theme: buildAppTheme(),
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      locale: const Locale("tr", "TR"),
+      supportedLocales: const [
+        Locale("tr", "TR"),
+        Locale("en", "US"),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
     );
   }
 }

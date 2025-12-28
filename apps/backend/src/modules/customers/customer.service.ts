@@ -273,6 +273,23 @@ class CustomerService {
   }
 
   async create(adminId: string, payload: CreateCustomerPayload) {
+    // Check for duplicate customer with same name AND phone
+    const normalizedPhone = normalizePhoneNumber(payload.phone);
+    const existingCustomer = await prisma.customer.findFirst({
+      where: {
+        adminId,
+        name: { equals: payload.name.trim(), mode: "insensitive" },
+        phone: normalizedPhone,
+      },
+    });
+
+    if (existingCustomer) {
+      throw new AppError(
+        "Bu isim ve telefon numarası ile zaten bir müşteri mevcut",
+        400,
+      );
+    }
+
     const hasDebt = payload.hasDebt ?? false;
     const debtAmount = payload.debtAmount ? new Prisma.Decimal(payload.debtAmount) : null;
     const hasInstallment = payload.hasInstallment ?? false;
