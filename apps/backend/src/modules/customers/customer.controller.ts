@@ -96,6 +96,13 @@ const updateSchema = updateSchemaBase.extend({
       // String datetime değerini olduğu gibi döndür
       return val;
     }),
+  // Kullanılan ürünler listesi
+  usedProducts: z.array(z.object({
+    inventoryItemId: z.string(),
+    name: z.string(),
+    quantity: z.number().int().positive(),
+    unit: z.string().optional(),
+  })).optional(),
 });
 
 export const listCustomersHandler = async (req: Request, res: Response, next: NextFunction) => {
