@@ -72,6 +72,7 @@ class CustomerService {
         receivedAmountHistory: {
           orderBy: { receivedAt: "desc" },
         },
+        usedProducts: true,
       },
     });
     if (!customer) {
@@ -639,6 +640,7 @@ class CustomerService {
         include: {
           debtPaymentHistory: true,
           receivedAmountHistory: true,
+          usedProducts: true,
         },
       });
 
@@ -659,6 +661,7 @@ class CustomerService {
             receivedAmountHistory: {
               orderBy: { receivedAt: "desc" },
             },
+            usedProducts: true,
           },
         });
         if (!reloaded) {
