@@ -14,6 +14,7 @@ import "../../../../core/error/error_handler.dart";
 import "../../application/customer_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
+import "../../data/models/inventory_item.dart";
 import "../../../dashboard/presentation/home_page_provider.dart";
 import "../widgets/interactive_location_picker.dart";
 import "customer_detail_page.dart" show customerDetailProvider;
@@ -51,6 +52,11 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
   bool _maintenanceDateChanged = false; // Bakım tarihi değiştirildi mi?
   double? _initialDebtAmount; // Başlangıç borç miktarı (karşılaştırma için)
   DateTime? _paymentDate; // Ücret alım tarihi
+  
+  // Kullanılan ürün bilgisi
+  final Map<String, int> _selectedMaterials = {};
+  bool _deductFromStock = true;
+  List<InventoryItem> _inventoryList = [];
 
   @override
   void initState() {
@@ -134,6 +140,13 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
         });
       }
     });
+
+    // Mevcut müşterinin kullandığı ürünleri yükle
+    if (customer.usedProducts != null) {
+      for (final product in customer.usedProducts!) {
+        _selectedMaterials[product.inventoryItemId] = product.quantity;
+      }
+    }
   }
 
   @override
@@ -586,6 +599,27 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     }
   }
 
+  Future<void> _selectMaterials() async {
+    final inventory = await ref.read(adminRepositoryProvider).fetchInventory();
+    if (!mounted) return;
+
+    final result = await showDialog<({Map<String, int> selection, bool deductFromStock})>(
+      context: context,
+      builder: (context) => _MaterialSelectionDialog(
+        inventory: inventory,
+        initialSelection: _selectedMaterials,
+      ),
+    );
+    if (result != null) {
+      setState(() {
+        _selectedMaterials.clear();
+        _selectedMaterials.addAll(result.selection);
+        _deductFromStock = result.deductFromStock;
+        _inventoryList = inventory;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -797,6 +831,154 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                         ),
                       ),
                     ),
+                  ),
+                ],
+                // Kullanılan Ürün Bilgisi
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                Text(
+                  "Kullanılan Ürün Bilgisi",
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: Colors.grey.shade200, width: 1),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _selectMaterials,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 18,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF10B981).withValues(alpha: 0.1),
+                                const Color(0xFF10B981).withValues(alpha: 0.05),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.inventory_2_outlined,
+                                  color: Color(0xFF10B981),
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                _selectedMaterials.isEmpty
+                                    ? "Ürün Ekle"
+                                    : "Ürünleri Düzenle",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade900,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Seçili ürünler
+                if (_selectedMaterials.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _selectedMaterials.entries.map((entry) {
+                      final item = _inventoryList.isNotEmpty
+                          ? _inventoryList.firstWhere(
+                              (i) => i.id == entry.key,
+                              orElse: () => InventoryItem(
+                                id: entry.key,
+                                name: widget.customer.usedProducts
+                                        ?.firstWhere(
+                                          (p) => p.inventoryItemId == entry.key,
+                                          orElse: () => UsedProduct(
+                                            id: "",
+                                            inventoryItemId: entry.key,
+                                            name: "Ürün",
+                                            quantity: entry.value,
+                                          ),
+                                        )
+                                        .name ??
+                                    "Ürün",
+                                category: "",
+                                stockQty: 0,
+                                criticalThreshold: 0,
+                                unitPrice: 0,
+                                isActive: true,
+                                unit: "",
+                              ),
+                            )
+                          : InventoryItem(
+                              id: entry.key,
+                              name: widget.customer.usedProducts
+                                      ?.firstWhere(
+                                        (p) => p.inventoryItemId == entry.key,
+                                        orElse: () => UsedProduct(
+                                          id: "",
+                                          inventoryItemId: entry.key,
+                                          name: "Ürün",
+                                          quantity: entry.value,
+                                        ),
+                                      )
+                                      .name ??
+                                  "Ürün",
+                              category: "",
+                              stockQty: 0,
+                              criticalThreshold: 0,
+                              unitPrice: 0,
+                              isActive: true,
+                              unit: "",
+                            );
+                      return Chip(
+                        avatar: CircleAvatar(
+                          backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.2),
+                          child: Text(
+                            "${entry.value}",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF10B981),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        label: Text(item.name),
+                        deleteIcon: const Icon(Icons.close, size: 18),
+                        onDeleted: () {
+                          setState(() {
+                            _selectedMaterials.remove(entry.key);
+                          });
+                        },
+                      );
+                    }).toList(),
                   ),
                 ],
                 // Bakım Bilgileri
@@ -1387,6 +1569,293 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MaterialSelectionDialog extends StatefulWidget {
+  const _MaterialSelectionDialog({
+    required this.inventory,
+    required this.initialSelection,
+  });
+
+  final List<InventoryItem> inventory;
+  final Map<String, int> initialSelection;
+
+  @override
+  State<_MaterialSelectionDialog> createState() =>
+      _MaterialSelectionDialogState();
+}
+
+class _MaterialSelectionDialogState extends State<_MaterialSelectionDialog> {
+  final Map<String, int> _selection = {};
+  final Map<String, TextEditingController> _controllers = {};
+  bool _deductFromStock = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _selection.addAll(widget.initialSelection);
+    for (final item in widget.inventory) {
+      _controllers[item.id] = TextEditingController(
+        text: widget.initialSelection[item.id]?.toString() ?? "",
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Malzeme Seç"),
+      contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.inventory.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Text("Stokta ürün bulunmuyor"),
+              )
+            else
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: widget.inventory.length,
+                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final item = widget.inventory[index];
+                    final controller = _controllers[item.id]!;
+                    final quantity = int.tryParse(controller.text) ?? 0;
+                    final isSelected = quantity > 0;
+                    return InkWell(
+                      onTap: () {
+                        if (isSelected) {
+                          controller.text = "";
+                          _selection.remove(item.id);
+                        } else {
+                          controller.text = "1";
+                          _selection[item.id] = 1;
+                        }
+                        setState(() {});
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF2563EB).withValues(alpha: 0.08)
+                              : null,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 32,
+                              height: 32,
+                              child: Checkbox(
+                                value: isSelected,
+                                onChanged: (checked) {
+                                  if (checked == true) {
+                                    controller.text = "1";
+                                    _selection[item.id] = 1;
+                                  } else {
+                                    controller.text = "";
+                                    _selection.remove(item.id);
+                                  }
+                                  setState(() {});
+                                },
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: TextStyle(
+                                      fontWeight: isSelected
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
+                                      fontSize: 14,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    "Stok: ${item.stockQty} ${item.unit}",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 28,
+                                  height: 28,
+                                  child: IconButton(
+                                    onPressed: () {
+                                      final currentQty =
+                                          int.tryParse(controller.text) ?? 0;
+                                      if (currentQty > 0) {
+                                        final newQty = currentQty - 1;
+                                        controller.text =
+                                            newQty > 0 ? newQty.toString() : "";
+                                        if (newQty > 0) {
+                                          _selection[item.id] = newQty;
+                                        } else {
+                                          _selection.remove(item.id);
+                                        }
+                                        setState(() {});
+                                      }
+                                    },
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: Icon(
+                                      Icons.remove_circle_outline,
+                                      size: 22,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                SizedBox(
+                                  width: 40,
+                                  height: 32,
+                                  child: TextField(
+                                    controller: controller,
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 14),
+                                    decoration: InputDecoration(
+                                      hintText: "0",
+                                      isDense: true,
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 6,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: BorderSide(
+                                          color: Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: BorderSide(
+                                          color: Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFF2563EB),
+                                        ),
+                                      ),
+                                    ),
+                                    onChanged: (value) {
+                                      final qty = int.tryParse(value) ?? 0;
+                                      if (qty > 0) {
+                                        _selection[item.id] = qty;
+                                      } else {
+                                        _selection.remove(item.id);
+                                      }
+                                      setState(() {});
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                SizedBox(
+                                  width: 28,
+                                  height: 28,
+                                  child: IconButton(
+                                    onPressed: () {
+                                      final currentQty =
+                                          int.tryParse(controller.text) ?? 0;
+                                      if (currentQty < item.stockQty) {
+                                        final newQty = currentQty + 1;
+                                        controller.text = newQty.toString();
+                                        _selection[item.id] = newQty;
+                                        setState(() {});
+                                      }
+                                    },
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: Icon(
+                                      Icons.add_circle_outline,
+                                      size: 22,
+                                      color: const Color(0xFF2563EB),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            if (_selection.isNotEmpty) ...[
+              const Divider(),
+              CheckboxListTile(
+                value: _deductFromStock,
+                onChanged: (value) {
+                  setState(() {
+                    _deductFromStock = value ?? true;
+                  });
+                },
+                title: const Text(
+                  "Stoktan düşülsün mü?",
+                  style: TextStyle(fontSize: 14),
+                ),
+                subtitle: Text(
+                  "İşaretlenirse seçilen malzemeler stoktan düşürülür",
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+              ),
+            ],
+          ],
+        ),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text("İptal"),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(
+            (selection: _selection, deductFromStock: _deductFromStock),
+          ),
+          child: const Text("Tamam"),
+        ),
+      ],
     );
   }
 }

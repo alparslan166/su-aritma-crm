@@ -177,10 +177,27 @@ model Customer {
   debtPaymentHistory      DebtPaymentHistory[]
   receivedAmountHistory   ReceivedAmountHistory[]
   installments            Installment[]
+  usedProducts            UsedProduct[]
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
 
   @@index([adminId])
+}
+
+model UsedProduct {
+  id              String        @id @default(cuid())
+  customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId      String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  inventoryItemId String
+  name            String
+  quantity        Int
+  unit            String?
+  usedAt          DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+
+  @@index([customerId])
+  @@index([inventoryItemId])
 }
 
 model DebtPaymentHistory {
@@ -295,6 +312,7 @@ model InventoryItem {
   isActive          Boolean                @default(true)
   jobMaterials      JobMaterial[]
   transactions      InventoryTransaction[]
+  usedProducts      UsedProduct[]
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
 }

@@ -38,6 +38,12 @@ type UpdateCustomerPayload = Partial<CreateCustomerPayload> & {
   nextMaintenanceDate?: string | null;
   receivedAmount?: number;
   paymentDate?: string;
+  usedProducts?: Array<{
+    inventoryItemId: string;
+    name: string;
+    quantity: number;
+    unit?: string;
+  }>;
 };
 
 type CustomerListFilters = {
@@ -66,6 +72,7 @@ class CustomerService {
         receivedAmountHistory: {
           orderBy: { receivedAt: "desc" },
         },
+        usedProducts: true,
       },
     });
     if (!customer) {
@@ -601,12 +608,34 @@ class CustomerService {
         !new Prisma.Decimal(payload.receivedAmount).equals(existing.receivedAmount));
 
     const updatedCustomer = await prisma.$transaction(async (tx) => {
+      // Handle usedProducts - replace all existing with new ones
+      if (payload.usedProducts !== undefined) {
+        // Delete existing used products
+        await tx.usedProduct.deleteMany({
+          where: { customerId },
+        });
+
+        // Create new used products
+        if (payload.usedProducts && payload.usedProducts.length > 0) {
+          await tx.usedProduct.createMany({
+            data: payload.usedProducts.map((product) => ({
+              customerId,
+              inventoryItemId: product.inventoryItemId,
+              name: product.name,
+              quantity: product.quantity,
+              unit: product.unit,
+            })),
+          });
+        }
+      }
+
       const updated = await tx.customer.update({
         where: { id: customerId },
         data: updateData,
         include: {
           debtPaymentHistory: true,
           receivedAmountHistory: true,
+          usedProducts: true,
         },
       });
 
@@ -627,6 +656,7 @@ class CustomerService {
             receivedAmountHistory: {
               orderBy: { receivedAt: "desc" },
             },
+            usedProducts: true,
           },
         });
         if (!reloaded) {

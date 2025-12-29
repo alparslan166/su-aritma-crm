@@ -9,6 +9,7 @@ class Customer {
     this.jobs,
     this.debtPaymentHistory,
     this.receivedAmountHistory,
+    this.usedProducts,
     this.createdAt,
     this.status = "ACTIVE",
     this.hasDebt = false,
@@ -34,6 +35,7 @@ class Customer {
   final List<CustomerJob>? jobs;
   final List<DebtPaymentHistory>? debtPaymentHistory;
   final List<ReceivedAmountHistory>? receivedAmountHistory;
+  final List<UsedProduct>? usedProducts;
   final DateTime? createdAt;
   final String status;
   final bool hasDebt;
@@ -53,6 +55,7 @@ class Customer {
     final jobsList = json["jobs"] as List<dynamic>?;
     final debtPaymentHistoryList = json["debtPaymentHistory"] as List<dynamic>?;
     final receivedAmountHistoryList = json["receivedAmountHistory"] as List<dynamic>?;
+    final usedProductsList = json["usedProducts"] as List<dynamic>?;
     return Customer(
       id: json["id"] as String,
       name: json["name"] as String? ?? "-",
@@ -70,6 +73,9 @@ class Customer {
           .toList(),
       receivedAmountHistory: receivedAmountHistoryList
           ?.map((e) => ReceivedAmountHistory.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      usedProducts: usedProductsList
+          ?.map((e) => UsedProduct.fromJson(e as Map<String, dynamic>))
           .toList(),
       createdAt: json["createdAt"] != null
           ? DateTime.tryParse(json["createdAt"] as String)
@@ -108,6 +114,7 @@ class Customer {
     List<CustomerJob>? jobs,
     List<DebtPaymentHistory>? debtPaymentHistory,
     List<ReceivedAmountHistory>? receivedAmountHistory,
+    List<UsedProduct>? usedProducts,
     DateTime? createdAt,
     String? status,
     bool? hasDebt,
@@ -133,6 +140,7 @@ class Customer {
       jobs: jobs ?? this.jobs,
       debtPaymentHistory: debtPaymentHistory ?? this.debtPaymentHistory,
       receivedAmountHistory: receivedAmountHistory ?? this.receivedAmountHistory,
+      usedProducts: usedProducts ?? this.usedProducts,
       createdAt: createdAt ?? this.createdAt,
       status: status ?? this.status,
       hasDebt: hasDebt ?? this.hasDebt,
@@ -365,6 +373,46 @@ class ReceivedAmountHistory {
           ? DateTime.tryParse(json["receivedAt"] as String) ?? DateTime.now()
           : DateTime.now(),
     );
+  }
+}
+
+class UsedProduct {
+  UsedProduct({
+    required this.id,
+    required this.inventoryItemId,
+    required this.name,
+    required this.quantity,
+    this.unit,
+    this.usedAt,
+  });
+
+  final String id;
+  final String inventoryItemId;
+  final String name;
+  final int quantity;
+  final String? unit;
+  final DateTime? usedAt;
+
+  factory UsedProduct.fromJson(Map<String, dynamic> json) {
+    return UsedProduct(
+      id: json["id"] as String? ?? "",
+      inventoryItemId: json["inventoryItemId"] as String? ?? "",
+      name: json["name"] as String? ?? "-",
+      quantity: json["quantity"] as int? ?? 0,
+      unit: json["unit"] as String?,
+      usedAt: json["usedAt"] != null
+          ? DateTime.tryParse(json["usedAt"] as String)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "inventoryItemId": inventoryItemId,
+      "name": name,
+      "quantity": quantity,
+      if (unit != null) "unit": unit,
+    };
   }
 }
 
