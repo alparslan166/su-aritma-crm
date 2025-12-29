@@ -191,7 +191,7 @@ class AdminRepository {
     );
   }
 
-  Future<void> createInventoryItem({
+  Future<InventoryItem> createInventoryItem({
     required String name,
     required String category,
     required int stockQty,
@@ -203,7 +203,7 @@ class AdminRepository {
     int? reorderPoint,
     int? reorderQuantity,
   }) async {
-    await _client.post(
+    final response = await _client.post(
       "/inventory",
       data: {
         "name": name,
@@ -218,6 +218,9 @@ class AdminRepository {
         if (reorderQuantity != null) "reorderQuantity": reorderQuantity,
         "isActive": true,
       },
+    );
+    return InventoryItem.fromJson(
+      response.data["data"] as Map<String, dynamic>,
     );
   }
 

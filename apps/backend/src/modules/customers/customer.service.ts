@@ -650,14 +650,31 @@ class CustomerService {
                 
                 if (diff > 0) {
                   // Sadece artış varsa stoktan düş
-                  await tx.inventoryItem.update({
+                  // Sadece artış varsa ve stok yeterliyse stoktan düş (Negatif stok önleme)
+                  const currentItem = await tx.inventoryItem.findUnique({
                     where: { id: product.inventoryItemId },
-                    data: {
-                      stockQty: {
-                        decrement: diff,
-                      },
-                    },
                   });
+
+                  // Eğer ürün varsa ve stoğu 0'dan büyükse düşüm yap
+                  if (currentItem && currentItem.stockQty > 0) {
+                    const deductionAmount = Math.min(diff, currentItem.stockQty);
+                    
+                    if (deductionAmount > 0) {
+                      await tx.inventoryItem.update({
+                        where: { id: product.inventoryItemId },
+                        data: {
+                          stockQty: {
+                            decrement: deductionAmount,
+                          },
+                        },
+                      });
+                      console.log(`   ✅ ${product.name}: ${deductionAmount} adet stoktan düşüldü (İstenen: ${diff}, Mevcut: ${currentItem.stockQty})`);
+                    } else {
+                        console.log(`   ⚠️ ${product.name}: Stok yetersiz (Mevcut: ${currentItem.stockQty}), düşüm yapılmadı (İstenen: ${diff}).`);
+                    }
+                  } else {
+                     console.log(`   ⚠️ ${product.name}: Stok 0 veya ürün bulunamadı, düşüm yapılmadı.`);
+                  }
                   console.log(`   ✅ ${product.name}: ${diff} adet stoktan düşüldü (önceki: ${existingQty}, yeni: ${product.quantity})`);
                 } else {
                   console.log(`   ⏭️ ${product.name}: Miktar artışı yok (Fark: ${diff}), stok işlemi yapılmadı.`);
