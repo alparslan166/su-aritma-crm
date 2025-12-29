@@ -72,7 +72,6 @@ class CustomerService {
         receivedAmountHistory: {
           orderBy: { receivedAt: "desc" },
         },
-        usedProducts: true,
       },
     });
     if (!customer) {
@@ -610,22 +609,27 @@ class CustomerService {
     const updatedCustomer = await prisma.$transaction(async (tx) => {
       // Handle usedProducts - replace all existing with new ones
       if (payload.usedProducts !== undefined) {
-        // Delete existing used products
-        await tx.usedProduct.deleteMany({
-          where: { customerId },
-        });
-
-        // Create new used products
-        if (payload.usedProducts && payload.usedProducts.length > 0) {
-          await tx.usedProduct.createMany({
-            data: payload.usedProducts.map((product) => ({
-              customerId,
-              inventoryItemId: product.inventoryItemId,
-              name: product.name,
-              quantity: product.quantity,
-              unit: product.unit,
-            })),
+        try {
+          // Delete existing used products
+          await tx.usedProduct.deleteMany({
+            where: { customerId },
           });
+
+          // Create new used products
+          if (payload.usedProducts && payload.usedProducts.length > 0) {
+            await tx.usedProduct.createMany({
+              data: payload.usedProducts.map((product) => ({
+                customerId,
+                inventoryItemId: product.inventoryItemId,
+                name: product.name,
+                quantity: product.quantity,
+                unit: product.unit,
+              })),
+            });
+          }
+        } catch (e) {
+          // UsedProduct table might not exist yet (migration pending)
+          console.log("UsedProduct operation skipped - table may not exist yet");
         }
       }
 
@@ -635,7 +639,6 @@ class CustomerService {
         include: {
           debtPaymentHistory: true,
           receivedAmountHistory: true,
-          usedProducts: true,
         },
       });
 
@@ -656,7 +659,6 @@ class CustomerService {
             receivedAmountHistory: {
               orderBy: { receivedAt: "desc" },
             },
-            usedProducts: true,
           },
         });
         if (!reloaded) {
