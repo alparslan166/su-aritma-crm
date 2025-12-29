@@ -2607,127 +2607,242 @@ class _UsedProductsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Header with icon and title
         Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF10B981),
+                    const Color(0xFF059669),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    spreadRadius: 0,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: const Icon(
-                Icons.inventory_2_outlined,
-                size: 24,
-                color: Color(0xFF10B981),
+                Icons.inventory_2_rounded,
+                size: 22,
+                color: Colors.white,
               ),
             ),
-            const SizedBox(width: 12),
-            Text(
-              "Kullanılan Ürünler",
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF10B981),
-                letterSpacing: -0.3,
-              ),
+            const SizedBox(width: 14),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Kullanılan Ürünler",
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1F2937),
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                if (products.isNotEmpty)
+                  Text(
+                    "${products.length} ürün",
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: const Color(0xFF10B981),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
+        // Products container
         Container(
+          width: double.infinity,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF10B981).withValues(alpha: 0.08),
-                const Color(0xFF34D399).withValues(alpha: 0.05),
-                Colors.white,
-              ],
-            ),
+            color: const Color(0xFFFAF9F7), // Kremimsi beyaz
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: const Color(0xFF10B981).withValues(alpha: 0.2),
-              width: 1.5,
+              color: const Color(0xFFE5E7EB),
+              width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                blurRadius: 12,
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
                 spreadRadius: 0,
-                offset: const Offset(0, 4),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: products.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        "Henüz ürün eklenmedi",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ),
-                  )
-                : Column(
-              children: [
-                ...products.map((product) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
+          child: products.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+                  child: Column(
                     children: [
                       Container(
-                        width: 36,
-                        height: 36,
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
+                          color: const Color(0xFFF3F4F6),
+                          shape: BoxShape.circle,
                         ),
-                        child: Center(
-                          child: Text(
-                            "${product.quantity}",
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF10B981),
-                            ),
-                          ),
+                        child: Icon(
+                          Icons.inventory_2_outlined,
+                          size: 32,
+                          color: Colors.grey.shade400,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              product.name,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF1F2937),
-                              ),
-                            ),
-                            if (product.unit != null && product.unit!.isNotEmpty)
-                              Text(
-                                product.unit!,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                          ],
+                      const SizedBox(height: 12),
+                      Text(
+                        "Henüz ürün eklenmedi",
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Müşteri düzenlemesinden ürün ekleyebilirsiniz",
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade400,
                         ),
                       ),
                     ],
                   ),
-                )),
-              ],
-            ),
-          ),
+                )
+              : Column(
+                  children: [
+                    ...products.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final product = entry.value;
+                      final isLast = index == products.length - 1;
+                      
+                      return Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            child: Row(
+                              children: [
+                                // Quantity badge - daha belirgin
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        const Color(0xFF10B981).withValues(alpha: 0.15),
+                                        const Color(0xFF34D399).withValues(alpha: 0.1),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        "${product.quantity}",
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF059669),
+                                          height: 1,
+                                        ),
+                                      ),
+                                      Text(
+                                        "adet",
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: const Color(0xFF10B981).withValues(alpha: 0.8),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                // Product info
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        product.name,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF1F2937),
+                                          letterSpacing: -0.2,
+                                        ),
+                                      ),
+                                      if (product.unit != null && product.unit!.isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.straighten_rounded,
+                                              size: 14,
+                                              color: Colors.grey.shade400,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              product.unit!,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.grey.shade500,
+                                                fontWeight: FontWeight.w400,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                // Green check icon
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.check_rounded,
+                                    size: 16,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Divider between items
+                          if (!isLast)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Divider(
+                                height: 1,
+                                color: const Color(0xFFE5E7EB),
+                              ),
+                            ),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
         ),
       ],
     );

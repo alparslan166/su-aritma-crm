@@ -364,6 +364,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                 "unit": inventoryItem?.unit ?? "",
               };
             }).toList(),
+            deductFromStock: _deductFromStock,
           );
 
       debugPrint(

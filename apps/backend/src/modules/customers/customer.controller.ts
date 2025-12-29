@@ -103,6 +103,8 @@ const updateSchema = updateSchemaBase.extend({
     quantity: z.number().int().positive(),
     unit: z.string().optional(),
   })).optional(),
+  // Stoktan düşülsün mü?
+  deductFromStock: z.boolean().optional(),
 });
 
 export const listCustomersHandler = async (req: Request, res: Response, next: NextFunction) => {

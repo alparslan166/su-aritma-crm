@@ -517,6 +517,7 @@ class AdminRepository {
     double? receivedAmount,
     DateTime? paymentDate,
     List<Map<String, dynamic>>? usedProducts, // Kullanılan ürünler listesi
+    bool deductFromStock = false, // Stoktan düşülsün mü?
   }) async {
     final data = <String, dynamic>{};
     if (name != null) data["name"] = name;
@@ -586,7 +587,8 @@ class AdminRepository {
     // usedProducts gönder
     if (usedProducts != null) {
       data["usedProducts"] = usedProducts;
-      debugPrint("   ✅ usedProducts gönderiliyor: ${usedProducts.length} adet");
+      data["deductFromStock"] = deductFromStock;
+      debugPrint("   ✅ usedProducts gönderiliyor: ${usedProducts.length} adet, deductFromStock: $deductFromStock");
     }
     // Eğer sendNextMaintenanceDate false ise, nextMaintenanceDate hiç gönderilmez (undefined)
     final response = await _client.put("/customers/$id", data: data);

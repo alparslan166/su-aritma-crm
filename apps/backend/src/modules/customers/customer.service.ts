@@ -44,6 +44,7 @@ type UpdateCustomerPayload = Partial<CreateCustomerPayload> & {
     quantity: number;
     unit?: string;
   }>;
+  deductFromStock?: boolean;
 };
 
 type CustomerListFilters = {
@@ -627,10 +628,26 @@ class CustomerService {
                 unit: product.unit,
               })),
             });
+
+            // Stoktan düş - eğer deductFromStock true ise
+            if (payload.deductFromStock === true) {
+              console.log("📦 Stoktan düşme işlemi başlatıldı...");
+              for (const product of payload.usedProducts) {
+                await tx.inventoryItem.update({
+                  where: { id: product.inventoryItemId },
+                  data: {
+                    stockQty: {
+                      decrement: product.quantity,
+                    },
+                  },
+                });
+                console.log(`   ✅ ${product.name}: ${product.quantity} adet stoktan düşüldü`);
+              }
+            }
           }
         } catch (e) {
           // UsedProduct table might not exist yet (migration pending)
-          console.log("UsedProduct operation skipped - table may not exist yet");
+          console.log("UsedProduct operation skipped - table may not exist yet:", e);
         }
       }
 
