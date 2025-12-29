@@ -12,6 +12,7 @@ import "package:latlong2/latlong.dart";
 
 import "../../../../core/error/error_handler.dart";
 import "../../application/customer_list_notifier.dart";
+import "../../application/inventory_list_notifier.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
 import "../../data/models/inventory_item.dart";
@@ -385,6 +386,16 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
         ref.read(customerListProvider.notifier).refresh(showLoading: false);
       } catch (e) {
         // Provider henüz initialize edilmemiş olabilir, hata yok say
+      }
+
+      // Eğer stoktan düşüldüyse envanter listesini de refresh et
+      if (_deductFromStock && _selectedMaterials.isNotEmpty) {
+        try {
+          ref.read(inventoryListProvider.notifier).refresh();
+          debugPrint("📦 Envanter listesi refresh edildi");
+        } catch (e) {
+          // Provider henüz initialize edilmemiş olabilir
+        }
       }
 
       // Tüm filter type'lar için ayrı ayrı refresh et

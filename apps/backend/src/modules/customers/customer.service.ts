@@ -612,6 +612,17 @@ class CustomerService {
       // Handle usedProducts - replace all existing with new ones
       if (payload.usedProducts !== undefined) {
         try {
+          // Önce mevcut usedProducts'ı al (karşılaştırma için)
+          const existingUsedProducts = await tx.usedProduct.findMany({
+            where: { customerId },
+          });
+
+          // Mevcut ürünleri Map'e çevir (inventoryItemId -> quantity)
+          const existingMap = new Map<string, number>();
+          for (const p of existingUsedProducts) {
+            existingMap.set(p.inventoryItemId, p.quantity);
+          }
+
           // Delete existing used products
           await tx.usedProduct.deleteMany({
             where: { customerId },
@@ -630,18 +641,38 @@ class CustomerService {
             });
 
             // Stoktan düş - eğer deductFromStock true ise
+            // Sadece YENİ eklenen veya miktarı ARTAN ürünler için düş
             if (payload.deductFromStock === true) {
               console.log("📦 Stoktan düşme işlemi başlatıldı...");
               for (const product of payload.usedProducts) {
-                await tx.inventoryItem.update({
-                  where: { id: product.inventoryItemId },
-                  data: {
-                    stockQty: {
-                      decrement: product.quantity,
+                const existingQty = existingMap.get(product.inventoryItemId) || 0;
+                const diff = product.quantity - existingQty;
+                
+                if (diff > 0) {
+                  // Sadece artış varsa stoktan düş
+                  await tx.inventoryItem.update({
+                    where: { id: product.inventoryItemId },
+                    data: {
+                      stockQty: {
+                        decrement: diff,
+                      },
                     },
-                  },
-                });
-                console.log(`   ✅ ${product.name}: ${product.quantity} adet stoktan düşüldü`);
+                  });
+                  console.log(`   ✅ ${product.name}: ${diff} adet stoktan düşüldü (önceki: ${existingQty}, yeni: ${product.quantity})`);
+                } else if (diff === 0) {
+                  console.log(`   ⏭️ ${product.name}: Değişiklik yok, stoktan düşülmedi`);
+                } else {
+                  // diff < 0: Miktar azalmış - stoğu geri ekle
+                  await tx.inventoryItem.update({
+                    where: { id: product.inventoryItemId },
+                    data: {
+                      stockQty: {
+                        increment: Math.abs(diff),
+                      },
+                    },
+                  });
+                  console.log(`   🔄 ${product.name}: ${Math.abs(diff)} adet stoğa geri eklendi (önceki: ${existingQty}, yeni: ${product.quantity})`);
+                }
               }
             }
           }
