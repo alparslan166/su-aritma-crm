@@ -119,11 +119,9 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           // Bakım Bilgileri - Her zaman göster
           const SizedBox(height: 24),
           _MaintenanceSection(customer: customer),
-          // Kullanılan Ürün Bilgisi - Eğer ürün varsa göster
-          if (customer.usedProducts != null && customer.usedProducts!.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            _UsedProductsSection(customer: customer),
-          ],
+          // Kullanılan Ürün Bilgisi - Her zaman göster
+          const SizedBox(height: 24),
+          _UsedProductsSection(customer: customer),
           if (customer.hasDebt) ...[
             const SizedBox(height: 24),
             _DebtSection(customer: customer),
@@ -2605,7 +2603,6 @@ class _UsedProductsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final products = customer.usedProducts ?? [];
-    if (products.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2663,7 +2660,21 @@ class _UsedProductsSection extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
+            child: products.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        "Henüz ürün eklenmedi",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  )
+                : Column(
               children: [
                 ...products.map((product) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
