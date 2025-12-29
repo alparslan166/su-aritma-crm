@@ -659,19 +659,8 @@ class CustomerService {
                     },
                   });
                   console.log(`   ✅ ${product.name}: ${diff} adet stoktan düşüldü (önceki: ${existingQty}, yeni: ${product.quantity})`);
-                } else if (diff === 0) {
-                  console.log(`   ⏭️ ${product.name}: Değişiklik yok, stoktan düşülmedi`);
                 } else {
-                  // diff < 0: Miktar azalmış - stoğu geri ekle
-                  await tx.inventoryItem.update({
-                    where: { id: product.inventoryItemId },
-                    data: {
-                      stockQty: {
-                        increment: Math.abs(diff),
-                      },
-                    },
-                  });
-                  console.log(`   🔄 ${product.name}: ${Math.abs(diff)} adet stoğa geri eklendi (önceki: ${existingQty}, yeni: ${product.quantity})`);
+                  console.log(`   ⏭️ ${product.name}: Miktar artışı yok (Fark: ${diff}), stok işlemi yapılmadı.`);
                 }
               }
             }
