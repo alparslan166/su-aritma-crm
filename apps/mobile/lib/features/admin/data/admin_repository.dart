@@ -516,6 +516,7 @@ class AdminRepository {
         false, // nextMaintenanceDate gönderilmeli mi? (null olsa bile)
     double? receivedAmount,
     DateTime? paymentDate,
+    List<Map<String, dynamic>>? usedProducts, // Kullanılan ürünler listesi
   }) async {
     final data = <String, dynamic>{};
     if (name != null) data["name"] = name;
@@ -582,6 +583,11 @@ class AdminRepository {
     debugPrint(
       "═══════════════════════════════════════════════════════════════════════════════════════════",
     );
+    // usedProducts gönder
+    if (usedProducts != null) {
+      data["usedProducts"] = usedProducts;
+      debugPrint("   ✅ usedProducts gönderiliyor: ${usedProducts.length} adet");
+    }
     // Eğer sendNextMaintenanceDate false ise, nextMaintenanceDate hiç gönderilmez (undefined)
     final response = await _client.put("/customers/$id", data: data);
     final updatedCustomer = Customer.fromJson(

@@ -341,6 +341,29 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                 ? double.tryParse(_receivedAmountController.text.trim())
                 : null,
             paymentDate: _paymentDate,
+            usedProducts: _selectedMaterials.entries.map((entry) {
+              final inventoryItem = _inventoryList.isNotEmpty
+                  ? _inventoryList.firstWhere(
+                      (i) => i.id == entry.key,
+                      orElse: () => _inventoryList.first,
+                    )
+                  : null;
+              return {
+                "inventoryItemId": entry.key,
+                "name": inventoryItem?.name ?? 
+                    widget.customer.usedProducts?.firstWhere(
+                      (p) => p.inventoryItemId == entry.key,
+                      orElse: () => UsedProduct(
+                        id: "",
+                        inventoryItemId: entry.key,
+                        name: "Ürün",
+                        quantity: entry.value,
+                      ),
+                    ).name ?? "Ürün",
+                "quantity": entry.value,
+                "unit": inventoryItem?.unit ?? "",
+              };
+            }).toList(),
           );
 
       debugPrint(
