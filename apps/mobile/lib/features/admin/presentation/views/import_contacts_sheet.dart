@@ -1,7 +1,7 @@
 import "package:flutter/material.dart";
 import "package:flutter_contacts/flutter_contacts.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
-import "package:url_launcher/url_launcher.dart";
+import "package:permission_handler/permission_handler.dart";
 
 import "../../data/admin_repository.dart";
 import "../../application/customer_list_notifier.dart";
@@ -34,14 +34,22 @@ class _ImportContactsSheetState extends ConsumerState<ImportContactsSheet> {
     });
 
     try {
-      // Request permission
-      debugPrint("Requesting contacts permission...");
-      final hasPermission = await FlutterContacts.requestPermission();
-      debugPrint("Permission result: $hasPermission");
+      // Check current permission status
+      var status = await Permission.contacts.status;
+      debugPrint("Current contacts permission status: $status");
       
-      if (!hasPermission) {
+      if (!status.isGranted) {
+        // Request permission
+        debugPrint("Requesting contacts permission...");
+        status = await Permission.contacts.request();
+        debugPrint("Permission request result: $status");
+      }
+      
+      if (!status.isGranted) {
         setState(() {
-          _error = "Rehber izni verilmedi.\n\nLütfen uygulamayı ayarlardan açıp 'Kişiler' iznini verin.";
+          _error = status.isPermanentlyDenied 
+              ? "Rehber izni kalıcı olarak reddedildi.\n\nLütfen ayarlardan 'Kişiler' iznini açın."
+              : "Rehber izni verilmedi.\n\nLütfen izin verin.";
           _isLoading = false;
         });
         return;
@@ -294,12 +302,8 @@ class _ImportContactsSheetState extends ConsumerState<ImportContactsSheet> {
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: () async {
-                  // Open app settings
-                  final uri = Uri.parse("package:com.filtrefix.su_aritma_crm");
-                  await launchUrl(
-                    Uri.parse("app-settings:"),
-                    mode: LaunchMode.externalApplication,
-                  );
+                  // Open app settings using permission_handler
+                  await openAppSettings();
                 },
                 icon: const Icon(Icons.settings),
                 label: const Text("Ayarlara Git"),
