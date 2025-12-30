@@ -574,7 +574,7 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                       ),
                     ),
                     SizedBox(
-                      height: MediaQuery.of(context).viewInsets.bottom + 24,
+                      height: MediaQuery.of(context).viewInsets.bottom + 80,
                     ),
                   ],
                 ),

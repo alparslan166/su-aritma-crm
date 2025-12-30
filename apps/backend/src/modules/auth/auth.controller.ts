@@ -13,6 +13,7 @@ import { prisma } from "../../lib/prisma";
 import { getAdminId } from "../../lib/tenant";
 import { AppError } from "../../middleware/error-handler";
 import { SubscriptionService } from "../subscriptions/subscription.service";
+import { mediaService } from "../media/media.service";
 
 const loginSchema = z
   .object({
@@ -166,6 +167,8 @@ export const getProfileHandler = async (req: Request, res: Response, next: NextF
       throw new AppError("Admin not found", 404);
     }
 
+    const logoUrl = await mediaService.getMediaUrl(admin.logoUrl);
+
     res.json({
       success: true,
       data: {
@@ -181,7 +184,7 @@ export const getProfileHandler = async (req: Request, res: Response, next: NextF
         companyEmail: admin.companyEmail ?? null,
         taxOffice: admin.taxOffice ?? null,
         taxNumber: admin.taxNumber ?? null,
-        logoUrl: admin.logoUrl ?? null,
+        logoUrl: logoUrl ?? null,
       },
     });
   } catch (error) {
@@ -588,6 +591,8 @@ export const updateProfileHandler = async (req: Request, res: Response, next: Ne
       data: updateData,
     });
 
+    const logoUrl = await mediaService.getMediaUrl(updated.logoUrl);
+
     res.json({
       success: true,
       data: {
@@ -603,7 +608,7 @@ export const updateProfileHandler = async (req: Request, res: Response, next: Ne
         companyEmail: updated.companyEmail ?? null,
         taxOffice: updated.taxOffice ?? null,
         taxNumber: updated.taxNumber ?? null,
-        logoUrl: updated.logoUrl ?? null,
+        logoUrl: logoUrl ?? null,
       },
     });
   } catch (error) {

@@ -38,7 +38,7 @@ class InventoryService {
 
   async list(adminId: string) {
     return prisma.inventoryItem.findMany({
-      where: { adminId },
+      where: { adminId, isActive: true },
       orderBy: { name: "asc" },
     });
   }
@@ -84,7 +84,11 @@ class InventoryService {
 
   async delete(adminId: string, id: string) {
     await this.ensureItem(adminId, id);
-    await prisma.inventoryItem.delete({ where: { id } });
+    // Soft delete to prevent foreign key errors with UsedProduct
+    await prisma.inventoryItem.update({
+      where: { id },
+      data: { isActive: false },
+    });
   }
 
   async adjust(adminId: string, id: string, payload: AdjustPayload) {

@@ -157,24 +157,6 @@ class _InventoryTile extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            item.category,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade700,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
                         const SizedBox(width: 8),
                         Text(
                           "${item.stockQty} ${item.unit ?? "adet"}",

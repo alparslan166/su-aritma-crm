@@ -1170,6 +1170,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                         : const Text("Kaydet"),
                   ),
                 ),
+                const SizedBox(height: 80),
                 SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
               ],
             ),

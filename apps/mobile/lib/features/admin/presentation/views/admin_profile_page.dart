@@ -1,10 +1,12 @@
 import "dart:async";
+import "dart:io";
 import "dart:typed_data";
 
 import "package:dio/dio.dart";
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
+import "package:image_cropper/image_cropper.dart";
 import "package:image_picker/image_picker.dart";
 import "package:intl/intl.dart";
 
@@ -96,13 +98,68 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
   }
 
   Future<void> _pickLogo() async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      final bytes = await image.readAsBytes();
-      setState(() {
-        _selectedLogoBytes = bytes;
-      });
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(source: ImageSource.gallery);
+      
+      if (image != null) {
+        debugPrint("Image picked: ${image.path}");
+        
+        // Crop the image
+        final croppedFile = await ImageCropper().cropImage(
+          sourcePath: image.path,
+          aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+          uiSettings: [
+            AndroidUiSettings(
+              toolbarTitle: "Logo Düzenle",
+              toolbarColor: const Color(0xFF2563EB),
+              toolbarWidgetColor: Colors.white,
+              initAspectRatio: CropAspectRatioPreset.square,
+              lockAspectRatio: false,
+              activeControlsWidgetColor: const Color(0xFF2563EB),
+              cropStyle: CropStyle.rectangle,
+              aspectRatioPresets: [
+                CropAspectRatioPreset.square,
+                CropAspectRatioPreset.ratio3x2,
+                CropAspectRatioPreset.original,
+                CropAspectRatioPreset.ratio4x3,
+                CropAspectRatioPreset.ratio16x9,
+              ],
+            ),
+            IOSUiSettings(
+              title: "Logo Düzenle",
+              cancelButtonTitle: "İptal",
+              doneButtonTitle: "Tamam",
+              aspectRatioPresets: [
+                CropAspectRatioPreset.square,
+                CropAspectRatioPreset.ratio3x2,
+                CropAspectRatioPreset.original,
+                CropAspectRatioPreset.ratio4x3,
+                CropAspectRatioPreset.ratio16x9,
+              ],
+            ),
+          ],
+        );
+
+        if (croppedFile != null) {
+          debugPrint("Image cropped: ${croppedFile.path}");
+          final bytes = await File(croppedFile.path).readAsBytes();
+          setState(() {
+            _selectedLogoBytes = bytes;
+          });
+        } else {
+          debugPrint("Crop cancelled");
+        }
+      } else {
+        debugPrint("No image picked");
+      }
+    } catch (e) {
+      debugPrint("Error picking/cropping image: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Resim seçilirken hata oluştu: $e")),
+        );
+      }
     }
   }
 
@@ -203,6 +260,12 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
 
       // Refresh profile
       ref.invalidate(adminProfileProvider);
+      
+      // Reload profile data to get the new logo URL from server
+      await _loadProfile();
+      
+      // Reset selected logo bytes since it's now saved
+      _selectedLogoBytes = null;
 
       if (mounted) {
         ScaffoldMessenger.of(

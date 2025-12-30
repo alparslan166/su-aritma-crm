@@ -132,6 +132,7 @@ class _InventoryFormSheetState extends ConsumerState<InventoryFormSheet> {
                       : const Text("Kaydet"),
                 ),
               ),
+              const SizedBox(height: 80),
               SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
             ],
           ),
