@@ -586,10 +586,15 @@ export const updateProfileHandler = async (req: Request, res: Response, next: Ne
       updateData.logoUrl = payload.logoUrl === "" ? { set: null } : payload.logoUrl;
     }
 
+    console.log("Update Payload:", JSON.stringify(payload, null, 2));
+    console.log("Update Data to Prisma:", JSON.stringify(updateData, null, 2));
+
     const updated = await prisma.admin.update({
       where: { id: adminId },
       data: updateData,
     });
+
+    console.log("Updated DB Record:", JSON.stringify(updated, null, 2));
 
     const logoUrl = await mediaService.getMediaUrl(updated.logoUrl);
 

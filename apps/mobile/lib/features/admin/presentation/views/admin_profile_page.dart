@@ -179,10 +179,13 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
 
       final uploadUrl = presignedResponse.data["data"]["uploadUrl"] as String;
       final key = presignedResponse.data["data"]["key"] as String;
+      
+      debugPrint("Upload URL: $uploadUrl");
+      debugPrint("Key: $key");
 
       // Upload to S3 using a separate Dio instance (without interceptors)
       final uploadClient = Dio();
-      await uploadClient.put(
+      final response = await uploadClient.put(
         uploadUrl,
         data: _selectedLogoBytes,
         options: Options(
@@ -192,7 +195,20 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
         ),
       );
 
-      return key;
+      debugPrint("Upload Response Status: ${response.statusCode}");
+      debugPrint("Upload Response Data: ${response.data}");
+
+      if (response.statusCode! >= 200 && response.statusCode! < 300) {
+        debugPrint("Upload SUCCESS. Returning key: $key");
+        return key;
+      } else {
+        debugPrint("Upload FAILED with status: ${response.statusCode}");
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          error: "Upload failed with status code ${response.statusCode}",
+        );
+      }
     } catch (e) {
       debugPrint("Logo upload error: $e");
       if (mounted) {
