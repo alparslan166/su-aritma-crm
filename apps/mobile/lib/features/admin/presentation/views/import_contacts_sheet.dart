@@ -2,7 +2,8 @@ import "package:flutter/material.dart";
 import "package:flutter_contacts/flutter_contacts.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
 
-import "../../../admin/data/admin_provider.dart";
+import "../../data/admin_repository.dart";
+import "../../application/customer_list_notifier.dart";
 
 class ImportContactsSheet extends ConsumerStatefulWidget {
   const ImportContactsSheet({super.key});
@@ -134,7 +135,7 @@ class _ImportContactsSheetState extends ConsumerState<ImportContactsSheet> {
           ),
         );
         // Refresh customers list
-        ref.invalidate(customersProvider);
+        ref.invalidate(customerListProvider);
       }
     } catch (e) {
       if (mounted) {
