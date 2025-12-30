@@ -12,7 +12,7 @@ type PresignOptions = {
 export class MediaService {
   constructor(
     private readonly client = new S3Client({
-      region: config.aws.region,
+      region: "eu-north-1",
       // Use path-style URLs to avoid DNS issues with new buckets
       forcePathStyle: true,
     }),
