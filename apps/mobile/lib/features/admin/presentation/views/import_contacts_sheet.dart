@@ -34,10 +34,13 @@ class _ImportContactsSheetState extends ConsumerState<ImportContactsSheet> {
 
     try {
       // Request permission
+      debugPrint("Requesting contacts permission...");
       final hasPermission = await FlutterContacts.requestPermission();
+      debugPrint("Permission result: $hasPermission");
+      
       if (!hasPermission) {
         setState(() {
-          _error = "Rehber izni verilmedi. Lütfen ayarlardan izin verin.";
+          _error = "Rehber izni verilmedi.\n\nLütfen uygulamayı ayarlardan açıp 'Kişiler' iznini verin.";
           _isLoading = false;
         });
         return;
@@ -279,19 +282,30 @@ class _ImportContactsSheetState extends ConsumerState<ImportContactsSheet> {
 
     if (_error != null) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(_error!, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _loadContacts,
-              icon: const Icon(Icons.refresh),
-              label: const Text("Tekrar Dene"),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(_error!, textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () async {
+                  await FlutterContacts.openExternalPick();
+                },
+                icon: const Icon(Icons.settings),
+                label: const Text("Ayarlara Git"),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _loadContacts,
+                icon: const Icon(Icons.refresh),
+                label: const Text("Tekrar Dene"),
+              ),
+            ],
+          ),
         ),
       );
     }
