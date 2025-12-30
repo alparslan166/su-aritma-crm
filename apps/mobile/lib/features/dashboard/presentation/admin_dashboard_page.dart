@@ -4,7 +4,6 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 
 import "../../../core/session/session_provider.dart";
 import "../../../routing/app_router.dart";
-import "../../admin/data/admin_provider.dart";
 import "../../admin/presentation/views/admin_profile_page.dart";
 import "../../admin/presentation/views/assign_job_sheet.dart";
 import "../../admin/presentation/views/customers_view.dart";
