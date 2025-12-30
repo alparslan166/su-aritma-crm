@@ -80,6 +80,7 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
 
   Future<void> _loadProfile() async {
     final profile = await ref.read(adminRepositoryProvider).getProfile();
+    debugPrint("Loaded profile: $profile");
     setState(() {
       _nameController.text = profile["name"] as String? ?? "";
       _phoneController.text = profile["phone"] as String? ?? "";
