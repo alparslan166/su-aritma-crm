@@ -30,7 +30,7 @@ const env = envSchema.parse({
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT,
   DATABASE_URL: process.env.DATABASE_URL,
-  AWS_REGION: process.env.AWS_REGION,
+  AWS_REGION: "eu-north-1", // Force eu-north-1 regardless of process.env
   AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
   S3_MEDIA_BUCKET: process.env.S3_MEDIA_BUCKET,
