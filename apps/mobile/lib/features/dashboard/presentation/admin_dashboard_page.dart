@@ -14,6 +14,7 @@ import "../../admin/presentation/views/notifications_view.dart";
 import "../../admin/presentation/views/past_jobs_view.dart";
 import "../../admin/presentation/views/personnel_view.dart";
 import "../../admin/presentation/views/export_data_page.dart";
+import "import_data_page.dart";
 import "home_page_tab.dart";
 
 class AdminDashboardPage extends ConsumerStatefulWidget {
@@ -761,6 +762,34 @@ class _AdminDrawer extends ConsumerWidget {
               Navigator.of(context).pop();
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const ExportDataPage()),
+              );
+            },
+          ),
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.upload,
+                color: Color(0xFF2563EB),
+                size: 24,
+              ),
+            ),
+            title: const Text(
+              "İçeri Aktar",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+              ),
+            ),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ImportDataPage()),
               );
             },
           ),
