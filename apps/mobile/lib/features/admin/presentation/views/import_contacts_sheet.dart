@@ -122,16 +122,19 @@ class _ImportContactsSheetState extends ConsumerState<ImportContactsSheet> {
         final contact = _contacts.firstWhere((c) => c.id == contactId);
         final phone = contact.phones.first.number.replaceAll(RegExp(r'[^\d+]'), '');
         
+        debugPrint("Creating customer: name=${contact.displayName}, phone=$phone");
+        
         try {
           await repository.createCustomer(
             name: contact.displayName,
             phone: phone,
-            address: "", // Empty address, user can fill later
+            address: "Rehberden aktarıldı", // Default address
           );
           successCount++;
+          debugPrint("SUCCESS: Created customer ${contact.displayName}");
         } catch (e) {
           failCount++;
-          debugPrint("Failed to create customer for ${contact.displayName}: $e");
+          debugPrint("FAILED to create customer for ${contact.displayName}: $e");
         }
       }
 
