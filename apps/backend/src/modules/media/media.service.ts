@@ -65,14 +65,9 @@ export class MediaService {
       return key;
     }
 
-    // Priority 1: Check if S3_MEDIA_BASE_URL is set (CloudFront or public bucket)
-    // This is the most reliable and permanent solution
-    const s3BaseUrl = process.env.S3_MEDIA_BASE_URL;
-    if (s3BaseUrl && s3BaseUrl.trim() !== "") {
-      // Remove trailing slash from base URL if present
-      const baseUrl = s3BaseUrl.endsWith("/") ? s3BaseUrl.slice(0, -1) : s3BaseUrl;
-      return `${baseUrl}/${key}`;
-    }
+    // Force eu-north-1 region for S3 URLs (bucket is in Stockholm)
+    const s3BaseUrl = "https://su-aritma-crm-media.s3.eu-north-1.amazonaws.com";
+    return `${s3BaseUrl}/${key}`;
 
     // Priority 2: Generate long-lived presigned URL (7 days - AWS maximum)
     // This is stored in DB and will be auto-refreshed when expired
