@@ -12,7 +12,7 @@ const envSchema = z.object({
     .string()
     .min(1, "DATABASE_URL is required")
     .default("postgresql://postgres:postgres@localhost:5432/su_aritma?schema=public"),
-  AWS_REGION: z.string().default("eu-central-1"),
+  AWS_REGION: z.string().default("eu-north-1"),
   AWS_ACCESS_KEY_ID: z.string().default("local"),
   AWS_SECRET_ACCESS_KEY: z.string().default("local"),
   S3_MEDIA_BUCKET: z.string().default("local-bucket"),
