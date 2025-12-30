@@ -5,6 +5,7 @@ import "package:permission_handler/permission_handler.dart";
 
 import "../../data/admin_repository.dart";
 import "../../application/customer_list_notifier.dart";
+import "customers_view.dart";
 
 class ImportContactsSheet extends ConsumerStatefulWidget {
   const ImportContactsSheet({super.key});
@@ -139,7 +140,16 @@ class _ImportContactsSheetState extends ConsumerState<ImportContactsSheet> {
       }
 
       if (mounted) {
+        // Refresh customers list for all filter types
+        ref.invalidate(customerListProvider);
+        for (final filterType in CustomerFilterType.values) {
+          ref.invalidate(customerListProviderForFilter(filterType.toString()));
+        }
+        
+        // Navigate back to customer list
         Navigator.of(context).pop();
+        Navigator.of(context).pop(); // Also pop the import explanation page
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -149,8 +159,6 @@ class _ImportContactsSheetState extends ConsumerState<ImportContactsSheet> {
             ),
           ),
         );
-        // Refresh customers list
-        ref.invalidate(customerListProvider);
       }
     } catch (e) {
       if (mounted) {
