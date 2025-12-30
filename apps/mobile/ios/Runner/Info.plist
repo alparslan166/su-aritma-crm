@@ -51,5 +51,7 @@
 	<string>Bu uygulama arka planda konumunuzu personel takibi için kullanır.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Bu uygulama arka planda konumunuzu personel takibi için kullanır.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Bu uygulama rehberinizdeki kişileri müşteri olarak içeri aktarmak için kullanır.</string>
 </dict>
 </plist>

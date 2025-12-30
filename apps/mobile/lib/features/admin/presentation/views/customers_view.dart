@@ -16,6 +16,7 @@ import "../../data/models/customer.dart";
 import "../../../dashboard/presentation/home_page_provider.dart";
 import "add_customer_sheet.dart";
 import "edit_customer_sheet.dart";
+import "import_contacts_sheet.dart";
 import "job_map_view.dart";
 import "package:latlong2/latlong.dart";
 
@@ -429,10 +430,29 @@ class CustomersView extends HookConsumerWidget {
           Positioned(
             right: 16,
             bottom: 16 + padding,
-            child: FloatingActionButton.extended(
-              onPressed: () => _openAddCustomerSheet(context, ref),
-              icon: const Icon(Icons.person_add),
-              label: const Text("Müşteri Ekle"),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FloatingActionButton(
+                  heroTag: "import",
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ImportContactsSheet(),
+                      ),
+                    );
+                  },
+                  backgroundColor: const Color(0xFF10B981),
+                  child: const Icon(Icons.contacts),
+                ),
+                const SizedBox(height: 12),
+                FloatingActionButton.extended(
+                  heroTag: "add",
+                  onPressed: () => _openAddCustomerSheet(context, ref),
+                  icon: const Icon(Icons.person_add),
+                  label: const Text("Müşteri Ekle"),
+                ),
+              ],
             ),
           ),
       ],

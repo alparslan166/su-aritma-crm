@@ -57,6 +57,7 @@ dependencies:
   url_launcher: ^6.3.2
   fl_chart: ^0.69.0
   image_cropper: ^8.0.2
+  flutter_contacts: ^1.1.9+2
 
 dev_dependencies:
   flutter_test:
