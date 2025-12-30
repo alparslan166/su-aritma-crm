@@ -1,6 +1,6 @@
 import "package:flutter/material.dart";
 
-import "../admin/presentation/views/import_contacts_sheet.dart";
+import "../../admin/presentation/views/import_contacts_sheet.dart";
 
 class ImportDataPage extends StatelessWidget {
   const ImportDataPage({super.key});
