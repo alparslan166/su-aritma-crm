@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:flutter_contacts/flutter_contacts.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
+import "package:url_launcher/url_launcher.dart";
 
 import "../../data/admin_repository.dart";
 import "../../application/customer_list_notifier.dart";
@@ -293,7 +294,12 @@ class _ImportContactsSheetState extends ConsumerState<ImportContactsSheet> {
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: () async {
-                  await FlutterContacts.openExternalPick();
+                  // Open app settings
+                  final uri = Uri.parse("package:com.filtrefix.su_aritma_crm");
+                  await launchUrl(
+                    Uri.parse("app-settings:"),
+                    mode: LaunchMode.externalApplication,
+                  );
                 },
                 icon: const Icon(Icons.settings),
                 label: const Text("Ayarlara Git"),
