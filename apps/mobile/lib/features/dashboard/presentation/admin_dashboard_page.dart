@@ -4,6 +4,7 @@ import "package:hooks_riverpod/hooks_riverpod.dart";
 
 import "../../../core/session/session_provider.dart";
 import "../../../routing/app_router.dart";
+import "../../admin/data/admin_provider.dart";
 import "../../admin/presentation/views/admin_profile_page.dart";
 import "../../admin/presentation/views/assign_job_sheet.dart";
 import "../../admin/presentation/views/customers_view.dart";
@@ -16,16 +17,16 @@ import "../../admin/presentation/views/personnel_view.dart";
 import "../../admin/presentation/views/export_data_page.dart";
 import "home_page_tab.dart";
 
-class AdminDashboardPage extends StatefulWidget {
+class AdminDashboardPage extends ConsumerStatefulWidget {
   const AdminDashboardPage({super.key});
 
   static const routeName = "admin-dashboard";
 
   @override
-  State<AdminDashboardPage> createState() => _AdminDashboardPageState();
+  ConsumerState<AdminDashboardPage> createState() => _AdminDashboardPageState();
 }
 
-class _AdminDashboardPageState extends State<AdminDashboardPage>
+class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage>
     with TickerProviderStateMixin {
   late TabController _tabController;
   late AnimationController _homeIconAnimationController;
@@ -157,17 +158,76 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
           children: [
             GestureDetector(
               onTap: () => context.goNamed(AdminDashboardPage.routeName),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.water_drop,
-                  color: Color(0xFF2563EB),
-                  size: 20,
-                ),
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final profileAsync = ref.watch(adminProfileProvider);
+                  return profileAsync.when(
+                    data: (profile) {
+                      final logoUrl = profile["logoUrl"] as String?;
+                      if (logoUrl != null && logoUrl.isNotEmpty) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            logoUrl,
+                            width: 36,
+                            height: 36,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.water_drop,
+                                  color: Color(0xFF2563EB),
+                                  size: 20,
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      }
+                      return Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.water_drop,
+                          color: Color(0xFF2563EB),
+                          size: 20,
+                        ),
+                      );
+                    },
+                    loading: () => Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                    error: (_, __) => Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.water_drop,
+                        color: Color(0xFF2563EB),
+                        size: 20,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 12),
