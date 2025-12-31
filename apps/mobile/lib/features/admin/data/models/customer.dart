@@ -198,6 +198,15 @@ class Customer {
   }
 
   bool get hasUpcomingMaintenance {
+    // 1. Check customer's direct nextMaintenanceDate field first
+    if (nextMaintenanceDate != null) {
+      final now = DateTime.now();
+      final daysUntilDue = nextMaintenanceDate!.difference(now).inDays;
+      // Geçmiş veya 30 gün içinde olan bakımlar
+      if (daysUntilDue <= 30) return true;
+    }
+
+    // 2. Check job-based maintenance dates
     if (jobs == null) return false;
     return jobs!.any((job) {
       if (job.maintenanceDueAt == null) return false;

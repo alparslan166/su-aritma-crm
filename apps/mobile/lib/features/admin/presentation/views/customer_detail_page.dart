@@ -2344,60 +2344,62 @@ class _CustomerMapSectionState extends State<_CustomerMapSection> {
                       )
                     : _error != null
                     ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: const Color(
-                                    0xFF60A5FA,
-                                  ).withOpacity(0.1),
-                                ),
-                                child: const Icon(
-                                  Icons.location_searching,
-                                  color: Color(0xFF60A5FA), // Light Blue
-                                  size: 56,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                "Konum Bulunamadı",
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey.shade700,
-                                    ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _error!.contains("Adres bilgisi")
-                                    ? "Müşterinin adres bilgisi bulunmuyor. Adres bilgisi ekleyerek konumu görüntüleyebilirsiniz."
-                                    : "Müşterinin konum bilgisi yüklenemedi. Adres bilgisi doğru mu kontrol edin veya Google Maps'te açmak için adrese tıklayın.",
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: Colors.grey.shade600,
-                                      height: 1.4,
-                                    ),
-                              ),
-                              const SizedBox(height: 16),
-                              OutlinedButton.icon(
-                                onPressed: _loadLocation,
-                                icon: const Icon(Icons.refresh, size: 18),
-                                label: const Text("Tekrar Dene"),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 12,
+                        child: SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: const Color(
+                                      0xFF60A5FA,
+                                    ).withOpacity(0.1),
+                                  ),
+                                  child: const Icon(
+                                    Icons.location_searching,
+                                    color: Color(0xFF60A5FA), // Light Blue
+                                    size: 56,
                                   ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 16),
+                                Text(
+                                  "Konum Bulunamadı",
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _error!.contains("Adres bilgisi")
+                                      ? "Müşterinin adres bilgisi bulunmuyor. Adres bilgisi ekleyerek konumu görüntüleyebilirsiniz."
+                                      : "Müşterinin konum bilgisi yüklenemedi. Adres bilgisi doğru mu kontrol edin veya Google Maps'te açmak için adrese tıklayın.",
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Colors.grey.shade600,
+                                        height: 1.4,
+                                      ),
+                                ),
+                                const SizedBox(height: 16),
+                                OutlinedButton.icon(
+                                  onPressed: _loadLocation,
+                                  icon: const Icon(Icons.refresh, size: 18),
+                                  label: const Text("Tekrar Dene"),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       )

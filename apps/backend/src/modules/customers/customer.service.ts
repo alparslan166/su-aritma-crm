@@ -247,7 +247,8 @@ class CustomerService {
 
     if (filters.hasUpcomingMaintenance) {
       filtered = filtered.filter((customer) => {
-        return customer.jobs.some((job) => {
+        // 1. Check job-based reminders
+        const hasJobMaintenance = customer.jobs.some((job) => {
           if (!job.maintenanceReminders.length) return false;
           const reminder = job.maintenanceReminders[0];
           const daysUntilDue = Math.ceil(
@@ -256,6 +257,20 @@ class CustomerService {
           // Son 3 gün, bugün veya geçmiş olanlar (daysUntilDue <= 3)
           return daysUntilDue <= 3;
         });
+
+        if (hasJobMaintenance) return true;
+
+        // 2. Check customer-based maintenance date (orphan)
+        if (customer.nextMaintenanceDate) {
+          const maintenanceDate = new Date(customer.nextMaintenanceDate);
+          const daysUntilDue = Math.ceil(
+            (maintenanceDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+          );
+          // Son 3 gün, bugün veya geçmiş olanlar (daysUntilDue <= 3)
+          return daysUntilDue <= 3;
+        }
+
+        return false;
       });
     }
 
