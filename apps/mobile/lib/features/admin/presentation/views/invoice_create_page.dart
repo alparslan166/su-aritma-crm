@@ -248,7 +248,7 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                           labelText: "İş Tarihi *",
                           border: OutlineInputBorder(),
                         ),
-                        child: Text(DateFormat("dd MMM yyyy").format(_jobDate)),
+                        child: Text(DateFormat("dd MMM yyyy", "tr_TR").format(_jobDate)),
                       ),
                     ),
                   ],

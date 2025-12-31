@@ -1640,7 +1640,7 @@ class _CustomerInfoSection extends StatelessWidget {
           _InfoRowIcon(
             icon: Icons.event,
             label: "Kayıt Tarihi",
-            value: DateFormat("dd MMM yyyy").format(customer.createdAt!),
+            value: DateFormat("dd MMM yyyy", "tr_TR").format(customer.createdAt!),
           ),
         _InfoRowIcon(icon: Icons.badge, label: "İsim", value: customer.name),
         _InfoRowIcon(
@@ -2106,7 +2106,7 @@ class _JobCard extends ConsumerWidget {
               if (job.maintenanceDueAt != null)
                 _Row(
                   "Bakım Tarihi",
-                  DateFormat("dd MMM yyyy").format(job.maintenanceDueAt!),
+                  DateFormat("dd MMM yyyy", "tr_TR").format(job.maintenanceDueAt!),
                 ),
               // Fatura Oluştur butonu - sadece DELIVERED işler için
               if (isDelivered) ...[

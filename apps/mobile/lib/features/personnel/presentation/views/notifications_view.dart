@@ -81,7 +81,7 @@ class _NotificationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatter = DateFormat("dd MMM HH:mm");
+    final formatter = DateFormat("dd MMM HH:mm", "tr_TR");
     return ListTile(
       leading: Icon(_icon, color: Theme.of(context).colorScheme.primary),
       title: Text(notification.title),

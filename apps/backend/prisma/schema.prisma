@@ -283,7 +283,7 @@ model Job {
 }
 
 model JobPersonnel {
-  job         Job       @relation(fields: [jobId], references: [id])
+  job         Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
   jobId       String
   personnel   Personnel @relation(fields: [personnelId], references: [id])
   personnelId String
@@ -319,7 +319,7 @@ model InventoryItem {
 
 model JobMaterial {
   id              String        @id @default(cuid())
-  job             Job           @relation(fields: [jobId], references: [id])
+  job             Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
   jobId           String
   inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
   inventoryItemId String
@@ -369,7 +369,7 @@ model Subscription {
 
 model JobStatusHistory {
   id                   String     @id @default(cuid())
-  job                  Job        @relation(fields: [jobId], references: [id])
+  job                  Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
   jobId                String
   status               JobStatus
   note                 String?
@@ -382,7 +382,7 @@ model JobStatusHistory {
 
 model JobNote {
   id                String            @id @default(cuid())
-  job               Job               @relation(fields: [jobId], references: [id])
+  job               Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
   jobId             String
   authorType        JobNoteAuthorType
   adminAuthor       Admin?            @relation("JobNoteAdmin", fields: [adminAuthorId], references: [id])

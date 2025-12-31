@@ -708,7 +708,7 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
                                         } else if (diff.inMinutes < 60) {
                                           subtitle = "${diff.inMinutes} dk önce";
                                         } else {
-                                          subtitle = DateFormat("dd MMM HH:mm").format(timestamp.toLocal());
+                                          subtitle = DateFormat("dd MMM HH:mm", "tr_TR").format(timestamp.toLocal());
                                         }
                                       } else {
                                         subtitle = "Konum zamanı bilinmiyor";
@@ -1088,7 +1088,7 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
             const SizedBox(height: 12),
             if (location.timestamp != null) ...[
               Text(
-                "Son konum: ${DateFormat("dd MMM yyyy HH:mm").format(location.timestamp!.toLocal())}",
+                "Son konum: ${DateFormat("dd MMM yyyy HH:mm", "tr_TR").format(location.timestamp!.toLocal())}",
                 style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
               const SizedBox(height: 12),

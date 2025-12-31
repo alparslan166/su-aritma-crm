@@ -49,7 +49,7 @@ class _JobTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatter = DateFormat("dd MMM HH:mm");
+    final formatter = DateFormat("dd MMM HH:mm", "tr_TR");
     final scheduled = job.scheduledAt != null
         ? formatter.format(job.scheduledAt!)
         : "Planlı değil";

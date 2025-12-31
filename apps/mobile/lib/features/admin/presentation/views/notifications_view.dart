@@ -116,7 +116,7 @@ class _NotificationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatter = DateFormat("dd MMM HH:mm");
+    final formatter = DateFormat("dd MMM HH:mm", "tr_TR");
     final isClickable = _jobId != null || _customerId != null || 
         notification.type == "maintenance" || notification.type == "maintenance-reminder";
     

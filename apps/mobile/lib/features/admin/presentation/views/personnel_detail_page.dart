@@ -944,7 +944,7 @@ class _LeavesManagementSheetState
                     title: Text(
                       startDate == null
                           ? "Başlangıç Tarihi Seç"
-                          : DateFormat("dd MMM yyyy").format(startDate!),
+                          : DateFormat("dd MMM yyyy", "tr_TR").format(startDate!),
                     ),
                     trailing: const Icon(Icons.calendar_today),
                     onTap: () async {
@@ -968,7 +968,7 @@ class _LeavesManagementSheetState
                     title: Text(
                       endDate == null
                           ? "Bitiş Tarihi Seç"
-                          : DateFormat("dd MMM yyyy").format(endDate!),
+                          : DateFormat("dd MMM yyyy", "tr_TR").format(endDate!),
                     ),
                     trailing: const Icon(Icons.calendar_today),
                     onTap: () async {
@@ -1162,7 +1162,7 @@ class _LeavesManagementSheetState
           color: isActive ? const Color(0xFF2563EB) : Colors.grey.shade600,
         ),
         title: Text(
-          "${DateFormat("dd MMM yyyy").format(leave.startDate)} - ${DateFormat("dd MMM yyyy").format(leave.endDate)}",
+          "${DateFormat("dd MMM yyyy", "tr_TR").format(leave.startDate)} - ${DateFormat("dd MMM yyyy", "tr_TR").format(leave.endDate)}",
           style: TextStyle(
             fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
             color: isActive ? const Color(0xFF2563EB) : Colors.black87,
@@ -1802,7 +1802,7 @@ class _PersonnelMapSectionState extends ConsumerState<_PersonnelMapSection>
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    "Son güncelleme: ${DateFormat("dd MMM yyyy HH:mm").format(widget.personnel.lastKnownLocation!.timestamp!.toLocal())}",
+                    "Son güncelleme: ${DateFormat("dd MMM yyyy HH:mm", "tr_TR").format(widget.personnel.lastKnownLocation!.timestamp!.toLocal())}",
                     style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                   ),
                 ],

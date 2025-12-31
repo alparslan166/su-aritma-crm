@@ -294,9 +294,9 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
         };
       }
 
-      // Hesaplanan bakım tarihi - sadece slider değeri 0'dan büyükse gönder
+      // Hesaplanan bakım tarihi - slider değeri 0 veya büyükse gönder
       DateTime? calculatedMaintenanceDate;
-      if (_filterChangeMonths > 0) {
+      if (_filterChangeMonths >= 0) {
         calculatedMaintenanceDate = _lastTransactionDate.add(
           Duration(days: (_filterChangeMonths * 30).toInt()),
         );
@@ -769,13 +769,66 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                           "Sonraki Filtre Değişim Tarihi ?",
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
-                        Text(
-                          "${_filterChangeMonths.toInt()} ay",
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF2563EB),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Minus button
+                            GestureDetector(
+                              onTap: () {
+                                if (_filterChangeMonths > 0) {
+                                  setState(() {
+                                    _filterChangeMonths--;
+                                  });
+                                }
+                              },
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(
+                                  Icons.remove,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
                               ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              "${_filterChangeMonths.toInt()} ay",
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF2563EB),
+                                  ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Plus button
+                            GestureDetector(
+                              onTap: () {
+                                if (_filterChangeMonths < 12) {
+                                  setState(() {
+                                    _filterChangeMonths++;
+                                  });
+                                }
+                              },
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(
+                                  Icons.add,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

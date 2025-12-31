@@ -384,7 +384,7 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                         children: [
                           Expanded(
                             child: Text(
-                              "Ödeme Tarihi: ${_nextDebtDate != null ? DateFormat("dd MMM yyyy").format(_nextDebtDate!) : "Seçilmedi"}",
+                              "Ödeme Tarihi: ${_nextDebtDate != null ? DateFormat("dd MMM yyyy", "tr_TR").format(_nextDebtDate!) : "Seçilmedi"}",
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),

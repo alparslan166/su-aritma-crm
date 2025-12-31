@@ -590,7 +590,7 @@ class _MaintenanceInfo extends StatelessWidget {
     } else if (difference <= 7) {
       return "Bakım $difference gün sonra";
     } else {
-      return "Bakım ${DateFormat("dd MMM yyyy").format(dueDate)}";
+      return "Bakım ${DateFormat("dd MMM yyyy", "tr_TR").format(dueDate)}";
     }
   }
 

@@ -259,7 +259,7 @@ class _PaymentInvoiceCreatePageState
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.calendar_today),
                         ),
-                        child: Text(DateFormat("dd MMM yyyy").format(_paymentDate)),
+                        child: Text(DateFormat("dd MMM yyyy", "tr_TR").format(_paymentDate)),
                       ),
                     ),
                   ],
@@ -369,9 +369,9 @@ class _PaymentInvoiceCreatePageState
                     )
                   : const Text("Ödeme Faturası Oluştur"),
             ),
+            const SizedBox(height: 24),
           ],
-        ),
       ),
-    );
+    ));
   }
 }

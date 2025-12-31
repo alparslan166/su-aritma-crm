@@ -407,7 +407,7 @@ class _JobFormSheetState extends ConsumerState<_JobFormSheet> {
   Widget build(BuildContext context) {
     final dateText = _scheduledAt == null
         ? "Seçilmedi"
-        : DateFormat("dd MMM yyyy").format(_scheduledAt!);
+        : DateFormat("dd MMM yyyy", "tr_TR").format(_scheduledAt!);
     return Padding(
       padding: const EdgeInsets.all(24),
       child: SingleChildScrollView(

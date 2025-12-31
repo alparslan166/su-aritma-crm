@@ -268,12 +268,12 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       if (_maintenanceDateChanged) {
         // Kullanıcı değişiklik yaptıysa, yeni tarihi hesapla
         sendNextMaintenanceDate = true;
-        if (_nextMaintenanceMonths > 0) {
+        if (_nextMaintenanceMonths >= 0) {
           calculatedMaintenanceDate = _lastMaintenanceDate.add(
             Duration(days: (_nextMaintenanceMonths * 30).toInt()),
           );
         } else {
-          // Slider 0 ise bakım tarihini temizle (null gönder)
+          // Slider 0'dan küçük olamaz ama yine de güvenlik için
           calculatedMaintenanceDate = null;
         }
       }

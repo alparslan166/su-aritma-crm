@@ -79,7 +79,7 @@ class _ReminderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatter = DateFormat("dd MMM yyyy");
+    final formatter = DateFormat("dd MMM yyyy", "tr_TR");
     final dueText = formatter.format(reminder.dueAt);
     final days = reminder.daysUntilDue;
     final status = days <= 0 ? "Bakım kaçırıldı" : "$days gün kaldı";
