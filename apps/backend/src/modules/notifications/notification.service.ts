@@ -232,6 +232,78 @@ export class NotificationService {
       payload,
     );
   }
+
+  /**
+   * Send job status update notification to specific admin
+   */
+  async sendJobStatusUpdateToAdmin(
+    adminId: string,
+    jobId: string,
+    jobTitle: string,
+    status: string,
+    statusText: string,
+  ) {
+    const payload: NotificationPayload = {
+      title: "İş Durumu Değişti",
+      body: `"${jobTitle}" işi ${statusText} durumuna güncellendi`,
+      data: {
+        type: "job_status_updated",
+        jobId,
+        adminId,
+        status,
+        title: jobTitle,
+      },
+    };
+
+    const service = this.getFCMService();
+    await service.sendToUser(adminId, "admin", payload);
+
+    // Save to DB and emit via Socket.IO
+    await this.saveAndEmitNotification(
+      adminId,
+      "admin",
+      adminId,
+      "job_status_updated",
+      payload,
+      jobId,
+    );
+  }
+
+  /**
+   * Send maintenance reminder notification to specific admin
+   */
+  async sendMaintenanceReminderToAdmin(
+    adminId: string,
+    jobId: string,
+    jobTitle: string,
+    title: string,
+    body: string,
+    window: string,
+  ) {
+    const payload: NotificationPayload = {
+      title,
+      body,
+      data: {
+        type: "maintenance",
+        jobId,
+        adminId,
+        window,
+      },
+    };
+
+    const service = this.getFCMService();
+    await service.sendToUser(adminId, "admin", payload);
+
+    // Save to DB and emit via Socket.IO
+    await this.saveAndEmitNotification(
+      adminId,
+      "admin",
+      adminId,
+      "maintenance",
+      payload,
+      jobId,
+    );
+  }
 }
 
 export const notificationService = new NotificationService();

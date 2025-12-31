@@ -491,16 +491,14 @@ class JobService {
     // Notification göndermeyi try-catch ile sarmalayalım - hata durumunda job update devam etmeli
     try {
       const statusText = this.getStatusText(payload.status);
-      await notificationService.notifyRole("admin", {
-        title: "İş Durumu Değişti",
-        body: `"${job.title}" işi ${statusText} durumuna güncellendi`,
-        data: { 
-          type: "job_status_updated",
-          jobId, 
-          status: payload.status,
-          title: job.title,
-        },
-      });
+      // Use targeted notification to only send to this job's admin
+      await notificationService.sendJobStatusUpdateToAdmin(
+        adminId,
+        jobId,
+        job.title ?? "İş",
+        payload.status,
+        statusText,
+      );
     } catch (error) {
       // Notification hatası job update'i engellememeli
       logger.error("Failed to send notification:", error);

@@ -35,6 +35,7 @@ export const maintenanceReminderProcessor = async (_job: Job) => {
           id: true,
           title: true,
           maintenanceDueAt: true,
+          adminId: true, // Include adminId for targeted notifications
         },
       },
     },
@@ -51,6 +52,12 @@ export const maintenanceReminderProcessor = async (_job: Job) => {
     }
 
     const job = reminder.job;
+    
+    // Skip if job doesn't have adminId (shouldn't happen, but be safe)
+    if (!job?.adminId) {
+      continue;
+    }
+
     const payload = {
       id: reminder.id,
       jobId: reminder.jobId,
@@ -79,17 +86,18 @@ export const maintenanceReminderProcessor = async (_job: Job) => {
       notificationBody = `"${jobTitle}" için planlı bakıma ${diffDays} gün kaldı.`;
     }
 
-    await notificationService.notifyRole("admin", {
-      title: notificationTitle,
-      body: notificationBody,
-      data: {
-        type: "maintenance",
-        jobId: reminder.jobId,
-        window,
-      },
-    });
+    // Use targeted notification to only send to this job's admin
+    await notificationService.sendMaintenanceReminderToAdmin(
+      job.adminId,
+      reminder.jobId,
+      jobTitle,
+      notificationTitle,
+      notificationBody,
+      window,
+    );
 
-    realtimeGateway.emitMaintenanceReminder(payload);
+    // Emit via realtime gateway to the specific admin only
+    realtimeGateway.emitToAdmin(job.adminId, "maintenance-reminder", payload);
 
     await prisma.maintenanceReminder.update({
       where: { id: reminder.id },
@@ -102,4 +110,3 @@ export const maintenanceReminderProcessor = async (_job: Job) => {
     });
   }
 };
-
