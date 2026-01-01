@@ -8,10 +8,12 @@ class MaterialSelectionDialog extends ConsumerStatefulWidget {
     super.key,
     required this.inventory,
     required this.initialSelection,
+    this.showDeductOption = true,
   });
 
   final List<InventoryItem> inventory;
   final Map<String, int> initialSelection;
+  final bool showDeductOption;
 
   @override
   ConsumerState<MaterialSelectionDialog> createState() =>
@@ -196,6 +198,7 @@ class _MaterialSelectionDialogState
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: "Ekle veya ara",
+                hintStyle: const TextStyle(color: Colors.black),
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -430,7 +433,7 @@ class _MaterialSelectionDialogState
                       },
                     ),
             ),
-            if (_selection.isNotEmpty) ...[
+            if (_selection.isNotEmpty && widget.showDeductOption) ...[
               const Divider(),
               CheckboxListTile(
                 value: _deductFromStock,

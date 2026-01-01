@@ -117,8 +117,18 @@ class PersonnelDashboardPage extends ConsumerWidget {
               title: const Text("Müşteri Ekle"),
               onTap: () {
                 Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AddCustomerSheet()),
+                showDialog(
+                  context: context,
+                  builder: (_) => Dialog(
+                    insetPadding: const EdgeInsets.all(16),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 500),
+                      child: const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: AddCustomerSheet(),
+                      ),
+                    ),
+                  ),
                 );
               },
             ),

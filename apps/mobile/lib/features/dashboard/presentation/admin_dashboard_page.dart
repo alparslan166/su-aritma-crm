@@ -449,10 +449,11 @@ class _AssignJobTab extends StatelessWidget {
               child: const Icon(Icons.add, color: Color(0xFF2563EB), size: 48),
             ),
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const AssignJobSheet(),
-                  fullscreenDialog: true,
+              showDialog(
+                context: context,
+                builder: (_) => const Dialog(
+                  insetPadding: EdgeInsets.all(16),
+                  child: AssignJobSheet(),
                 ),
               );
             },

@@ -125,60 +125,60 @@ class LoginPage extends HookConsumerWidget {
     final isLoading = loginState.status.isLoading;
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF2563EB).withValues(alpha: 0.05),
-              const Color(0xFF10B981).withValues(alpha: 0.05),
-              Colors.white,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Padding(
-                padding: const EdgeInsets.all(32),
+      body: Stack(
+        children: [
+          // Animated wave background
+          const _AnimatedWaveBackground(),
+          // Content
+          SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 16),
                       // Logo/Icon Area with Animation
                       _AnimatedLogo(),
-                      const SizedBox(height: 20),
-                      Text(
-                        "FiltreFix",
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineLarge
-                            ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                              letterSpacing: -0.5,
-                              height: 1.2,
-                            ),
+                      _TypewriterText(
+                        text: "www.filtrefix.com",
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: const Color(0xFF1E3A8A),
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                        duration: const Duration(milliseconds: 1500),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        "Rolünü seç ve güvenli giriş yap",
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      _TypewriterText(
+                        text: "Müşteri ve Stok yönetiminin kolaylaştırılmış hali",
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey.shade600,
-                          letterSpacing: 0.2,
-                          height: 1.4,
+                          letterSpacing: 0.1,
                         ),
+                        duration: const Duration(milliseconds: 1500),
                       ),
                       const SizedBox(height: 32),
-                      // Role Selection
+                      // Role Selection - Glassmorphism
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.white.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF1E3A8A).withValues(alpha: 0.1),
+                              blurRadius: 20,
+                              spreadRadius: 0,
+                            ),
+                          ],
                         ),
                         child: SegmentedButton<AuthRole>(
                           segments: AuthRole.values
@@ -187,12 +187,15 @@ class LoginPage extends HookConsumerWidget {
                                   value: role,
                                   label: Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
+                                      horizontal: 8,
                                     ),
                                     child: Text(
                                       role.label,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w600,
+                                        fontSize: 13,
                                       ),
                                     ),
                                   ),
@@ -208,7 +211,7 @@ class LoginPage extends HookConsumerWidget {
                               states,
                             ) {
                               if (states.contains(WidgetState.selected)) {
-                                return Colors.white;
+                                return const Color(0xFF3B82F6).withValues(alpha: 0.15);
                               }
                               return Colors.transparent;
                             }),
@@ -216,23 +219,27 @@ class LoginPage extends HookConsumerWidget {
                               states,
                             ) {
                               if (states.contains(WidgetState.selected)) {
-                                return const Color(0xFF2563EB);
+                                return const Color(0xFF1E3A8A);
                               }
-                              return Colors.grey.shade600;
+                              return const Color(0xFF64748B);
                             }),
+                            side: WidgetStateProperty.all(BorderSide.none),
                             shape: WidgetStateProperty.all(
                               RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                             elevation: WidgetStateProperty.resolveWith((
                               states,
                             ) {
                               if (states.contains(WidgetState.selected)) {
-                                return 2;
+                                return 4;
                               }
                               return 0;
                             }),
+                            shadowColor: WidgetStateProperty.all(
+                              const Color(0xFF1E3A8A).withValues(alpha: 0.2),
+                            ),
                           ),
                         ),
                       ),
@@ -292,7 +299,7 @@ class LoginPage extends HookConsumerWidget {
                                       Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                                          color: const Color(0xFF2563EB).withValues(alpha: 1),
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: const Icon(
@@ -402,24 +409,51 @@ class LoginPage extends HookConsumerWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      SwitchListTile(
-                        title: const Text(
-                          "Bu cihazda hatırla",
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        subtitle: Text(
-                          "Yetkili cihazlarda otomatik giriş",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            width: 1,
                           ),
                         ),
-                        value: loginState.rememberDevice,
-                        onChanged: controller.toggleRemember,
-                        contentPadding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: const [
+                                  Text(
+                                    "Bu cihazda hatırla",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    "Yetkili cihazlarda otomatik giriş",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white60,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Switch(
+                              value: loginState.rememberDevice,
+                              onChanged: controller.toggleRemember,
+                              activeColor: Colors.white,
+                              activeTrackColor: const Color(0xFF22C55E),
+                              inactiveThumbColor: Colors.white,
+                              inactiveTrackColor: const Color(0xFFEF4444),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -433,22 +467,65 @@ class LoginPage extends HookConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            TextButton(
-                              onPressed: () => ref
+                            // Kayıt ol butonu
+                            GestureDetector(
+                              onTap: () => ref
                                   .read(appRouterProvider)
                                   .goNamed(RegisterPage.routeName),
-                              child: const Text("Hesabınız yok mu? Kayıt olun"),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF93C5FD).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: const Color(0xFF93C5FD).withValues(alpha: 0.5),
+                                    width: 1,
+                                  ),
+                                  // boxShadow: [
+                                  //   BoxShadow(
+                                  //     color: const Color(0xFF93C5FD).withValues(alpha: 0.3),
+                                  //     blurRadius: 20,
+                                  //     spreadRadius: 0,
+                                  //   ),
+                                  // ],
+                                ),
+                                child: const Text(
+                                  "Kayıt ol",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Şifremi unuttum butonu
+                            GestureDetector(
+                              onTap: () => ref
+                                  .read(appRouterProvider)
+                                  .goNamed(ForgotPasswordPage.routeName),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF6B6B).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: const Color(0xFFFF6B6B).withValues(alpha: 0.5),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: const Text(
+                                  "Şifremi unuttum",
+                                  style: TextStyle(
+                                    color: Color(0xFFFF6B6B),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
-                        ),
-                        TextButton(
-                          onPressed: () => ref
-                              .read(appRouterProvider)
-                              .goNamed(ForgotPasswordPage.routeName),
-                          child: Text(
-                            "Şifremi unuttum",
-                            style: TextStyle(color: Colors.red.shade600),
-                          ),
                         ),
                       ],
                       const SizedBox(height: 24),
@@ -486,10 +563,196 @@ class LoginPage extends HookConsumerWidget {
                 ),
               ),
             ),
-          ),
-        ),
+          )),
+        ],
       ),
     );
+  }
+}
+
+class _TypewriterText extends StatefulWidget {
+  const _TypewriterText({
+    required this.text,
+    this.style,
+    this.duration = const Duration(milliseconds: 1000),
+    this.delay = Duration.zero,
+  });
+
+  final String text;
+  final TextStyle? style;
+  final Duration duration;
+  final Duration delay;
+
+  @override
+  State<_TypewriterText> createState() => _TypewriterTextState();
+}
+
+class _TypewriterTextState extends State<_TypewriterText>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<int> _charCount;
+  bool _started = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: widget.duration,
+      vsync: this,
+    );
+
+    _charCount = IntTween(begin: 0, end: widget.text.length).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            _controller.reset();
+            _controller.forward();
+          }
+        });
+      }
+    });
+
+    Future.delayed(widget.delay, () {
+      if (mounted) {
+        _started = true;
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _charCount,
+      builder: (context, child) {
+        final displayText = widget.text.substring(0, _charCount.value);
+        return Text(
+          displayText,
+          textAlign: TextAlign.center,
+          style: widget.style,
+        );
+      },
+    );
+  }
+}
+
+class _AnimatedWaveBackground extends StatefulWidget {
+  const _AnimatedWaveBackground();
+
+  @override
+  State<_AnimatedWaveBackground> createState() => _AnimatedWaveBackgroundState();
+}
+
+class _AnimatedWaveBackgroundState extends State<_AnimatedWaveBackground>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(seconds: 4),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.white,
+                Color(0xFFFFFFFF),
+                Color(0xFF4A6FA5),
+                Color(0xFF0B1F3A),
+              ],
+            ),
+          ),
+          child: CustomPaint(
+            painter: _WavePainter(_controller.value),
+            size: Size.infinite,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _WavePainter extends CustomPainter {
+  final double animationValue;
+
+  _WavePainter(this.animationValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF3B82F6).withValues(alpha: 0.08)
+      ..style = PaintingStyle.fill;
+
+    final paint2 = Paint()
+      ..color = const Color(0xFF1E3A8A).withValues(alpha: 0.06)
+      ..style = PaintingStyle.fill;
+
+    // First wave
+    final path1 = Path();
+    path1.moveTo(0, size.height * 0.7);
+    
+    for (double i = 0; i <= size.width; i++) {
+      path1.lineTo(
+        i,
+        size.height * 0.7 +
+            math.sin((i / size.width * 2 * math.pi) + (animationValue * 2 * math.pi)) * 20 +
+            math.sin((i / size.width * 4 * math.pi) + (animationValue * 2 * math.pi * 1.5)) * 10,
+      );
+    }
+    path1.lineTo(size.width, size.height);
+    path1.lineTo(0, size.height);
+    path1.close();
+    canvas.drawPath(path1, paint);
+
+    // Second wave
+    final path2 = Path();
+    path2.moveTo(0, size.height * 0.75);
+    
+    for (double i = 0; i <= size.width; i++) {
+      path2.lineTo(
+        i,
+        size.height * 0.75 +
+            math.sin((i / size.width * 2 * math.pi) + (animationValue * 2 * math.pi) + math.pi) * 15 +
+            math.sin((i / size.width * 3 * math.pi) + (animationValue * 2 * math.pi * 0.8)) * 8,
+      );
+    }
+    path2.lineTo(size.width, size.height);
+    path2.lineTo(0, size.height);
+    path2.close();
+    canvas.drawPath(path2, paint2);
+  }
+
+  @override
+  bool shouldRepaint(covariant _WavePainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue;
   }
 }
 
@@ -561,62 +824,10 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
           scale: _scaleAnimation.value,
           child: Opacity(
             opacity: _opacityAnimation.value,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFF2563EB).withValues(alpha: 0.15),
-                    const Color(0xFF10B981).withValues(alpha: 0.15),
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF2563EB).withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-                border: Border.all(
-                  color: const Color(0xFF2563EB).withValues(alpha: 0.3),
-                  width: 2,
-                ),
-              ),
-              child: Container(
-                margin: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      const Color(0xFF2563EB).withValues(alpha: 0.1),
-                      const Color(0xFF10B981).withValues(alpha: 0.1),
-                    ],
-                  ),
-                ),
-                child: Center(
-                  child: Transform.rotate(
-                    angle: _rotationAnimation.value * 0.1,
-                    child: Icon(
-                      Icons.water_drop,
-                      size: 64,
-                      color: const Color(0xFF2563EB),
-                      shadows: [
-                        Shadow(
-                          color: const Color(0xFF2563EB).withValues(alpha: 0.5),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+            child: Image.asset(
+              'assets/images/logo.png',
+              width: 180,
+              height: 180,
             ),
           ),
         );

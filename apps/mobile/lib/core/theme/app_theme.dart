@@ -30,25 +30,28 @@ ThemeData buildAppTheme() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white,
+      fillColor: Colors.white.withValues(alpha: 0.25),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.4), width: 1),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.4), width: 1),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Colors.white, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+      labelStyle: const TextStyle(color: Colors.white, fontSize: 14),
+      hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14),
+      prefixIconColor: Colors.white70,
+      floatingLabelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(

@@ -10,6 +10,8 @@ const subscriptionService = new SubscriptionService();
 export const getSubscriptionHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const adminId = getAdminId(req);
+    console.log(`🔍 Fetching subscription for admin: ${adminId}`);
+    
     let subscription = await subscriptionService.getSubscription(adminId);
 
     // If no subscription exists, automatically create a trial for this admin
@@ -23,16 +25,24 @@ export const getSubscriptionHandler = async (req: Request, res: Response, next: 
         subscription = await subscriptionService.getSubscription(adminId);
       } catch (trialError) {
         const msg = trialError instanceof Error ? trialError.message : String(trialError);
-        if (!msg.includes("Subscription already exists")) {
+        // "Subscription already exists" might happen if race condition or consistent read issue
+        if (msg.includes("Subscription already exists")) {
+          console.log(`ℹ️ Subscription appeared during trial creation for admin: ${adminId}`);
+          // Try fetching again
+          subscription = await subscriptionService.getSubscription(adminId);
+        } else {
           console.error(`❌ Failed to auto-create trial for admin ${adminId}:`, trialError);
         }
       }
+    } else {
+        console.log(`✅ Found existing subscription for admin ${adminId}: ${subscription.status}, Ends: ${subscription.endDate || subscription.trialEnds}`);
     }
 
     if (!subscription) {
+      console.error(`❌ Still no subscription found for admin ${adminId} after attempts.`);
       return res.json({
         success: true,
-        data: null,
+        data: null, // Frontend should handle this as "Error/Contact Support" not "Loading"
         message: "No subscription found",
       });
     }

@@ -16,17 +16,11 @@ class CustomerDonutChart extends ConsumerStatefulWidget {
 
 class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
     with TickerProviderStateMixin {
-  AnimationController? _animationController;
   AnimationController? _rotationController;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    )..repeat();
-
     _rotationController = AnimationController(
       duration: const Duration(seconds: 20),
       vsync: this,
@@ -35,7 +29,6 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
 
   @override
   void dispose() {
-    _animationController?.dispose();
     _rotationController?.dispose();
     super.dispose();
   }
@@ -99,10 +92,10 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                     // Ekran genişliğine göre responsive boşluk
                     final screenWidth = MediaQuery.of(context).size.width;
                     final spacing = screenWidth < 400
-                        ? 40.0 // Küçük ekranlar için
+                        ? 60.0 // Küçük ekranlar için
                         : screenWidth < 600
-                        ? 48.0 // Orta ekranlar için
-                        : 56.0; // Büyük ekranlar için
+                        ? 80.0 // Orta ekranlar için
+                        : 100.0; // Büyük ekranlar için
                     return SizedBox(height: spacing);
                   },
                 ),
@@ -112,15 +105,9 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                     alignment: Alignment.center,
                     children: [
                       AnimatedBuilder(
-                        animation: Listenable.merge(
-                          [
-                            _animationController,
-                            _rotationController,
-                          ].whereType<Listenable>(),
-                        ),
+                        animation: _rotationController!,
                         builder: (context, child) {
-                          if (_rotationController == null ||
-                              _animationController == null) {
+                          if (_rotationController == null) {
                             return const SizedBox.shrink();
                           }
 
@@ -132,7 +119,6 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
                             activeCustomers,
                             inactiveCustomers,
                             total,
-                            _animationController!.value,
                           );
 
                           // Eğer hiç veri yoksa, boş bir daire göster
@@ -310,18 +296,9 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
     int activeCustomers,
     int inactiveCustomers,
     int total,
-    double animationValue,
   ) {
     final sections = <PieChartSectionData>[];
     final baseRadius = 65.0;
-    final animationRange = 8.0;
-
-    // Sinüs fonksiyonu kullanarak yumuşak animasyon
-    double getAnimatedRadius(double phase) {
-      final offset = (animationValue + phase) % 1.0;
-      final sinValue = (math.sin(offset * 2 * math.pi) + 1) / 2; // 0-1 arası
-      return baseRadius + (sinValue * animationRange);
-    }
 
     // Ödemesi Gelenler - Kırmızı
     if (overduePayments > 0) {
@@ -329,7 +306,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
         PieChartSectionData(
           value: overduePayments.toDouble(),
           color: const Color(0xFFEF4444),
-          radius: getAnimatedRadius(0.0),
+          radius: baseRadius,
           showTitle: false,
         ),
       );
@@ -341,7 +318,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
         PieChartSectionData(
           value: upcomingMaintenance.toDouble(),
           color: const Color(0xFFF59E0B),
-          radius: getAnimatedRadius(0.25),
+          radius: baseRadius,
           showTitle: false,
         ),
       );
@@ -353,7 +330,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
         PieChartSectionData(
           value: maintenanceApproaching.toDouble(),
           color: const Color(0xFFFFC107),
-          radius: getAnimatedRadius(0.5),
+          radius: baseRadius,
           showTitle: false,
         ),
       );
@@ -365,7 +342,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
         PieChartSectionData(
           value: completedLastWeek.toDouble(),
           color: const Color(0xFF10B981),
-          radius: getAnimatedRadius(0.75),
+          radius: baseRadius,
           showTitle: false,
         ),
       );
@@ -377,7 +354,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
         PieChartSectionData(
           value: activeCustomers.toDouble(),
           color: const Color(0xFF86EFAC), // Açık yeşil
-          radius: getAnimatedRadius(1.0),
+          radius: baseRadius,
           showTitle: false,
         ),
       );
@@ -389,7 +366,7 @@ class _CustomerDonutChartState extends ConsumerState<CustomerDonutChart>
         PieChartSectionData(
           value: inactiveCustomers.toDouble(),
           color: Colors.grey.shade400, // Gri
-          radius: getAnimatedRadius(1.25),
+          radius: baseRadius,
           showTitle: false,
         ),
       );

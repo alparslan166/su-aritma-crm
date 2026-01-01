@@ -84,14 +84,11 @@ class InventoryView extends ConsumerWidget {
   }
 
   void _openAddInventorySheet(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: const InventoryFormSheet(),
+      builder: (_) => const Dialog(
+        insetPadding: EdgeInsets.all(16),
+        child: InventoryFormSheet(),
       ),
     );
   }

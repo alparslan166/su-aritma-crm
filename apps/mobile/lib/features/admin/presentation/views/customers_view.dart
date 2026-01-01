@@ -200,6 +200,7 @@ class CustomersView extends HookConsumerWidget {
                           enabled: !isSelectionMode.value,
                           decoration: InputDecoration(
                             hintText: "Müşteri ara...",
+                            hintStyle: const TextStyle(color: Colors.black54),
                             prefixIcon: const Icon(Icons.search),
                             suffixIcon: searchQuery.value.isNotEmpty
                                 ? IconButton(
@@ -218,9 +219,21 @@ class CustomersView extends HookConsumerWidget {
                                 : null,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF2563EB),
+                                width: 2,
+                              ),
                             ),
                             filled: true,
-                            fillColor: Colors.grey.shade50,
+                            fillColor: Colors.white,
                           ),
                           onChanged: (value) {
                             searchQuery.value = value;
@@ -301,6 +314,7 @@ class CustomersView extends HookConsumerWidget {
                               decoration: const InputDecoration(
                                 labelText: "Telefon Numarası",
                                 hintText: "Örn: 2324",
+                                hintStyle: const TextStyle(color: Colors.black54),
                                 prefixIcon: Icon(Icons.phone),
                                 border: OutlineInputBorder(),
                               ),
@@ -583,13 +597,18 @@ class CustomersView extends HookConsumerWidget {
   }
 
   void _openAddCustomerSheet(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      isDismissible: true,
-      enableDrag: true,
-      builder: (_) => const AddCustomerSheet(),
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: const Padding(
+            padding: EdgeInsets.all(24),
+            child: AddCustomerSheet(),
+          ),
+        ),
+      ),
     );
   }
 
@@ -598,13 +617,18 @@ class CustomersView extends HookConsumerWidget {
     WidgetRef ref,
     Customer customer,
   ) {
-    return showModalBottomSheet(
+    return showDialog(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      isDismissible: true,
-      enableDrag: true,
-      builder: (_) => EditCustomerSheet(customer: customer),
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: EditCustomerSheet(customer: customer),
+          ),
+        ),
+      ),
     ).then((_) {
       // Refresh customer list after editing
       ref.read(customerListProvider.notifier).refresh(showLoading: false);

@@ -13,6 +13,7 @@ import "package:latlong2/latlong.dart";
 import "../../../../core/error/error_handler.dart";
 import "../../application/customer_list_notifier.dart";
 import "../../application/inventory_list_notifier.dart";
+import "../../application/customer_detail_provider.dart";
 import "../../data/admin_repository.dart";
 import "../../data/models/customer.dart";
 import "../../data/models/inventory_item.dart";
@@ -399,6 +400,14 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
         }
       }
 
+      // Customer Detail Provider'ı da refresh et (Detay sayfasını güncellemek için)
+      try {
+        ref.invalidate(customerDetailProvider(widget.customer.id));
+        debugPrint("🔄 customerDetailProvider refresh edildi");
+      } catch (e) {
+        debugPrint("⚠️ customerDetailProvider refresh hatası: $e");
+      }
+
       // Tüm filter type'lar için ayrı ayrı refresh et
       for (final filterType in [
         CustomerFilterType.all,
@@ -658,25 +667,35 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-          tooltip: "Geri",
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Müşteri Düzenle",
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.of(context).pop(),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
         ),
-        title: const Text("Müşteri Düzenle"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
+        const SizedBox(height: 16),
+        Flexible(
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
                 // Kayıt Bilgileri
                 Text(
                   "Kayıt Bilgileri",
@@ -693,6 +712,8 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                   decoration: InputDecoration(
                     labelText: "Kayıt Tarihi",
                     hintText: "Tarih seçin",
+                    labelStyle: const TextStyle(color: Colors.black),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.calendar_today),
                       onPressed: () async {
@@ -716,7 +737,11 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: "İsim"),
+                  decoration: const InputDecoration(
+                    labelText: "İsim",
+                    labelStyle: TextStyle(color: Colors.black),
+                    floatingLabelStyle: TextStyle(color: Colors.black),
+                  ),
                   textCapitalization: TextCapitalization.words,
                   validator: (value) => value == null || value.trim().length < 2
                       ? "İsim girin"
@@ -725,7 +750,11 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _phoneController,
-                  decoration: const InputDecoration(labelText: "Telefon"),
+                  decoration: const InputDecoration(
+                    labelText: "Telefon",
+                    labelStyle: TextStyle(color: Colors.black),
+                    floatingLabelStyle: TextStyle(color: Colors.black),
+                  ),
                   keyboardType: TextInputType.phone,
                   validator: (value) => value == null || value.trim().length < 6
                       ? "Telefon girin"
@@ -736,6 +765,8 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                   controller: _emailController,
                   decoration: const InputDecoration(
                     labelText: "E-posta (opsiyonel)",
+                    labelStyle: TextStyle(color: Colors.black),
+                    floatingLabelStyle: TextStyle(color: Colors.black),
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
@@ -745,6 +776,8 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                   decoration: const InputDecoration(
                     labelText: "Adres",
                     hintText: "Şehir, ilçe, mahalle, sokak, bina no",
+                    labelStyle: TextStyle(color: Colors.black),
+                    floatingLabelStyle: TextStyle(color: Colors.black),
                   ),
                   maxLines: 2,
                   textCapitalization: TextCapitalization.sentences,
@@ -1034,9 +1067,12 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                   ),
                   decoration: InputDecoration(
                     labelText: "Son bakım tarihi",
+                    labelStyle: const TextStyle(color: Colors.black),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
                     hintText: "Tarih seçin",
+                    hintStyle: const TextStyle(color: Colors.black54),
                     suffixIcon: IconButton(
-                      icon: const Icon(Icons.calendar_today),
+                      icon: const Icon(Icons.calendar_today, color: Colors.black54),
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -1162,8 +1198,11 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                   ),
                   decoration: InputDecoration(
                     labelText: "Bakım Zamanı",
+                    labelStyle: const TextStyle(color: Colors.black),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
                     hintText: "Tarih hesaplanacak",
-                    suffixIcon: const Icon(Icons.calendar_today),
+                    hintStyle: const TextStyle(color: Colors.black54),
+                    suffixIcon: const Icon(Icons.calendar_today, color: Colors.black54),
                     filled: true,
                     fillColor: Colors.grey.shade100,
                   ),
@@ -1236,7 +1275,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                     controller: _debtAmountController,
                     decoration: const InputDecoration(
                       labelText: "Borç Miktarı (TL)",
-                      prefixIcon: Icon(Icons.attach_money),
+                      labelStyle: const TextStyle(color: Colors.black),
+                      floatingLabelStyle: const TextStyle(color: Colors.black),
+                      hintStyle: const TextStyle(color: Colors.black54),
+                      prefixIcon: Icon(Icons.attach_money, color: Colors.black54),
                     ),
                     keyboardType: TextInputType.number,
                     validator: (value) {
@@ -1265,14 +1307,17 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       ),
                       decoration: InputDecoration(
                         labelText: "Ödeme Tarihi",
+                        labelStyle: const TextStyle(color: Colors.black),
+                        floatingLabelStyle: const TextStyle(color: Colors.black),
                         hintText: "Tarih seçin",
+                        hintStyle: const TextStyle(color: Colors.black54),
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.calendar_today),
                           onPressed: () async {
                             final picked = await showDatePicker(
                               context: context,
                               initialDate: _nextDebtDate ?? DateTime.now(),
-                              firstDate: DateTime.now(),
+                              firstDate: DateTime(2000),
                               lastDate: DateTime.now().add(
                                 const Duration(days: 3650),
                               ),
@@ -1310,7 +1355,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                               width: _debtHasInstallment ? 2 : 1,
                             ),
                           ),
-                          child: const Text("Taksitli Satış Var"),
+                          child: const Text("Taksitli"),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1335,7 +1380,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                               width: !_debtHasInstallment ? 2 : 1,
                             ),
                           ),
-                          child: const Text("Taksitli Satış Yok"),
+                          child: const Text("Peşin"),
                         ),
                       ),
                     ],
@@ -1346,7 +1391,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       controller: _installmentCountController,
                       decoration: const InputDecoration(
                         labelText: "Taksit Sayısı",
-                        prefixIcon: Icon(Icons.numbers),
+                        labelStyle: const TextStyle(color: Colors.black),
+                        floatingLabelStyle: const TextStyle(color: Colors.black),
+                        hintStyle: const TextStyle(color: Colors.black54),
+                        prefixIcon: Icon(Icons.numbers, color: Colors.black54),
                       ),
                       keyboardType: TextInputType.number,
                       onChanged: (_) => setState(() {}), // Kutucukları güncelle
@@ -1377,7 +1425,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       ),
                       decoration: InputDecoration(
                         labelText: "Taksit Başlama Tarihi",
+                        labelStyle: const TextStyle(color: Colors.black),
+                        floatingLabelStyle: const TextStyle(color: Colors.black),
                         hintText: "Tarih seçin",
+                        hintStyle: const TextStyle(color: Colors.black54),
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.calendar_today),
                           onPressed: () async {
@@ -1385,7 +1436,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                               context: context,
                               initialDate:
                                   _installmentStartDate ?? DateTime.now(),
-                              firstDate: DateTime.now(),
+                              firstDate: DateTime(2000),
                               lastDate: DateTime.now().add(
                                 const Duration(days: 3650),
                               ),
@@ -1405,7 +1456,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       controller: _installmentIntervalDaysController,
                       decoration: const InputDecoration(
                         labelText: "Ödeme kaç günde bir olacak?",
-                        prefixIcon: Icon(Icons.repeat),
+                        labelStyle: const TextStyle(color: Colors.black),
+                        floatingLabelStyle: const TextStyle(color: Colors.black),
+                        hintStyle: const TextStyle(color: Colors.black54),
+                        prefixIcon: Icon(Icons.repeat, color: Colors.black54),
                         helperText:
                             "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
                       ),
@@ -1523,8 +1577,11 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: "Alınan Ücret (₺)",
+                    labelStyle: const TextStyle(color: Colors.black),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
                     hintText: "ör. 1500",
-                    prefixIcon: const Icon(Icons.attach_money),
+                    hintStyle: const TextStyle(color: Colors.black54),
+                    prefixIcon: const Icon(Icons.attach_money, color: Colors.black54),
                     suffixText: "₺",
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -1545,10 +1602,13 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                   ),
                   decoration: InputDecoration(
                     labelText: "Ücret Alım Tarihi",
+                    labelStyle: const TextStyle(color: Colors.black),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
                     hintText: "Tarih seçin",
-                    prefixIcon: const Icon(Icons.calendar_today),
+                    hintStyle: const TextStyle(color: Colors.black54),
+                    prefixIcon: const Icon(Icons.calendar_today, color: Colors.black54),
                     suffixIcon: IconButton(
-                      icon: const Icon(Icons.calendar_today),
+                      icon: const Icon(Icons.calendar_today, color: Colors.black54),
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -1606,6 +1666,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
           ),
         ),
       ),
+      ],
     );
   }
 }

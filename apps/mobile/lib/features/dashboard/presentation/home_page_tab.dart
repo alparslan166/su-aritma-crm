@@ -646,6 +646,7 @@ class _OverduePaymentsSection extends StatelessWidget {
             },
           ),
         ),
+        const SizedBox(height: 80),
       ],
     );
   }

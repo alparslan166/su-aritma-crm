@@ -395,23 +395,35 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Yeni Müşteri Ekle",
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.of(context).pop(),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
         ),
-        title: const Text("Yeni Müşteri Ekle"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: SingleChildScrollView(
-          child: Form(
+        const SizedBox(height: 16),
+        Flexible(
+          child: SingleChildScrollView(
+            child: Form(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 8),
                 const SizedBox(height: 16),
                 // Kayıt Tarihi - Filtre Değişim bölümü gibi güzel gösterim
                 Text(
@@ -427,8 +439,10 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                   decoration: InputDecoration(
                     labelText: "Kayıt Tarihi",
                     hintText: "Tarih seçin",
+                    labelStyle: const TextStyle(color: Colors.black),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
                     suffixIcon: IconButton(
-                      icon: const Icon(Icons.calendar_today),
+                      icon: const Icon(Icons.calendar_today, color: Colors.black54),
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -450,7 +464,11 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: "İsim"),
+                  decoration: const InputDecoration(
+                    labelText: "İsim",
+                    labelStyle: TextStyle(color: Colors.black),
+                    floatingLabelStyle: TextStyle(color: Colors.black),
+                  ),
                   textCapitalization: TextCapitalization.words,
                   validator: (value) => value == null || value.trim().length < 2
                       ? "İsim girin"
@@ -459,7 +477,11 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _phoneController,
-                  decoration: const InputDecoration(labelText: "Telefon"),
+                  decoration: const InputDecoration(
+                    labelText: "Telefon",
+                    labelStyle: TextStyle(color: Colors.black),
+                    floatingLabelStyle: TextStyle(color: Colors.black),
+                  ),
                   keyboardType: TextInputType.phone,
                   validator: (value) => value == null || value.trim().length < 6
                       ? "Telefon girin"
@@ -470,6 +492,8 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                   controller: _emailController,
                   decoration: const InputDecoration(
                     labelText: "E-posta (opsiyonel)",
+                    labelStyle: TextStyle(color: Colors.black),
+                    floatingLabelStyle: TextStyle(color: Colors.black),
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
@@ -479,6 +503,9 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                   decoration: const InputDecoration(
                     labelText: "Adres",
                     hintText: "Şehir, ilçe, mahalle, sokak, bina no",
+                    hintStyle: const TextStyle(color: Colors.black54),
+                    labelStyle: TextStyle(color: Colors.black),
+                    floatingLabelStyle: TextStyle(color: Colors.black),
                   ),
                   maxLines: 2,
                   textCapitalization: TextCapitalization.sentences,
@@ -559,7 +586,9 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: "Alınan Ücret (₺)",
-                    prefixIcon: const Icon(Icons.attach_money),
+                    prefixIcon: const Icon(Icons.attach_money, color: Colors.black54),
+                    labelStyle: const TextStyle(color: Colors.black),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -579,9 +608,11 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                   decoration: InputDecoration(
                     labelText: "Ücret Alım Tarihi",
                     hintText: "Tarih seçin",
-                    prefixIcon: const Icon(Icons.calendar_today),
+                    labelStyle: const TextStyle(color: Colors.black),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
+                    prefixIcon: const Icon(Icons.calendar_today, color: Colors.black54),
                     suffixIcon: IconButton(
-                      icon: const Icon(Icons.calendar_today),
+                      icon: const Icon(Icons.calendar_today, color: Colors.black54),
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -739,6 +770,8 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                   decoration: InputDecoration(
                     labelText: "Son işlem tarihi",
                     hintText: "Tarih seçin",
+                    labelStyle: const TextStyle(color: Colors.black),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.calendar_today),
                       onPressed: () async {
@@ -861,7 +894,10 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                   decoration: InputDecoration(
                     labelText: "Filtre Değişim Zamanı",
                     hintText: "Tarih hesaplanacak",
-                    suffixIcon: const Icon(Icons.calendar_today),
+                    labelStyle: const TextStyle(color: Colors.black),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
+                    hintStyle: const TextStyle(color: Colors.black54),
+                    suffixIcon: const Icon(Icons.calendar_today, color: Colors.black54),
                     filled: true,
                     fillColor: Colors.grey.shade100,
                   ),
@@ -971,7 +1007,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                             final picked = await showDatePicker(
                               context: context,
                               initialDate: _nextDebtDate ?? DateTime.now(),
-                              firstDate: DateTime.now(),
+                              firstDate: DateTime(2000),
                               lastDate: DateTime.now().add(
                                 const Duration(days: 3650),
                               ),
@@ -1009,7 +1045,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                               width: _debtHasInstallment ? 2 : 1,
                             ),
                           ),
-                          child: const Text("Taksitli Satış Var"),
+                          child: const Text("Taksitli"),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1034,7 +1070,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                               width: !_debtHasInstallment ? 2 : 1,
                             ),
                           ),
-                          child: const Text("Taksitli Satış Yok"),
+                          child: const Text("Peşin"),
                         ),
                       ),
                     ],
@@ -1084,7 +1120,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                               context: context,
                               initialDate:
                                   _installmentStartDate ?? DateTime.now(),
-                              firstDate: DateTime.now(),
+                              firstDate: DateTime(2000),
                               lastDate: DateTime.now().add(
                                 const Duration(days: 3650),
                               ),
@@ -1227,10 +1263,11 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                 SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
               ],
             ),
-          ),
-        ),
-      ),
-    );
+        ), // Form
+          ), // SingleChildScrollView
+        ), // Flexible
+      ], // Column children
+    ); // Column
   }
 }
 

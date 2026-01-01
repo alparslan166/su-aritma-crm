@@ -6,13 +6,13 @@ import "package:dio/dio.dart";
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
-import "package:image_cropper/image_cropper.dart";
 import "package:image_picker/image_picker.dart";
 import "package:intl/intl.dart";
 
 import "../../../../core/constants/app_config.dart";
 import "../../../../core/network/api_client.dart" show apiClientProvider;
 import "../../../../core/session/session_provider.dart";
+import "../../../../core/widgets/custom_image_cropper.dart";
 import "../../../../routing/app_router.dart";
 import "../../../auth/application/auth_service.dart";
 import "../../data/admin_repository.dart";
@@ -102,60 +102,28 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
     try {
       final picker = ImagePicker();
       final image = await picker.pickImage(source: ImageSource.gallery);
-      
+
       if (image != null) {
         debugPrint("Image picked: ${image.path}");
-        
-        // Crop the image
-        final croppedFile = await ImageCropper().cropImage(
-          sourcePath: image.path,
-          aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-          uiSettings: [
-            AndroidUiSettings(
-              toolbarTitle: "Logo Düzenle",
-              toolbarColor: const Color(0xFF2563EB),
-              toolbarWidgetColor: Colors.white,
-              initAspectRatio: CropAspectRatioPreset.square,
-              lockAspectRatio: false,
-              activeControlsWidgetColor: const Color(0xFF2563EB),
-              cropStyle: CropStyle.rectangle,
-              aspectRatioPresets: [
-                CropAspectRatioPreset.square,
-                CropAspectRatioPreset.ratio3x2,
-                CropAspectRatioPreset.original,
-                CropAspectRatioPreset.ratio4x3,
-                CropAspectRatioPreset.ratio16x9,
-              ],
-            ),
-            IOSUiSettings(
-              title: "Logo Düzenle",
-              cancelButtonTitle: "İptal",
-              doneButtonTitle: "Tamam",
-              aspectRatioPresets: [
-                CropAspectRatioPreset.square,
-                CropAspectRatioPreset.ratio3x2,
-                CropAspectRatioPreset.original,
-                CropAspectRatioPreset.ratio4x3,
-                CropAspectRatioPreset.ratio16x9,
-              ],
-            ),
-          ],
-        );
+        final bytes = await image.readAsBytes();
 
-        if (croppedFile != null) {
-          debugPrint("Image cropped: ${croppedFile.path}");
-          final bytes = await File(croppedFile.path).readAsBytes();
-          setState(() {
-            _selectedLogoBytes = bytes;
-          });
-        } else {
-          debugPrint("Crop cancelled");
-        }
-      } else {
-        debugPrint("No image picked");
+        if (!mounted) return;
+
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => CustomImageCropper(
+              image: bytes,
+              onCropped: (croppedBytes) {
+                setState(() {
+                  _selectedLogoBytes = croppedBytes;
+                });
+              },
+            ),
+          ),
+        );
       }
     } catch (e) {
-      debugPrint("Error picking/cropping image: $e");
+      debugPrint("Error picking image: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Resim seçilirken hata oluştu: $e")),
@@ -610,6 +578,8 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             controller: _nameController,
                             decoration: const InputDecoration(
                               labelText: "Ad Soyad",
+                              labelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(),
                             ),
                             enabled: _isEditing,
@@ -626,6 +596,8 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             controller: _phoneController,
                             decoration: const InputDecoration(
                               labelText: "Telefon",
+                              labelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.phone,
@@ -642,6 +614,8 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             controller: _emailController,
                             decoration: const InputDecoration(
                               labelText: "E-posta",
+                              labelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.text,
@@ -681,6 +655,8 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             controller: _companyNameController,
                             decoration: const InputDecoration(
                               labelText: "Firma Adı",
+                              labelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.text,
@@ -696,6 +672,8 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             controller: _companyAddressController,
                             decoration: const InputDecoration(
                               labelText: "Firma Adresi",
+                              labelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(),
                             ),
                             maxLines: 3,
@@ -708,6 +686,8 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             controller: _companyPhoneController,
                             decoration: const InputDecoration(
                               labelText: "Firma Telefonu",
+                              labelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.phone,
@@ -719,6 +699,8 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             controller: _companyEmailController,
                             decoration: const InputDecoration(
                               labelText: "Firma E-postası",
+                              labelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.text,
@@ -751,6 +733,8 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             controller: _taxOfficeController,
                             decoration: const InputDecoration(
                               labelText: "Vergi Dairesi",
+                              labelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(),
                             ),
                             enabled: _isEditing,
@@ -761,6 +745,8 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             controller: _taxNumberController,
                             decoration: const InputDecoration(
                               labelText: "Vergi Numarası",
+                              labelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(color: Colors.black),
                               border: OutlineInputBorder(),
                             ),
                             enabled: _isEditing,
@@ -781,7 +767,7 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                         data: (subscription) {
                           if (subscription == null) {
                             return Card(
-                              color: Colors.orange.shade50,
+                              color: Colors.red.shade50,
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Column(
@@ -790,21 +776,26 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                                     Row(
                                       children: [
                                         Icon(
-                                          Icons.hourglass_empty,
-                                          color: Colors.orange.shade700,
+                                          Icons.error_outline,
+                                          color: Colors.red.shade700,
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Text(
-                                            "Abonelik bilgisi yükleniyor...",
+                                            "Abonelik bilgisi bulunamadı.",
                                             style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w500,
-                                              color: Colors.orange.shade900,
+                                              color: Colors.red.shade900,
                                             ),
                                           ),
                                         ),
                                       ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                        "Lütfen internet bağlantınızı kontrol edip tekrar deneyin veya sistem yöneticisi ile iletişime geçin.",
+                                        style: TextStyle(color: Colors.red.shade700, fontSize: 13),
                                     ),
                                     const SizedBox(height: 12),
                                     SizedBox(
@@ -814,10 +805,10 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                                           ref.invalidate(adminSubscriptionProvider);
                                         },
                                         icon: const Icon(Icons.refresh),
-                                        label: const Text("Yenile"),
+                                        label: const Text("Tekrar Dene"),
                                         style: OutlinedButton.styleFrom(
-                                          foregroundColor: Colors.orange.shade700,
-                                          side: BorderSide(color: Colors.orange.shade300),
+                                          foregroundColor: Colors.red.shade700,
+                                          side: BorderSide(color: Colors.red.shade300),
                                         ),
                                       ),
                                     ),

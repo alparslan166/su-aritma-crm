@@ -341,10 +341,12 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
   }
 
   Future<void> _showAssignPersonnelSheet(Job job) async {
-    await showModalBottomSheet(
+    await showDialog(
       context: context,
-      isScrollControlled: true,
-      builder: (context) => _PersonnelAssignmentSheet(job: job),
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: _PersonnelAssignmentSheet(job: job),
+      ),
     );
   }
 
@@ -364,174 +366,199 @@ class _AdminJobDetailPageState extends ConsumerState<AdminJobDetailPage> {
     DateTime? scheduledAt = job.scheduledAt;
     final formKey = GlobalKey<FormState>();
 
-    await showModalBottomSheet<void>(
+    await showDialog<void>(
       context: context,
-      isScrollControlled: true,
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-            left: 24,
-            right: 24,
-            top: 24,
-          ),
-          child: StatefulBuilder(
-            builder: (context, setModalState) {
-              return Form(
-                key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        "İş Düzenle",
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: titleController,
-                        decoration: const InputDecoration(labelText: "Başlık"),
-                        validator: (value) =>
-                            value == null || value.trim().length < 2
-                            ? "Başlık girin"
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: customerNameController,
-                        decoration: const InputDecoration(
-                          labelText: "Müşteri Adı",
+        return Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: StatefulBuilder(
+              builder: (context, setModalState) {
+                return Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "İş Düzenle",
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.close),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
                         ),
-                        validator: (value) =>
-                            value == null || value.trim().length < 2
-                            ? "Müşteri adı girin"
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: customerPhoneController,
-                        decoration: const InputDecoration(labelText: "Telefon"),
-                        keyboardType: TextInputType.phone,
-                        validator: (value) =>
-                            value == null || value.trim().length < 6
-                            ? "Telefon girin"
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: customerAddressController,
-                        decoration: const InputDecoration(labelText: "Adres"),
-                        validator: (value) =>
-                            value == null || value.trim().length < 5
-                            ? "Adres girin"
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        readOnly: true,
-                        controller: TextEditingController(
-                          text: scheduledAt != null
-                              ? DateFormat("dd.MM.yyyy").format(scheduledAt!)
-                              : "",
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: titleController,
+                          decoration: const InputDecoration(
+                              labelText: "Başlık",
+                              labelStyle: TextStyle(color: Colors.black),
+                              floatingLabelStyle: TextStyle(color: Colors.black)),
+                          validator: (value) =>
+                              value == null || value.trim().length < 2
+                                  ? "Başlık girin"
+                                  : null,
                         ),
-                        decoration: InputDecoration(
-                          labelText: "Planlanan Tarih",
-                          hintText: "Tarih seçin",
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.calendar_today),
-                            onPressed: () async {
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: scheduledAt ?? DateTime.now(),
-                                firstDate: DateTime.now().subtract(
-                                  const Duration(days: 365),
-                                ),
-                                lastDate: DateTime.now().add(
-                                  const Duration(days: 365),
-                                ),
-                              );
-                              if (picked != null) {
-                                setModalState(() {
-                                  scheduledAt = picked;
-                                });
-                              }
-                            },
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: customerNameController,
+                          decoration: const InputDecoration(
+                            labelText: "Müşteri Adı",
+                            labelStyle: TextStyle(color: Colors.black),
+                            floatingLabelStyle: TextStyle(color: Colors.black),
+                          ),
+                          validator: (value) =>
+                              value == null || value.trim().length < 2
+                                  ? "Müşteri adı girin"
+                                  : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: customerPhoneController,
+                          decoration: const InputDecoration(
+                              labelText: "Telefon",
+                              labelStyle: TextStyle(color: Colors.black),
+                              floatingLabelStyle: TextStyle(color: Colors.black)),
+                          keyboardType: TextInputType.phone,
+                          validator: (value) =>
+                              value == null || value.trim().length < 6
+                                  ? "Telefon girin"
+                                  : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: customerAddressController,
+                          decoration: const InputDecoration(
+                              labelText: "Adres",
+                              labelStyle: TextStyle(color: Colors.black),
+                              floatingLabelStyle: TextStyle(color: Colors.black)),
+                          validator: (value) =>
+                              value == null || value.trim().length < 5
+                                  ? "Adres girin"
+                                  : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          readOnly: true,
+                          controller: TextEditingController(
+                            text: scheduledAt != null
+                                ? DateFormat("dd.MM.yyyy").format(scheduledAt!)
+                                : "",
+                          ),
+                          decoration: InputDecoration(
+                            labelText: "Planlanan Tarih",
+                            hintText: "Tarih seçin",
+                            labelStyle: const TextStyle(color: Colors.black),
+                            floatingLabelStyle: const TextStyle(color: Colors.black),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.calendar_today),
+                              onPressed: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: scheduledAt ?? DateTime.now(),
+                                  firstDate: DateTime.now().subtract(
+                                    const Duration(days: 365),
+                                  ),
+                                  lastDate: DateTime.now().add(
+                                    const Duration(days: 365),
+                                  ),
+                                );
+                                if (picked != null) {
+                                  setModalState(() {
+                                    scheduledAt = picked;
+                                  });
+                                }
+                              },
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: notesController,
-                        decoration: const InputDecoration(
-                          labelText: "Notlar (opsiyonel)",
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: notesController,
+                          decoration: const InputDecoration(
+                            labelText: "Notlar (opsiyonel)",
+                            labelStyle: TextStyle(color: Colors.black),
+                            floatingLabelStyle: TextStyle(color: Colors.black),
+                          ),
+                          maxLines: 3,
                         ),
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: priceController,
-                        decoration: const InputDecoration(
-                          labelText: "Ücret (₺) (opsiyonel)",
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: priceController,
+                          decoration: const InputDecoration(
+                            labelText: "Ücret (₺) (opsiyonel)",
+                            labelStyle: TextStyle(color: Colors.black),
+                            floatingLabelStyle: TextStyle(color: Colors.black),
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                         ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: () async {
+                              if (!formKey.currentState!.validate()) return;
+                              final repo = ref.read(adminRepositoryProvider);
+                              final messenger = ScaffoldMessenger.of(context);
+                              final navigator = Navigator.of(context);
+                              try {
+                                await repo.updateJob(
+                                  id: job.id,
+                                  title: titleController.text.trim(),
+                                  customerName: customerNameController.text
+                                      .trim(),
+                                  customerPhone: customerPhoneController.text
+                                      .trim(),
+                                  customerAddress: customerAddressController.text
+                                      .trim(),
+                                  scheduledAt: scheduledAt,
+                                  notes: notesController.text.trim().isEmpty
+                                      ? null
+                                      : notesController.text.trim(),
+                                  price: priceController.text.trim().isEmpty
+                                      ? null
+                                      : double.tryParse(
+                                          priceController.text.trim(),
+                                        ),
+                                );
+                                ref.invalidate(jobListProvider);
+                                ref.invalidate(_jobDetailProvider(widget.jobId));
+                                navigator.pop();
+                                messenger.showSnackBar(
+                                  const SnackBar(content: Text("İş güncellendi")),
+                                );
+                              } catch (error) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text("Güncelleme başarısız: $error"),
+                                  ),
+                                );
+                              }
+                            },
+                            child: const Text("Kaydet"),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: () async {
-                            if (!formKey.currentState!.validate()) return;
-                            final repo = ref.read(adminRepositoryProvider);
-                            final messenger = ScaffoldMessenger.of(context);
-                            final navigator = Navigator.of(context);
-                            try {
-                              await repo.updateJob(
-                                id: job.id,
-                                title: titleController.text.trim(),
-                                customerName: customerNameController.text
-                                    .trim(),
-                                customerPhone: customerPhoneController.text
-                                    .trim(),
-                                customerAddress: customerAddressController.text
-                                    .trim(),
-                                scheduledAt: scheduledAt,
-                                notes: notesController.text.trim().isEmpty
-                                    ? null
-                                    : notesController.text.trim(),
-                                price: priceController.text.trim().isEmpty
-                                    ? null
-                                    : double.tryParse(
-                                        priceController.text.trim(),
-                                      ),
-                              );
-                              ref.invalidate(jobListProvider);
-                              ref.invalidate(_jobDetailProvider(widget.jobId));
-                              navigator.pop();
-                              messenger.showSnackBar(
-                                const SnackBar(content: Text("İş güncellendi")),
-                              );
-                            } catch (error) {
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text("Güncelleme başarısız: $error"),
-                                ),
-                              );
-                            }
-                          },
-                          child: const Text("Kaydet"),
+                        SizedBox(
+                          height: MediaQuery.of(context).viewInsets.bottom,
                         ),
-                      ),
-                      SizedBox(
-                        height: MediaQuery.of(context).viewInsets.bottom,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         );
       },
@@ -632,30 +659,28 @@ class _PersonnelAssignmentSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final personnelState = ref.watch(personnelListProvider);
 
-    return Container(
+    return Padding(
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag handle
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Text(
-            "Personel Seç",
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          // Drag handle removed as it's a dialog now
+          Row(
+           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+           children: [
+             Text(
+              "Personel Seç",
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+             ),
+             IconButton(
+               onPressed: () => Navigator.of(context).pop(),
+               icon: const Icon(Icons.close),
+               padding: EdgeInsets.zero,
+               constraints: const BoxConstraints(),
+             ),
+           ],
           ),
           const SizedBox(height: 16),
           Expanded(

@@ -68,16 +68,16 @@ class _AdminPersonnelDetailPageState
   }
 
   Future<void> _showEditSheet(Personnel personnel) async {
-    await showModalBottomSheet<void>(
+    await showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: _EditPersonnelSheet(
-          personnel: personnel,
-          personnelId: widget.personnelId,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: _EditPersonnelSheet(
+            personnel: personnel,
+            personnelId: widget.personnelId,
+          ),
         ),
       ),
     );
@@ -176,28 +176,64 @@ class _AdminPersonnelDetailPageState
       return hasNoPersonnel;
     }).toList();
     if (!context.mounted) return;
-    await showModalBottomSheet<void>(
+    if (!context.mounted) return;
+    await showDialog<void>(
       context: context,
       builder: (context) {
-        if (availableJobs.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(24),
-            child: Text("Atanabilir iş bulunamadı."),
-          );
-        }
-        return ListView(
-          children: availableJobs
-              .map(
-                (job) => ListTile(
-                  title: Text("${job.customer.name} - ${job.title}"),
-                  subtitle: Text("Durum: ${_getJobStatusText(job.status)}"),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    await _assignPersonnelToJob(job, personnelId);
-                  },
+        return Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "İş Ata",
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
-              )
-              .toList(),
+                const SizedBox(height: 16),
+                if (availableJobs.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text("Atanabilir iş bulunamadı."),
+                  )
+                else
+                  SizedBox(
+                    height: 400, // Limit height for list
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: availableJobs
+                          .map(
+                            (job) => ListTile(
+                              title: Text(
+                                "${job.customer.name} - ${job.title}",
+                              ),
+                              subtitle: Text(
+                                "Durum: ${_getJobStatusText(job.status)}",
+                              ),
+                              onTap: () async {
+                                Navigator.of(context).pop();
+                                await _assignPersonnelToJob(job, personnelId);
+                              },
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -227,16 +263,16 @@ class _AdminPersonnelDetailPageState
   }
 
   Future<void> _showLeavesSheet(Personnel personnel) async {
-    await showModalBottomSheet<void>(
+    await showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: _LeavesManagementSheet(
-          personnelId: personnel.id,
-          personnelName: personnel.name,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: _LeavesManagementSheet(
+            personnelId: personnel.id,
+            personnelName: personnel.name,
+          ),
         ),
       ),
     );
@@ -328,7 +364,7 @@ class _DetailContent extends StatelessWidget {
                       _Row(
                         label: "İşe giriş",
                         value: DateFormat(
-                          "dd MMM yyyy",
+                          "dd MMM yyyy", "tr_TR",
                         ).format(personnel.hireDate.toLocal()),
                       ),
                       if (personnel.personnelId != null)
@@ -692,9 +728,20 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "Personel Düzenle",
-                style: Theme.of(context).textTheme.titleLarge,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Personel Düzenle",
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               // Fotoğraf seçimi
@@ -780,7 +827,11 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: "İsim"),
+                decoration: const InputDecoration(
+                  labelText: "İsim",
+                  labelStyle: TextStyle(color: Colors.black),
+                  floatingLabelStyle: TextStyle(color: Colors.black),
+                ),
                 textCapitalization: TextCapitalization.words,
                 validator: (value) => value == null || value.trim().length < 2
                     ? "İsim girin"
@@ -789,7 +840,11 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(labelText: "Telefon"),
+                decoration: const InputDecoration(
+                  labelText: "Telefon",
+                  labelStyle: TextStyle(color: Colors.black),
+                  floatingLabelStyle: TextStyle(color: Colors.black),
+                ),
                 keyboardType: TextInputType.phone,
                 validator: (value) => value == null || value.trim().length < 6
                     ? "Telefon girin"
@@ -800,6 +855,8 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
                 controller: _emailController,
                 decoration: const InputDecoration(
                   labelText: "E-posta (opsiyonel)",
+                  labelStyle: TextStyle(color: Colors.black),
+                  floatingLabelStyle: TextStyle(color: Colors.black),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -809,6 +866,8 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
                 decoration: const InputDecoration(
                   labelText: "Giriş Kodu (Şifre)",
                   helperText: "Boş bırakılırsa yeni kod otomatik oluşturulur",
+                  labelStyle: TextStyle(color: Colors.black),
+                  floatingLabelStyle: TextStyle(color: Colors.black),
                 ),
                 maxLength: 20,
                 buildCounter:
@@ -828,6 +887,8 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
                 decoration: InputDecoration(
                   labelText: "İşe Giriş Tarihi",
                   hintText: "Tarih seçin",
+                  labelStyle: const TextStyle(color: Colors.black),
+                  floatingLabelStyle: const TextStyle(color: Colors.black),
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.calendar_today),
                     onPressed: _pickDate,
@@ -837,7 +898,10 @@ class _EditPersonnelSheetState extends ConsumerState<_EditPersonnelSheet> {
               const SizedBox(height: 12),
               DropdownMenu<String>(
                 initialSelection: _status,
-                label: const Text("Durum"),
+                label: const Text(
+                  "Durum",
+                  style: TextStyle(color: Colors.black),
+                ),
                 onSelected: (value) {
                   if (value != null) {
                     setState(() {
@@ -990,6 +1054,8 @@ class _LeavesManagementSheetState
                     controller: reasonController,
                     decoration: const InputDecoration(
                       labelText: "İzin Nedeni (Opsiyonel)",
+                      labelStyle: TextStyle(color: Colors.black),
+                      floatingLabelStyle: TextStyle(color: Colors.black),
                       border: OutlineInputBorder(),
                     ),
                     maxLines: 2,

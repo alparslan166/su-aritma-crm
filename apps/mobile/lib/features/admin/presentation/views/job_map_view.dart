@@ -40,6 +40,7 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
   final Map<String, LatLng> _resolvedLocations = {};
+  final Map<String, LatLng> _resolvedPersonnelLocations = {};
   final Set<String> _loadingLocations = {};
   final Map<String, String> _locationErrors = {};
   bool _initialized = false;
@@ -339,15 +340,30 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
       }
     }
 
+    // Resolve locations for personnel without location
+    for (final person in personnel) {
+      final hasLiveLoc = _livePersonnelLocations.containsKey(person.id);
+      final hasLastKnown = person.lastKnownLocation != null;
+      
+      if (!hasLiveLoc && 
+          !hasLastKnown &&
+          !_resolvedPersonnelLocations.containsKey(person.id) &&
+          !_loadingLocations.contains(person.id)) {
+        _resolvePersonnelLocation(person);
+      }
+    }
+
     // Get all customers with location (either from backend or resolved)
     final customersWithLocation = customers.where((c) {
       return c.location != null || _resolvedLocations.containsKey(c.id);
     }).toList();
 
-    // Get all personnel with location (canlı konum veya son bilinen konum)
+    // Get all personnel with location (canlı konum, son bilinen konum veya iş geçmişinden bulunan konum)
     final personnelWithLocation = personnel
-        .where((p) => p.canShareLocation && 
-            (_livePersonnelLocations.containsKey(p.id) || p.lastKnownLocation != null))
+        .where((p) => 
+            _livePersonnelLocations.containsKey(p.id) || 
+            p.lastKnownLocation != null ||
+            _resolvedPersonnelLocations.containsKey(p.id))
         .toList();
 
     // Apply filter
@@ -376,11 +392,15 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
         );
       }).whereType<Marker>(),
       ...visiblePersonnel.map((person) {
-        // Öncelik: Canlı konum > Son bilinen konum
+
+        // Öncelik: Canlı konum > Son bilinen konum > Çözümlenen konum
         final liveLocation = _livePersonnelLocations[person.id];
         final lastKnown = person.lastKnownLocation;
+        final resolved = _resolvedPersonnelLocations[person.id];
+        
         final location = liveLocation ?? 
-            (lastKnown != null ? LatLng(lastKnown.lat, lastKnown.lng) : null);
+            (lastKnown != null ? LatLng(lastKnown.lat, lastKnown.lng) : null) ??
+            resolved;
         
         if (location == null) return null;
         
@@ -779,6 +799,48 @@ class _JobMapViewState extends ConsumerState<JobMapView> {
     );
   }
 
+  Future<void> _resolvePersonnelLocation(Personnel person) async {
+    if (_loadingLocations.contains(person.id)) return;
+    _loadingLocations.add(person.id);
+
+    try {
+      final jobs = await ref
+          .read(adminRepositoryProvider)
+          .fetchJobs(personnelId: person.id);
+
+      // Konum bilgisi olan en son işi bul
+      final jobWithLocation = jobs.where((job) => job.location != null).toList()
+        ..sort((a, b) {
+          // En son tarihli işi al
+          final aDate = a.scheduledAt ?? a.createdAt;
+          final bDate = b.scheduledAt ?? b.createdAt;
+          if (aDate == null && bDate == null) return 0;
+          if (aDate == null) return 1;
+          if (bDate == null) return -1;
+          return bDate.compareTo(aDate);
+        });
+
+      if (mounted) {
+        if (jobWithLocation.isNotEmpty &&
+            jobWithLocation.first.location != null) {
+          final loc = jobWithLocation.first.location!;
+          setState(() {
+            _resolvedPersonnelLocations[person.id] = LatLng(
+              loc.latitude,
+              loc.longitude,
+            );
+          });
+        }
+        _loadingLocations.remove(person.id);
+      }
+    } catch (e) {
+      debugPrint("❌ Error resolving personnel location: $e");
+      if (mounted) {
+        _loadingLocations.remove(person.id);
+      }
+    }
+  }
+
   Future<void> _resolveCustomerLocation(Customer customer) async {
     if (_loadingLocations.contains(customer.id)) return;
     _loadingLocations.add(customer.id);
@@ -1154,12 +1216,17 @@ LatLng _initialCenter(
 
 // Müşteri durumuna göre renk ve durum metni döndüren helper fonksiyon
 ({Color color, String statusText}) _getCustomerMarkerInfo(Customer customer) {
-  // 1. Bakımı gelen → Turuncu (en yüksek öncelik)
+  // 1. Ödemesi geçen → Kırmızı (En yüksek öncelik)
+  if (customer.hasOverduePayment) {
+    return (color: Colors.red, statusText: "Ödemesi Geçmiş");
+  }
+
+  // 2. Bakımı gelen → Turuncu
   if (customer.hasUpcomingMaintenance) {
     return (color: Colors.orange, statusText: "Bakımı Gelen");
   }
 
-  // 2. Mevcut iş olan (PENDING veya IN_PROGRESS) → Mavi
+  // 3. Mevcut iş olan (PENDING veya IN_PROGRESS) → Mavi
   final hasCurrentJob =
       customer.jobs?.any(
         (job) => job.status == "PENDING" || job.status == "IN_PROGRESS",
@@ -1169,14 +1236,12 @@ LatLng _initialCenter(
     return (color: Colors.blue, statusText: "Mevcut İş");
   }
 
-  // 3. Aktif (status ACTIVE ve işleri var) → Yeşil
-  if (customer.status == "ACTIVE" &&
-      customer.jobs != null &&
-      customer.jobs!.isNotEmpty) {
+  // 4. Aktif (status ACTIVE) → Yeşil
+  if (customer.status == "ACTIVE") {
     return (color: Colors.green, statusText: "Aktif");
   }
 
-  // 4. Pasif (diğer durumlar) → Gri
+  // 5. Pasif (diğer durumlar) → Gri
   return (color: Colors.grey, statusText: "Pasif");
 }
 

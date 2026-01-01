@@ -23,13 +23,7 @@ import "job_map_view.dart";
 import "customers_view.dart"; // CustomerFilterType enum'ı için
 import "payment_invoice_create_page.dart";
 
-final customerDetailProvider = FutureProvider.family<Customer, String>((
-  ref,
-  customerId,
-) {
-  final repository = ref.read(adminRepositoryProvider);
-  return repository.fetchCustomerDetail(customerId);
-});
+import "../../application/customer_detail_provider.dart";
 
 class CustomerDetailPage extends ConsumerStatefulWidget {
   const CustomerDetailPage({
@@ -178,14 +172,17 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
   }
 
   void _showEditCustomerSheet(Customer customer) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 500),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: EditCustomerSheet(customer: customer),
+          ),
         ),
-        child: EditCustomerSheet(customer: customer),
       ),
     );
   }
@@ -299,7 +296,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
       if (error is DioException) {
         final message = error.response?.data?["message"]?.toString() ?? "";
         if (message.contains("active jobs") ||
-            message.contains("Cannot delete customer with active jobs")) {
+            message.contains("Aktif işleri olan müşteri silinemez")) {
           errorMessage =
               "Aktif işleri olan müşteri silinemez. Önce müşterinin tüm aktif işlerini arşivleyin veya silin.";
         } else if (message.isNotEmpty) {
@@ -607,7 +604,7 @@ class _MaintenanceSection extends StatelessWidget {
                     icon: Icons.calendar_today,
                     label: "Sonraki Bakım Tarihi",
                     value: DateFormat(
-                      "dd MMM yyyy",
+                      "dd MMM yyyy", "tr_TR",
                     ).format(customer.nextMaintenanceDate!),
                     valueColor: isOverdue
                         ? Colors.red.shade700
@@ -834,13 +831,28 @@ class _DebtSection extends ConsumerWidget {
                     isBold: true,
                   ),
                 ],
+                if (customer.nextDebtDate != null) ...[
+                  const SizedBox(height: 16),
+                  _DebtRow(
+                    icon: Icons.calendar_today,
+                    label: "Borç Ödeme Tarihi",
+                    value: DateFormat(
+                      "dd MMM yyyy",
+                      "tr_TR",
+                    ).format(customer.nextDebtDate!),
+                    valueColor: customer.hasOverduePayment
+                        ? const Color(0xFFEF4444)
+                        : const Color(0xFF1F2937),
+                    isBold: true,
+                  ),
+                ],
                 if (latestPaymentDate != null) ...[
                   const SizedBox(height: 16),
                   _DebtRow(
                     icon: Icons.event_available,
                     label: "Son Ödeme Tarihi",
                     value: DateFormat(
-                      "dd MMM yyyy, HH:mm",
+                      "dd MMM yyyy, HH:mm", "tr_TR",
                     ).format(latestPaymentDate),
                     valueColor: const Color(0xFF10B981),
                     isBold: true,
@@ -852,7 +864,7 @@ class _DebtSection extends ConsumerWidget {
                     icon: Icons.calendar_today,
                     label: "Borç Ödeme Tarihi",
                     value: DateFormat(
-                      "dd MMM yyyy",
+                      "dd MMM yyyy", "tr_TR",
                     ).format(customer.nextDebtDate!),
                     valueColor: isOverdue
                         ? Colors.red.shade700
@@ -1348,7 +1360,7 @@ class _DebtPaymentHistorySection extends ConsumerWidget {
                               const SizedBox(width: 6),
                               Text(
                                 DateFormat(
-                                  "dd MMM yyyy, HH:mm",
+                                  "dd MMM yyyy, HH:mm", "tr_TR",
                                 ).format(history.receivedAt),
                                 style: TextStyle(
                                   fontSize: 13,
@@ -1494,7 +1506,7 @@ class _DebtPaymentHistorySection extends ConsumerWidget {
                               const SizedBox(width: 6),
                               Text(
                                 DateFormat(
-                                  "dd MMM yyyy, HH:mm",
+                                  "dd MMM yyyy, HH:mm", "tr_TR",
                                 ).format(payment.paidAt),
                                 style: TextStyle(
                                   fontSize: 13,
@@ -1961,7 +1973,10 @@ class _PayDebtFormState extends ConsumerState<_PayDebtForm> {
                 controller: _amountController,
                 decoration: InputDecoration(
                   labelText: "Ödenen Borç Miktarı (TL)",
-                  prefixIcon: const Icon(Icons.attach_money),
+                  labelStyle: const TextStyle(color: Colors.black),
+                  floatingLabelStyle: const TextStyle(color: Colors.black),
+                  hintStyle: const TextStyle(color: Colors.black54),
+                  prefixIcon: const Icon(Icons.attach_money, color: Colors.black54),
                   helperText: remaining > 0
                       ? "Maksimum: ${remaining.toStringAsFixed(2)} TL"
                       : "Ödeme yapıldıktan sonra borçtan düşülecek",
@@ -1987,7 +2002,10 @@ class _PayDebtFormState extends ConsumerState<_PayDebtForm> {
                   controller: _installmentCountController,
                   decoration: const InputDecoration(
                     labelText: "Yeni Taksit Sayısı (Manuel)",
-                    prefixIcon: Icon(Icons.numbers),
+                    labelStyle: const TextStyle(color: Colors.black),
+                    floatingLabelStyle: const TextStyle(color: Colors.black),
+                    hintStyle: const TextStyle(color: Colors.black54),
+                    prefixIcon: const Icon(Icons.numbers, color: Colors.black54),
                     helperText: "Kalan taksit sayısını manuel olarak girin",
                   ),
                   keyboardType: TextInputType.number,

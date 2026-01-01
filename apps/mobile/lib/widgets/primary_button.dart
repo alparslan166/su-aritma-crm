@@ -17,34 +17,44 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveOnPressed = isLoading ? null : onPressed;
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: FilledButton.icon(
-        onPressed: effectiveOnPressed,
-        icon: isLoading
-            ? SizedBox(
+    return GestureDetector(
+      onTap: effectiveOnPressed,
+      child: Container(
+        width: double.infinity,
+        height: 52,
+        decoration: BoxDecoration(
+          color: const Color(0xFF3B82F6).withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: const Color(0xFF93C5FD).withValues(alpha: 0.5),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isLoading)
+              SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
-                  color: Theme.of(context).colorScheme.onPrimary,
+                  color: Colors.white,
                   strokeWidth: 2.5,
                 ),
               )
-            : Icon(icon ?? Icons.arrow_forward_rounded, size: 20),
-        label: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
-        ),
-        style: FilledButton.styleFrom(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+            else
+              Icon(icon ?? Icons.arrow_forward_rounded, size: 20, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+                color: Colors.white,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -81,6 +81,7 @@ class PersonnelView extends HookConsumerWidget {
                         textInputAction: TextInputAction.search,
                         decoration: InputDecoration(
                           hintText: "Personel ara...",
+                          hintStyle: const TextStyle(color: Colors.black54),
                           prefixIcon: const Icon(Icons.search),
                           suffixIcon: searchQuery.value.isNotEmpty
                               ? IconButton(
@@ -99,9 +100,21 @@ class PersonnelView extends HookConsumerWidget {
                               : null,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF2563EB),
+                              width: 2,
+                            ),
                           ),
                           filled: true,
-                          fillColor: Colors.grey.shade50,
+                          fillColor: Colors.white,
                         ),
                         onChanged: (value) {
                           searchQuery.value = value;
@@ -173,6 +186,7 @@ class PersonnelView extends HookConsumerWidget {
                             decoration: const InputDecoration(
                               labelText: "Telefon Numarası",
                               hintText: "Örn: 2324",
+                              hintStyle: const TextStyle(color: Colors.black54),
                               prefixIcon: Icon(Icons.phone),
                               border: OutlineInputBorder(),
                             ),
@@ -393,14 +407,14 @@ class PersonnelView extends HookConsumerWidget {
   }
 
   void _openAddPersonnelSheet(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: const _PersonnelFormSheet(),
         ),
-        child: const _PersonnelFormSheet(),
       ),
     );
   }
@@ -910,9 +924,20 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "Personel Ekle",
-                style: Theme.of(context).textTheme.titleLarge,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Personel Ekle",
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               // Fotoğraf seçimi
@@ -990,7 +1015,11 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
               TextFormField(
                 key: const Key("personnel-name-field"),
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: "İsim"),
+                decoration: const InputDecoration(
+                  labelText: "İsim",
+                  labelStyle: TextStyle(color: Colors.black),
+                  floatingLabelStyle: TextStyle(color: Colors.black),
+                ),
                 textCapitalization: TextCapitalization.words,
                 validator: (value) => value == null || value.trim().length < 2
                     ? "İsim girin"
@@ -1000,7 +1029,11 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
               TextFormField(
                 key: const Key("personnel-phone-field"),
                 controller: _phoneController,
-                decoration: const InputDecoration(labelText: "Telefon"),
+                decoration: const InputDecoration(
+                  labelText: "Telefon",
+                  labelStyle: TextStyle(color: Colors.black),
+                  floatingLabelStyle: TextStyle(color: Colors.black),
+                ),
                 keyboardType: TextInputType.phone,
                 validator: (value) => value == null || value.trim().length < 6
                     ? "Telefon girin"
@@ -1012,6 +1045,8 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
                 controller: _emailController,
                 decoration: const InputDecoration(
                   labelText: "E-posta (opsiyonel)",
+                  labelStyle: TextStyle(color: Colors.black),
+                  floatingLabelStyle: TextStyle(color: Colors.black),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -1023,6 +1058,8 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
                   labelText:
                       "Giriş Kodu (opsiyonel - boş bırakılırsa otomatik oluşturulur)",
                   helperText: "Personel girişi için kullanılacak kod",
+                  labelStyle: TextStyle(color: Colors.black),
+                  floatingLabelStyle: TextStyle(color: Colors.black),
                 ),
                 maxLength: 20,
                 buildCounter:
@@ -1042,6 +1079,8 @@ class _PersonnelFormSheetState extends ConsumerState<_PersonnelFormSheet> {
                 decoration: InputDecoration(
                   labelText: "İşe Giriş Tarihi",
                   hintText: "Tarih seçin",
+                  labelStyle: const TextStyle(color: Colors.black),
+                  floatingLabelStyle: const TextStyle(color: Colors.black),
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.calendar_today),
                     onPressed: _pickDate,

@@ -93,139 +93,176 @@ class _AdminInventoryDetailPageState
     );
     final formKey = GlobalKey<FormState>();
 
-    await showModalBottomSheet<void>(
+    await showDialog<void>(
       context: context,
-      isScrollControlled: true,
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-            left: 24,
-            right: 24,
-            top: 24,
-          ),
-          child: StatefulBuilder(
-            builder: (context, setModalState) {
-              return Form(
-                key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        "Ürün Düzenle",
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: nameController,
-                        decoration: const InputDecoration(labelText: "İsim"),
-                        validator: (value) =>
-                            value == null || value.trim().length < 2
-                            ? "İsim girin"
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: stockQtyController,
-                        decoration: const InputDecoration(
-                          labelText: "Stok Miktarı",
+        return Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: StatefulBuilder(
+              builder: (context, setModalState) {
+                return Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Ürün Düzenle",
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.close),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
                         ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return "Stok miktarı girin";
-                          }
-                          final qty = int.tryParse(value.trim());
-                          if (qty == null || qty < 0) {
-                            return "Geçerli bir sayı girin";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: unitPriceController,
-                        decoration: const InputDecoration(
-                          labelText: "Birim Fiyat (₺)",
+                        const SizedBox(height: 24),
+                        TextFormField(
+                          controller: nameController,
+                          decoration: const InputDecoration(
+                            labelText: "İsim",
+                            labelStyle: TextStyle(color: Colors.black),
+                            floatingLabelStyle: TextStyle(color: Colors.black),
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 16,
+                            ),
+                          ),
+                          validator: (value) =>
+                              value == null || value.trim().length < 2
+                                  ? "İsim girin"
+                                  : null,
                         ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return "Birim fiyat girin";
-                          }
-                          final price = double.tryParse(value.trim());
-                          if (price == null || price < 0) {
-                            return "Geçerli bir fiyat girin";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: () async {
-                            if (!formKey.currentState!.validate()) return;
-                            final repo = ref.read(adminRepositoryProvider);
-                            final messenger = ScaffoldMessenger.of(context);
-                            final navigator = Navigator.of(context);
-                            try {
-                              final updatedItem = await repo.updateInventoryItem(
-                                id: item.id,
-                                name: nameController.text.trim(),
-                                category:
-                                    item.category, // Mevcut kategoriyi koru
-                                stockQty: int.parse(
-                                  stockQtyController.text.trim(),
-                                ),
-                                criticalThreshold: item
-                                    .criticalThreshold, // Mevcut değeri koru
-                                unitPrice: double.parse(
-                                  unitPriceController.text.trim(),
-                                ),
-                                photoUrl:
-                                    item.photoUrl, // Mevcut fotoğrafı koru
-                                sku: item.sku, // Mevcut SKU'yu koru
-                                unit: item.unit, // Mevcut birimi koru
-                                reorderPoint:
-                                    item.reorderPoint, // Mevcut değeri koru
-                                reorderQuantity:
-                                    item.reorderQuantity, // Mevcut değeri koru
-                                isActive: item.isActive, // Mevcut durumu koru
-                              );
-                              setState(() {
-                                _currentItem = updatedItem;
-                              });
-                              ref.invalidate(inventoryListProvider);
-                              navigator.pop();
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text("Ürün güncellendi"),
-                                ),
-                              );
-                            } catch (error) {
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text("Güncelleme başarısız: $error"),
-                                ),
-                              );
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: stockQtyController,
+                          decoration: const InputDecoration(
+                            labelText: "Stok Miktarı",
+                            labelStyle: TextStyle(color: Colors.black),
+                            floatingLabelStyle: TextStyle(color: Colors.black),
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 16,
+                            ),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return "Stok miktarı girin";
                             }
+                            final qty = int.tryParse(value.trim());
+                            if (qty == null || qty < 0) {
+                              return "Geçerli bir sayı girin";
+                            }
+                            return null;
                           },
-                          child: const Text("Kaydet"),
                         ),
-                      ),
-                      SizedBox(
-                        height: MediaQuery.of(context).viewInsets.bottom,
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: unitPriceController,
+                          decoration: const InputDecoration(
+                            labelText: "Birim Fiyat (₺)",
+                            labelStyle: TextStyle(color: Colors.black),
+                            floatingLabelStyle: TextStyle(color: Colors.black),
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 16,
+                            ),
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return "Birim fiyat girin";
+                            }
+                            final price = double.tryParse(value.trim());
+                            if (price == null || price < 0) {
+                              return "Geçerli bir fiyat girin";
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: FilledButton(
+                            onPressed: () async {
+                              if (!formKey.currentState!.validate()) return;
+                              final repo = ref.read(adminRepositoryProvider);
+                              final messenger = ScaffoldMessenger.of(context);
+                              final navigator = Navigator.of(context);
+                              try {
+                                final updatedItem =
+                                    await repo.updateInventoryItem(
+                                  id: item.id,
+                                  name: nameController.text.trim(),
+                                  category:
+                                      item.category, // Mevcut kategoriyi koru
+                                  stockQty: int.parse(
+                                    stockQtyController.text.trim(),
+                                  ),
+                                  criticalThreshold: item
+                                      .criticalThreshold, // Mevcut değeri koru
+                                  unitPrice: double.parse(
+                                    unitPriceController.text.trim(),
+                                  ),
+                                  photoUrl:
+                                      item.photoUrl, // Mevcut fotoğrafı koru
+                                  sku: item.sku, // Mevcut SKU'yu koru
+                                  unit: item.unit, // Mevcut birimi koru
+                                  reorderPoint:
+                                      item.reorderPoint, // Mevcut değeri koru
+                                  reorderQuantity:
+                                      item.reorderQuantity, // Mevcut değeri koru
+                                  isActive: item.isActive, // Mevcut durumu koru
+                                );
+                                setState(() {
+                                  _currentItem = updatedItem;
+                                });
+                                ref.invalidate(inventoryListProvider);
+                                navigator.pop();
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Ürün güncellendi"),
+                                  ),
+                                );
+                              } catch (error) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text("Güncelleme başarısız: $error"),
+                                  ),
+                                );
+                              }
+                            },
+                            child: const Text(
+                              "Kaydet",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         );
       },

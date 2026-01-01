@@ -352,14 +352,15 @@ class ForgotPasswordPage extends HookConsumerWidget {
         title: const Text("Şifremi Unuttum"),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              const Color(0xFFDC2626).withValues(alpha: 0.05),
-              const Color(0xFFF59E0B).withValues(alpha: 0.05),
               Colors.white,
+              Color(0xFFFFFFFF),
+              Color(0xFF4A6FA5),
+              Color(0xFF0B1F3A),
             ],
           ),
         ),

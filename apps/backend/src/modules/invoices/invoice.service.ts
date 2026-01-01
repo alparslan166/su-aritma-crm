@@ -74,6 +74,7 @@ class InvoiceService {
       where: { id: payload.jobId, adminId },
       include: {
         customer: true,
+        materials: true, // Include materials for fallback calculation
       },
     });
     if (!job) {
@@ -90,8 +91,24 @@ class InvoiceService {
       throw new AppError("Bu iş için zaten bir fatura mevcut", 400);
     }
 
-    // Calculate totals if not provided
-    const subtotal = payload.subtotal ?? Number(job.price ?? 0);
+    // Calculate totals if not provided or if 0
+    // Priority: 
+    // 1. Payload subtotal (if > 0)
+    // 2. Job Price (if > 0)
+    // 3. Job Collected Amount (if > 0)
+    // 4. Sum of Materials
+    let subtotal = payload.subtotal ?? 0;
+    
+    if (subtotal <= 0) {
+      if (Number(job.price) > 0) {
+        subtotal = Number(job.price);
+      } else if (Number(job.collectedAmount) > 0) {
+        subtotal = Number(job.collectedAmount);
+      } else if (job.materials && job.materials.length > 0) {
+        subtotal = job.materials.reduce((sum, m) => sum + (m.quantity * Number(m.unitPrice)), 0);
+      }
+    }
+
     const tax = payload.tax ?? 0;
     const total = payload.total ?? subtotal + tax;
 

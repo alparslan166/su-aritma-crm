@@ -156,14 +156,11 @@ class _JobsViewState extends ConsumerState<JobsView> {
   }
 
   void _openAddJobSheet(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: const _JobFormSheet(),
+      builder: (_) => const Dialog(
+        insetPadding: EdgeInsets.all(16),
+        child: _JobFormSheet(),
       ),
     );
   }
@@ -417,12 +414,27 @@ class _JobFormSheetState extends ConsumerState<_JobFormSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("İş Ekle", style: Theme.of(context).textTheme.titleLarge),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text("İş Ekle", style: Theme.of(context).textTheme.titleLarge),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 key: const Key("job-title-field"),
                 controller: _titleController,
-                decoration: const InputDecoration(labelText: "Başlık"),
+                decoration: const InputDecoration(
+                  labelText: "Başlık",
+                  labelStyle: TextStyle(color: Colors.black),
+                  floatingLabelStyle: TextStyle(color: Colors.black),
+                ),
                 textCapitalization: TextCapitalization.sentences,
                 validator: (value) => value == null || value.trim().length < 2
                     ? "Başlık girin"

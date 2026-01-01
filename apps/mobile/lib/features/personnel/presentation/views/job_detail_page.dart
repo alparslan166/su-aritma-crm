@@ -20,6 +20,7 @@ import "../../application/personnel_jobs_notifier.dart";
 import "../../data/personnel_repository.dart";
 import "../../data/models/personnel_job.dart";
 import "../widgets/job_status_chip.dart";
+import "../../../admin/presentation/widgets/material_selection_dialog.dart";
 
 class PersonnelJobDetailPage extends HookConsumerWidget {
   const PersonnelJobDetailPage({super.key, required this.jobId});
@@ -61,7 +62,7 @@ class PersonnelJobDetailPage extends HookConsumerWidget {
                 title: "Planlanan Tarih",
                 value: detail.job.scheduledAt != null
                     ? DateFormat(
-                        "dd MMM yyyy HH:mm",
+                        "dd MMM yyyy HH:mm", "tr_TR",
                       ).format(detail.job.scheduledAt!.toLocal())
                     : "Belirlenmedi",
               ),
@@ -69,7 +70,7 @@ class PersonnelJobDetailPage extends HookConsumerWidget {
                 _InfoTile(
                   title: "Teslim Tarihi",
                   value: DateFormat(
-                    "dd MMM yyyy HH:mm",
+                    "dd MMM yyyy HH:mm", "tr_TR",
                   ).format(detail.assignment.deliveredAt!.toLocal()),
                 ),
               // Malzemeler bölümü
@@ -222,10 +223,18 @@ class _ActionButtons extends HookConsumerWidget {
 
       if (confirmed != true) return;
 
-      final result = await showModalBottomSheet<DeliveryPayload>(
+      final result = await showDialog<DeliveryPayload>(
         context: context,
-        isScrollControlled: true,
-        builder: (context) => const _DeliverySheet(),
+        builder: (context) => Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: const Padding(
+              padding: EdgeInsets.all(24),
+              child: _DeliverySheet(),
+            ),
+          ),
+        ),
       );
       if (result == null) return;
       try {
@@ -319,19 +328,24 @@ class _DeliverySheet extends HookConsumerWidget {
     final imagePicker = ImagePicker();
     final isSubmitting = useState(false);
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        top: 24,
-      ),
-      child: Column(
+    return Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            "Teslim Bilgileri",
-            style: Theme.of(context).textTheme.titleMedium,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Teslim Bilgileri",
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           DropdownMenu<int>(
@@ -350,7 +364,11 @@ class _DeliverySheet extends HookConsumerWidget {
           TextField(
             controller: noteController,
             maxLines: 3,
-            decoration: const InputDecoration(labelText: "Not"),
+            decoration: const InputDecoration(
+              labelText: "Not",
+              labelStyle: TextStyle(color: Colors.black),
+              floatingLabelStyle: TextStyle(color: Colors.black),
+            ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -446,8 +464,31 @@ class _DeliverySheet extends HookConsumerWidget {
           ],
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () =>
-                _showMaterialSelectionSheet(context, ref, selectedMaterials),
+            onPressed: () async {
+              final inventoryState = ref.read(inventoryListProvider);
+              final inventory = inventoryState.value ?? [];
+              
+              if (inventory.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Malzeme bulunamadı")),
+                );
+                return;
+              }
+
+              final result = await showDialog<({Map<String, int> selection, bool deductFromStock})>(
+                context: context,
+                builder: (context) => MaterialSelectionDialog(
+                  inventory: inventory,
+                  initialSelection: selectedMaterials.value,
+                  // Teslim sırasında stoktan düşme seçeneği gösterilmez, her zaman düşülür
+                  showDeductOption: false, 
+                ),
+              );
+
+              if (result != null) {
+                selectedMaterials.value = result.selection;
+              }
+            },
             icon: const Icon(Icons.inventory_2),
             label: Text(
               selectedMaterials.value.isEmpty
@@ -521,6 +562,8 @@ class _DeliverySheet extends HookConsumerWidget {
             decoration: const InputDecoration(
               labelText: "Alınan Ücret (₺)",
               prefixIcon: Icon(Icons.attach_money),
+              labelStyle: TextStyle(color: Colors.black),
+              floatingLabelStyle: TextStyle(color: Colors.black),
             ),
           ),
           const SizedBox(height: 16),
@@ -654,132 +697,12 @@ class _DeliverySheet extends HookConsumerWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Future<void> _showMaterialSelectionSheet(
-    BuildContext context,
-    WidgetRef ref,
-    ValueNotifier<Map<String, int>> selectedMaterials,
-  ) async {
-    final inventoryState = ref.watch(inventoryListProvider);
-    final inventory = inventoryState.value ?? [];
-    if (inventory.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Malzeme bulunamadı")));
-      return;
-    }
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.8,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      "Malzeme Seç",
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  Flexible(
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: inventory.length,
-                      itemBuilder: (context, index) {
-                        final item = inventory[index];
-                        final isSelected = selectedMaterials.value.containsKey(
-                          item.id,
-                        );
-                        final quantity = selectedMaterials.value[item.id] ?? 0;
-                        return ListTile(
-                          title: Text(item.name),
-                          subtitle: Text(
-                            "Stok: ${item.stockQty} ${item.unit ?? "adet"}",
-                          ),
-                          trailing: isSelected
-                              ? Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.remove),
-                                      onPressed: () {
-                                        setModalState(() {
-                                          if (quantity > 1) {
-                                            selectedMaterials.value = {
-                                              ...selectedMaterials.value,
-                                              item.id: quantity - 1,
-                                            };
-                                          } else {
-                                            final newMap =
-                                                Map<String, int>.from(
-                                                  selectedMaterials.value,
-                                                );
-                                            newMap.remove(item.id);
-                                            selectedMaterials.value = newMap;
-                                          }
-                                        });
-                                      },
-                                    ),
-                                    Text("$quantity"),
-                                    IconButton(
-                                      icon: const Icon(Icons.add),
-                                      onPressed: () {
-                                        setModalState(() {
-                                          if (quantity < item.stockQty) {
-                                            selectedMaterials.value = {
-                                              ...selectedMaterials.value,
-                                              item.id: quantity + 1,
-                                            };
-                                          }
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                )
-                              : IconButton(
-                                  icon: const Icon(Icons.add),
-                                  onPressed: () {
-                                    setModalState(() {
-                                      selectedMaterials.value = {
-                                        ...selectedMaterials.value,
-                                        item.id: 1,
-                                      };
-                                    });
-                                  },
-                                ),
-                        );
-                      },
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: FilledButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text("Tamam"),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
+      );
   }
 }
+
+  // _showMaterialSelectionSheet silindi
+
 
 class _JobMapSection extends StatefulWidget {
   const _JobMapSection({required this.customer});

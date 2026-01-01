@@ -73,14 +73,15 @@ class RegisterPage extends HookConsumerWidget {
         title: const Text("Admin Kayıt"),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              const Color(0xFF2563EB).withValues(alpha: 0.05),
-              const Color(0xFF10B981).withValues(alpha: 0.05),
               Colors.white,
+              Color(0xFFFFFFFF),
+              Color(0xFF4A6FA5),
+              Color(0xFF0B1F3A),
             ],
           ),
         ),

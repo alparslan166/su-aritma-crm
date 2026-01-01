@@ -71,12 +71,30 @@ class _InventoryFormSheetState extends ConsumerState<InventoryFormSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Ürün Ekle", style: Theme.of(context).textTheme.titleLarge),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Ürün Ekle",
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 key: const Key("inventory-name-field"),
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: "İsim"),
+                decoration: const InputDecoration(
+                  labelText: "İsim",
+                  labelStyle: TextStyle(color: Colors.black),
+                  floatingLabelStyle: TextStyle(color: Colors.black),
+                ),
                 textCapitalization: TextCapitalization.words,
                 validator: (value) => value == null || value.trim().length < 2
                     ? "İsim girin"
@@ -86,7 +104,11 @@ class _InventoryFormSheetState extends ConsumerState<InventoryFormSheet> {
               TextFormField(
                 key: const Key("inventory-stock-qty-field"),
                 controller: _stockQtyController,
-                decoration: const InputDecoration(labelText: "Stok Miktarı"),
+                decoration: const InputDecoration(
+                  labelText: "Stok Miktarı",
+                  labelStyle: TextStyle(color: Colors.black),
+                  floatingLabelStyle: TextStyle(color: Colors.black),
+                ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -103,7 +125,11 @@ class _InventoryFormSheetState extends ConsumerState<InventoryFormSheet> {
               TextFormField(
                 key: const Key("inventory-unit-price-field"),
                 controller: _unitPriceController,
-                decoration: const InputDecoration(labelText: "Birim Fiyat (₺)"),
+                decoration: const InputDecoration(
+                  labelText: "Birim Fiyat (₺)",
+                  labelStyle: TextStyle(color: Colors.black),
+                  floatingLabelStyle: TextStyle(color: Colors.black),
+                ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
@@ -132,7 +158,7 @@ class _InventoryFormSheetState extends ConsumerState<InventoryFormSheet> {
                       : const Text("Kaydet"),
                 ),
               ),
-              const SizedBox(height: 80),
+              // const SizedBox(height: 80), // Dialog içinde bu boşluğa gerek yok
               SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
             ],
           ),

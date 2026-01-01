@@ -45,12 +45,27 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
     _jobTitleController = TextEditingController(text: job.title);
     _jobDate =
         job.deliveredAt ?? job.scheduledAt ?? job.createdAt ?? DateTime.now();
+    // Calculate initial amount: use job price if available
+    // Fallback order: Price -> Collected Amount -> Sum of Materials
+    double initialAmount = job.price ?? 0.0;
+    
+    if (initialAmount <= 0 && job.collectedAmount != null && job.collectedAmount! > 0) {
+      initialAmount = job.collectedAmount!;
+    }
+
+    if (initialAmount <= 0 && job.materials != null) {
+      initialAmount = job.materials!.fold(
+        0.0,
+        (sum, m) => sum + (m.quantity * m.unitPrice),
+      );
+    }
+
     _subtotalController = TextEditingController(
-      text: job.price != null ? job.price!.toStringAsFixed(2) : "",
+      text: initialAmount > 0 ? initialAmount.toStringAsFixed(2) : "",
     );
     _taxController = TextEditingController(text: "0.00");
     _totalController = TextEditingController(
-      text: job.price != null ? job.price!.toStringAsFixed(2) : "",
+      text: initialAmount > 0 ? initialAmount.toStringAsFixed(2) : "",
     );
     _notesController = TextEditingController();
 
@@ -108,9 +123,16 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
             : _customerEmailController.text.trim(),
         jobTitle: _jobTitleController.text.trim(),
         jobDate: _jobDate,
-        subtotal: double.tryParse(_subtotalController.text),
-        tax: double.tryParse(_taxController.text),
-        total: double.tryParse(_totalController.text),
+        // Only send totals if they are positive, otherwise keep backend's drafted values
+        subtotal: (double.tryParse(_subtotalController.text) ?? 0) > 0
+            ? double.tryParse(_subtotalController.text)
+            : null,
+        tax: (double.tryParse(_taxController.text) ?? 0) > 0
+            ? double.tryParse(_taxController.text)
+            : null,
+        total: (double.tryParse(_totalController.text) ?? 0) > 0
+            ? double.tryParse(_totalController.text)
+            : null,
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),

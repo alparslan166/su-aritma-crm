@@ -513,11 +513,17 @@ class CustomerService {
       }
 
       if (hasInstallment && installmentCount && installmentCount > 0) {
-        const nextDate = new Date();
-        nextDate.setMonth(nextDate.getMonth() + 1);
-        updateData.nextDebtDate = nextDate;
+        // Only set nextDebtDate if not provided in payload
+        if (payload.nextDebtDate === undefined) {
+          const nextDate = new Date();
+          nextDate.setMonth(nextDate.getMonth() + 1);
+          updateData.nextDebtDate = nextDate;
+        }
       } else {
-        updateData.nextDebtDate = null;
+        // Only set nextDebtDate if not provided in payload
+        if (payload.nextDebtDate === undefined) {
+          updateData.nextDebtDate = null;
+        }
       }
     } else if (hasDebt === false) {
       updateData.debtAmount = null;

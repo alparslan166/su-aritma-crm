@@ -181,122 +181,134 @@ class _AssignJobSheetState extends ConsumerState<AssignJobSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text("İş Ata"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 24), //---------------------------------
-                //--------------------------------- Müşteri Seç
-                OutlinedButton.icon(
-                  onPressed: _selectCustomer,
-                  icon: const Icon(Icons.business),
-                  label: Text(
-                    _selectedCustomer != null
-                        ? _selectedCustomer!.name
-                        : "Müşteri Seç (Opsiyonel)",
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Dialog için min kullan
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                   Text(
+                    "İş Ata",
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.all(16),
-                    alignment: Alignment.centerLeft,
-                  ),
-                ),
-                if (_selectedCustomer != null) ...[
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Telefon: ${_selectedCustomer!.phone}",
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        Text(
-                          "Adres: ${_selectedCustomer!.address}",
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
-                const SizedBox(height: 16), //---------------------------------
-                //--------------------------------- Personel Seç
-                OutlinedButton.icon(
-                  onPressed: _selectPersonnel,
-                  icon: const Icon(Icons.person),
-                  label: Text(
-                    _selectedPersonnelList.isEmpty
-                        ? "Personel Seç"
-                        : "${_selectedPersonnelList.length} personel seçildi",
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.all(16),
-                    alignment: Alignment.centerLeft,
+              ),
+              const SizedBox(height: 24),
+              //--------------------------------- Müşteri Seç
+              OutlinedButton.icon(
+                onPressed: _selectCustomer,
+                icon: const Icon(Icons.business),
+                label: Text(
+                  _selectedCustomer != null
+                      ? _selectedCustomer!.name
+                      : "Müşteri Seç (Opsiyonel)",
+                  style: const TextStyle(color: Colors.black),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  alignment: Alignment.centerLeft,
+                ),
+              ),
+              if (_selectedCustomer != null) ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Telefon: ${_selectedCustomer!.phone}",
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      Text(
+                        "Adres: ${_selectedCustomer!.address}",
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                   ),
                 ),
-                if (_selectedPersonnelList.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _selectedPersonnelList.map((personnel) {
-                        return Chip(
-                          label: Text(personnel.name),
-                          onDeleted: () {
-                            setState(() {
-                              _selectedPersonnelList.remove(personnel);
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                // Yapılacak İşlem
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: "Yapılacak işlem bilgisi",
-                    hintText: "Yapılacak işlem hakkında not",
-                  ),
-                  maxLines: 3,
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? "Yapılacak işlemi girin"
-                      : null,
-                ),
-                const SizedBox(height: 32),
-                // Kaydet Butonu
-                FilledButton(
-                  onPressed: _submitting ? null : _submit,
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: _submitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text("Kaydet"),
-                ),
-                const SizedBox(height: 80),
               ],
-            ),
+              const SizedBox(height: 16),
+              //--------------------------------- Personel Seç
+              OutlinedButton.icon(
+                onPressed: _selectPersonnel,
+                icon: const Icon(Icons.person),
+                label: Text(
+                  _selectedPersonnelList.isEmpty
+                      ? "Personel Seç"
+                      : "${_selectedPersonnelList.length} personel seçildi",
+                  style: const TextStyle(color: Colors.black),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  alignment: Alignment.centerLeft,
+                ),
+              ),
+              if (_selectedPersonnelList.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _selectedPersonnelList.map((personnel) {
+                      return Chip(
+                        label: Text(personnel.name),
+                        onDeleted: () {
+                          setState(() {
+                            _selectedPersonnelList.remove(personnel);
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              // Yapılacak İşlem
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: "Yapılacak işlem bilgisi",
+                  // hintText: "Yapılacak işlem hakkında not",
+                  labelStyle: TextStyle(color: Colors.black),
+                  floatingLabelStyle: TextStyle(color: Colors.black),
+                  border: OutlineInputBorder(), // Dialog içinde border daha iyi durur
+                ),
+                maxLines: 3,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? "Yapılacak işlemi girin"
+                    : null,
+              ),
+              const SizedBox(height: 32),
+              // Kaydet Butonu
+              FilledButton(
+                onPressed: _submitting ? null : _submit,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _submitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text("Kaydet"),
+              ),
+              SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
+            ],
           ),
         ),
       ),
@@ -380,7 +392,9 @@ class _PersonnelSelectionDialogState extends State<_PersonnelSelectionDialog> {
                     controller: _searchController,
                     decoration: const InputDecoration(
                       labelText: "Personel Ara",
-                      prefixIcon: Icon(Icons.search),
+                      labelStyle: const TextStyle(color: Colors.black),
+                      hintStyle: const TextStyle(color: Colors.black54),
+                      prefixIcon: Icon(Icons.search, color: Colors.black54),
                       border: OutlineInputBorder(),
                     ),
                     autofocus: true,
@@ -496,7 +510,9 @@ class _CustomerSelectionDialogState extends State<_CustomerSelectionDialog> {
                     controller: _searchController,
                     decoration: const InputDecoration(
                       labelText: "Müşteri Ara",
-                      prefixIcon: Icon(Icons.search),
+                      labelStyle: const TextStyle(color: Colors.black),
+                      hintStyle: const TextStyle(color: Colors.black54),
+                      prefixIcon: Icon(Icons.search, color: Colors.black54),
                       border: OutlineInputBorder(),
                     ),
                     autofocus: true,
@@ -517,7 +533,7 @@ class _CustomerSelectionDialogState extends State<_CustomerSelectionDialog> {
               itemBuilder: (context, index) {
                 final customer = _filteredList[index];
                 return ListTile(
-                  leading: const Icon(Icons.business),
+                  leading: const Icon(Icons.business, color: Colors.black54),
                   title: Text(customer.name),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

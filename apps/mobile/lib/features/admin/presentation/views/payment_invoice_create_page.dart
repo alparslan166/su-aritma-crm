@@ -181,6 +181,8 @@ class _PaymentInvoiceCreatePageState
                       controller: _customerNameController,
                       decoration: const InputDecoration(
                         labelText: "Müşteri Adı *",
+                        labelStyle: TextStyle(color: Colors.black),
+                        floatingLabelStyle: TextStyle(color: Colors.black),
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) =>
@@ -193,6 +195,8 @@ class _PaymentInvoiceCreatePageState
                       controller: _customerPhoneController,
                       decoration: const InputDecoration(
                         labelText: "Telefon *",
+                        labelStyle: TextStyle(color: Colors.black),
+                        floatingLabelStyle: TextStyle(color: Colors.black),
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.phone,
@@ -206,6 +210,8 @@ class _PaymentInvoiceCreatePageState
                       controller: _customerAddressController,
                       decoration: const InputDecoration(
                         labelText: "Adres *",
+                        labelStyle: TextStyle(color: Colors.black),
+                        floatingLabelStyle: TextStyle(color: Colors.black),
                         border: OutlineInputBorder(),
                       ),
                       maxLines: 2,
@@ -219,6 +225,8 @@ class _PaymentInvoiceCreatePageState
                       controller: _customerEmailController,
                       decoration: const InputDecoration(
                         labelText: "E-posta (opsiyonel)",
+                        labelStyle: TextStyle(color: Colors.black),
+                        floatingLabelStyle: TextStyle(color: Colors.black),
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.emailAddress,
@@ -256,8 +264,10 @@ class _PaymentInvoiceCreatePageState
                       child: InputDecorator(
                         decoration: const InputDecoration(
                           labelText: "Ödeme Tarihi *",
+                          labelStyle: TextStyle(color: Colors.black),
+                          floatingLabelStyle: TextStyle(color: Colors.black),
                           border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.calendar_today),
+                          prefixIcon: Icon(Icons.calendar_today, color: Colors.black),
                         ),
                         child: Text(DateFormat("dd MMM yyyy", "tr_TR").format(_paymentDate)),
                       ),
@@ -284,8 +294,10 @@ class _PaymentInvoiceCreatePageState
                       controller: _amountController,
                       decoration: const InputDecoration(
                         labelText: "Ödeme Tutarı (₺) *",
+                        labelStyle: TextStyle(color: Colors.black),
+                        floatingLabelStyle: TextStyle(color: Colors.black),
                         border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.attach_money),
+                        prefixIcon: Icon(Icons.attach_money, color: Colors.black),
                       ),
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
@@ -306,6 +318,8 @@ class _PaymentInvoiceCreatePageState
                       controller: _taxController,
                       decoration: const InputDecoration(
                         labelText: "KDV (₺)",
+                        labelStyle: TextStyle(color: Colors.black),
+                        floatingLabelStyle: TextStyle(color: Colors.black),
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: const TextInputType.numberWithOptions(
@@ -317,6 +331,8 @@ class _PaymentInvoiceCreatePageState
                       controller: _totalController,
                       decoration: const InputDecoration(
                         labelText: "Toplam (₺) *",
+                        labelStyle: TextStyle(color: Colors.black),
+                        floatingLabelStyle: TextStyle(color: Colors.black),
                         border: OutlineInputBorder(),
                       ),
                       readOnly: true,
@@ -347,6 +363,8 @@ class _PaymentInvoiceCreatePageState
                       controller: _notesController,
                       decoration: const InputDecoration(
                         labelText: "Fatura notları",
+                        labelStyle: TextStyle(color: Colors.black),
+                        floatingLabelStyle: TextStyle(color: Colors.black),
                         border: OutlineInputBorder(),
                       ),
                       maxLines: 3,
