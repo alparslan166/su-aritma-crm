@@ -1,7 +1,6 @@
 import "package:flutter/material.dart";
 import "package:go_router/go_router.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
-
 import "../../../core/session/session_provider.dart";
 import "../../../routing/app_router.dart";
 import "../../admin/presentation/views/admin_profile_page.dart";
@@ -16,6 +15,9 @@ import "../../admin/presentation/views/personnel_view.dart";
 import "../../admin/presentation/views/export_data_page.dart";
 import "import_data_page.dart";
 import "home_page_tab.dart";
+
+// Provider to control tab navigation from child widgets
+final tabNavigationProvider = StateProvider<int?>((ref) => null);
 
 class AdminDashboardPage extends ConsumerStatefulWidget {
   const AdminDashboardPage({super.key});
@@ -139,6 +141,15 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage>
 
   @override
   Widget build(BuildContext context) {
+    // Listen for tab navigation requests from child widgets
+    ref.listen<int?>(tabNavigationProvider, (previous, next) {
+      if (next != null && next != _tabController.index) {
+        _tabController.animateTo(next);
+        // Reset the provider to null
+        ref.read(tabNavigationProvider.notifier).state = null;
+      }
+    });
+
     final screenWidth = MediaQuery.of(context).size.width;
     // Ekran genişliğine göre font boyutunu hesapla (5 tab için)
     final tabWidth = screenWidth / 5;

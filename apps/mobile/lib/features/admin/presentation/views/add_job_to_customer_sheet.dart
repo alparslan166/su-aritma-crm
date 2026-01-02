@@ -8,6 +8,7 @@ import "../../data/admin_repository.dart";
 import "../../data/models/inventory_item.dart";
 import "../../../dashboard/presentation/home_page_provider.dart";
 import "customer_detail_page.dart";
+import "../../application/customer_detail_provider.dart";
 
 class AddJobToCustomerSheet extends ConsumerStatefulWidget {
   const AddJobToCustomerSheet({
@@ -69,13 +70,14 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
     final inventory = await ref.read(adminRepositoryProvider).fetchInventory();
     if (!mounted) return;
 
-    final result = await showDialog<({Map<String, int> selection, bool deductFromStock})>(
-      context: context,
-      builder: (context) => _MaterialSelectionDialog(
-        inventory: inventory,
-        initialSelection: _selectedMaterials,
-      ),
-    );
+    final result =
+        await showDialog<({Map<String, int> selection, bool deductFromStock})>(
+          context: context,
+          builder: (context) => _MaterialSelectionDialog(
+            inventory: inventory,
+            initialSelection: _selectedMaterials,
+          ),
+        );
     if (result != null) {
       setState(() {
         _selectedMaterials.clear();
@@ -141,13 +143,13 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
 
       await ref.read(customerListProvider.notifier).refresh();
       ref.invalidate(customerDetailProvider(widget.customerId));
-      
+
       // Ana sayfa grafik ve istatistiklerini statik olarak yenile
       ref.invalidate(dashboardStatsProvider);
       ref.invalidate(customerCategoryDataProvider);
       ref.invalidate(overduePaymentsCustomersProvider);
       ref.invalidate(upcomingMaintenanceProvider);
-      
+
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(
@@ -645,7 +647,8 @@ class _MaterialSelectionDialogState extends State<_MaterialSelectionDialog> {
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: widget.inventory.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final item = widget.inventory[index];
                     final controller = _controllers[item.id]!;
@@ -738,8 +741,9 @@ class _MaterialSelectionDialogState extends State<_MaterialSelectionDialog> {
                                           int.tryParse(controller.text) ?? 0;
                                       if (currentQty > 0) {
                                         final newQty = currentQty - 1;
-                                        controller.text =
-                                            newQty > 0 ? newQty.toString() : "";
+                                        controller.text = newQty > 0
+                                            ? newQty.toString()
+                                            : "";
                                         if (newQty > 0) {
                                           _selection[item.id] = newQty;
                                         } else {
@@ -770,10 +774,11 @@ class _MaterialSelectionDialogState extends State<_MaterialSelectionDialog> {
                                     decoration: InputDecoration(
                                       hintText: "0",
                                       isDense: true,
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                        vertical: 6,
-                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                            vertical: 6,
+                                          ),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(6),
                                         borderSide: BorderSide(
@@ -871,9 +876,9 @@ class _MaterialSelectionDialogState extends State<_MaterialSelectionDialog> {
           child: const Text("İptal"),
         ),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop(
-            (selection: _selection, deductFromStock: _deductFromStock),
-          ),
+          onPressed: () => Navigator.of(
+            context,
+          ).pop((selection: _selection, deductFromStock: _deductFromStock)),
           child: const Text("Tamam"),
         ),
       ],

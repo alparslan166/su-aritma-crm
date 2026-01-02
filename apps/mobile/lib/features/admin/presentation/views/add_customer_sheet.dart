@@ -150,15 +150,25 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
       if (!mounted) return;
       final initialLocation = LatLng(position.latitude, position.longitude);
 
-      final selectedLocation = await showModalBottomSheet<LatLng>(
+      final selectedLocation = await showDialog<LatLng>(
         context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => InteractiveLocationPicker(
-          initialLocation: initialLocation,
-          onLocationSelected: (location) {
-            Navigator.of(context).pop(location);
-          },
+        barrierDismissible: true,
+        builder: (context) => Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.95,
+            height: MediaQuery.of(context).size.height * 0.8,
+            child: InteractiveLocationPicker(
+              initialLocation: initialLocation,
+              onLocationSelected: (location) {
+                Navigator.of(context).pop(location);
+              },
+            ),
+          ),
         ),
       );
 

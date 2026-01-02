@@ -17,6 +17,7 @@ flutter emulators --launch Medium_Phone_API_36.1
 @
 # İkinci emülatör: Pixel 3a
 flutter emulators --launch Pixel_3a
+alp84202@gmail.com
 
 # Mevcut cihazları listele
 flutter devices

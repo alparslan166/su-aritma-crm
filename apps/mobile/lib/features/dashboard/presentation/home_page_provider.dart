@@ -47,8 +47,21 @@ final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
   final inventory = results[3] as List<InventoryItem>;
   final maintenanceReminders = results[4] as List<MaintenanceReminder>;
 
+  // Remove duplicates by ID and name+phone combination
+  final seenIds = <String>{};
+  final seenNamePhone = <String>{};
+  final uniqueCustomers = customers.where((c) {
+    if (seenIds.contains(c.id)) return false;
+    final namePhoneKey =
+        '${c.name.toLowerCase().trim()}_${c.phone.replaceAll(RegExp(r'\s+'), '')}';
+    if (seenNamePhone.contains(namePhoneKey)) return false;
+    seenIds.add(c.id);
+    seenNamePhone.add(namePhoneKey);
+    return true;
+  }).toList();
+
   // İstatistikleri hesapla
-  final totalCustomers = customers.length;
+  final totalCustomers = uniqueCustomers.length;
   final activeJobs = jobs
       .where((job) => job.status == "PENDING" || job.status == "IN_PROGRESS")
       .length;
@@ -85,7 +98,21 @@ final overduePaymentsCustomersProvider = FutureProvider<List<Customer>>((
 ) async {
   final repository = ref.watch(adminRepositoryProvider);
   final customers = await repository.fetchCustomers();
-  return customers
+
+  // Remove duplicates by ID and name+phone combination
+  final seenIds = <String>{};
+  final seenNamePhone = <String>{};
+  final uniqueCustomers = customers.where((c) {
+    if (seenIds.contains(c.id)) return false;
+    final namePhoneKey =
+        '${c.name.toLowerCase().trim()}_${c.phone.replaceAll(RegExp(r'\s+'), '')}';
+    if (seenNamePhone.contains(namePhoneKey)) return false;
+    seenIds.add(c.id);
+    seenNamePhone.add(namePhoneKey);
+    return true;
+  }).toList();
+
+  return uniqueCustomers
       .where((customer) => customer.hasOverduePayment == true)
       .toList();
 });
@@ -138,12 +165,25 @@ final customerCategoryDataProvider = FutureProvider<CustomerCategoryData>((
     final customers = await repository.fetchCustomers();
     final jobs = await repository.fetchJobs();
 
+    // Remove duplicates by ID and name+phone combination
+    final seenIds = <String>{};
+    final seenNamePhone = <String>{};
+    final uniqueCustomers = customers.where((c) {
+      if (seenIds.contains(c.id)) return false;
+      final namePhoneKey =
+          '${c.name.toLowerCase().trim()}_${c.phone.replaceAll(RegExp(r'\s+'), '')}';
+      if (seenNamePhone.contains(namePhoneKey)) return false;
+      seenIds.add(c.id);
+      seenNamePhone.add(namePhoneKey);
+      return true;
+    }).toList();
+
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
     final weekAgoStart = todayStart.subtract(const Duration(days: 7));
 
     // Ödemesi gelen müşteriler, aktif ve pasif müşteriler
-    for (final customer in customers) {
+    for (final customer in uniqueCustomers) {
       try {
         if (customer.hasOverduePayment) {
           overduePayments++;
@@ -166,7 +206,7 @@ final customerCategoryDataProvider = FutureProvider<CustomerCategoryData>((
     final Set<String> upcomingMaintenanceCustomerIds = {};
     final Set<String> maintenanceApproachingCustomerIds = {};
 
-    for (final customer in customers) {
+    for (final customer in uniqueCustomers) {
       try {
         if (customer.hasUpcomingMaintenance) {
           // Bakımı gelen sayfasında gösterilen müşteriler (30 gün içinde)

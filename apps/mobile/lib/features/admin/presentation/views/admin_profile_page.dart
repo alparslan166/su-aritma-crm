@@ -140,15 +140,12 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
       // Get presigned URL from /media/sign endpoint
       final presignedResponse = await client.post(
         "/media/sign",
-        data: {
-          "contentType": "image/jpeg",
-          "prefix": "admin-logos",
-        },
+        data: {"contentType": "image/jpeg", "prefix": "admin-logos"},
       );
 
       final uploadUrl = presignedResponse.data["data"]["uploadUrl"] as String;
       final key = presignedResponse.data["data"]["key"] as String;
-      
+
       debugPrint("Upload URL: $uploadUrl");
       debugPrint("Key: $key");
 
@@ -245,10 +242,10 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
 
       // Refresh profile
       ref.invalidate(adminProfileProvider);
-      
+
       // Reload profile data to get the new logo URL from server
       await _loadProfile();
-      
+
       // Reset selected logo bytes since it's now saved
       _selectedLogoBytes = null;
 
@@ -579,7 +576,9 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             decoration: const InputDecoration(
                               labelText: "Ad Soyad",
                               labelStyle: const TextStyle(color: Colors.black),
-                              floatingLabelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(
+                                color: Colors.black,
+                              ),
                               border: OutlineInputBorder(),
                             ),
                             enabled: _isEditing,
@@ -597,7 +596,9 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             decoration: const InputDecoration(
                               labelText: "Telefon",
                               labelStyle: const TextStyle(color: Colors.black),
-                              floatingLabelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(
+                                color: Colors.black,
+                              ),
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.phone,
@@ -615,7 +616,9 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             decoration: const InputDecoration(
                               labelText: "E-posta",
                               labelStyle: const TextStyle(color: Colors.black),
-                              floatingLabelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(
+                                color: Colors.black,
+                              ),
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.text,
@@ -656,7 +659,9 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             decoration: const InputDecoration(
                               labelText: "Firma Adı",
                               labelStyle: const TextStyle(color: Colors.black),
-                              floatingLabelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(
+                                color: Colors.black,
+                              ),
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.text,
@@ -673,7 +678,9 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             decoration: const InputDecoration(
                               labelText: "Firma Adresi",
                               labelStyle: const TextStyle(color: Colors.black),
-                              floatingLabelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(
+                                color: Colors.black,
+                              ),
                               border: OutlineInputBorder(),
                             ),
                             maxLines: 3,
@@ -687,7 +694,9 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             decoration: const InputDecoration(
                               labelText: "Firma Telefonu",
                               labelStyle: const TextStyle(color: Colors.black),
-                              floatingLabelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(
+                                color: Colors.black,
+                              ),
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.phone,
@@ -700,7 +709,9 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             decoration: const InputDecoration(
                               labelText: "Firma E-postası",
                               labelStyle: const TextStyle(color: Colors.black),
-                              floatingLabelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(
+                                color: Colors.black,
+                              ),
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.text,
@@ -734,7 +745,9 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             decoration: const InputDecoration(
                               labelText: "Vergi Dairesi",
                               labelStyle: const TextStyle(color: Colors.black),
-                              floatingLabelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(
+                                color: Colors.black,
+                              ),
                               border: OutlineInputBorder(),
                             ),
                             enabled: _isEditing,
@@ -746,7 +759,9 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                             decoration: const InputDecoration(
                               labelText: "Vergi Numarası",
                               labelStyle: const TextStyle(color: Colors.black),
-                              floatingLabelStyle: const TextStyle(color: Colors.black),
+                              floatingLabelStyle: const TextStyle(
+                                color: Colors.black,
+                              ),
                               border: OutlineInputBorder(),
                             ),
                             enabled: _isEditing,
@@ -794,21 +809,28 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                                     ),
                                     const SizedBox(height: 12),
                                     Text(
-                                        "Lütfen internet bağlantınızı kontrol edip tekrar deneyin veya sistem yöneticisi ile iletişime geçin.",
-                                        style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                                      "Lütfen internet bağlantınızı kontrol edip tekrar deneyin veya sistem yöneticisi ile iletişime geçin.",
+                                      style: TextStyle(
+                                        color: Colors.red.shade700,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                     const SizedBox(height: 12),
                                     SizedBox(
                                       width: double.infinity,
                                       child: OutlinedButton.icon(
                                         onPressed: () {
-                                          ref.invalidate(adminSubscriptionProvider);
+                                          ref.invalidate(
+                                            adminSubscriptionProvider,
+                                          );
                                         },
                                         icon: const Icon(Icons.refresh),
                                         label: const Text("Tekrar Dene"),
                                         style: OutlinedButton.styleFrom(
                                           foregroundColor: Colors.red.shade700,
-                                          side: BorderSide(color: Colors.red.shade300),
+                                          side: BorderSide(
+                                            color: Colors.red.shade300,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -1224,7 +1246,6 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
     );
   }
 
-
   void _showVerificationCodeDialog() {
     final codeController = TextEditingController();
     final isLoading = ValueNotifier(false);
@@ -1264,7 +1285,10 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
               const Text("E-posta adresinize gönderilen 6 haneli kodu girin:"),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(8),
@@ -1272,7 +1296,11 @@ class _AdminProfilePageState extends ConsumerState<AdminProfilePage> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.email_outlined, size: 18, color: Colors.grey.shade600),
+                    Icon(
+                      Icons.email_outlined,
+                      size: 18,
+                      color: Colors.grey.shade600,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

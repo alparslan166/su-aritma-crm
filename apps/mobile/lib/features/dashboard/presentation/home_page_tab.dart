@@ -20,6 +20,7 @@ import "../../admin/data/models/customer.dart";
 import "../../admin/data/models/maintenance_reminder.dart";
 import "customer_donut_chart.dart";
 import "home_page_provider.dart";
+import "admin_dashboard_page.dart";
 
 class HomePageTab extends ConsumerWidget {
   const HomePageTab({super.key});
@@ -331,11 +332,11 @@ class _StatCardLoading extends StatelessWidget {
   }
 }
 
-class _QuickActionsSection extends StatelessWidget {
+class _QuickActionsSection extends ConsumerWidget {
   const _QuickActionsSection();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -384,12 +385,8 @@ class _QuickActionsSection extends StatelessWidget {
               icon: Icons.add_task,
               color: const Color(0xFF2563EB),
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const AssignJobSheet(),
-                    fullscreenDialog: true,
-                  ),
-                );
+                // Navigate to İş Atama tab (index 4)
+                ref.read(tabNavigationProvider.notifier).state = 4;
               },
             ),
 
@@ -398,12 +395,24 @@ class _QuickActionsSection extends StatelessWidget {
               icon: Icons.person_add_alt_1,
               color: const Color(0xFFF59E0B),
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const AddCustomerSheet(),
-                    fullscreenDialog: true,
-                  ),
-                );
+                // Navigate to Tüm Müşteriler tab (index 0) and open add customer dialog
+                ref.read(tabNavigationProvider.notifier).state = 0;
+                // Small delay to let tab switch, then open dialog
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => Dialog(
+                      insetPadding: const EdgeInsets.all(16),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        child: const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: AddCustomerSheet(),
+                        ),
+                      ),
+                    ),
+                  );
+                });
               },
             ),
             _QuickActionButton(
