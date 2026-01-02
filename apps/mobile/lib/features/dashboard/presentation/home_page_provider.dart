@@ -35,25 +35,43 @@ final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
 
   // Admin profilini al (customerCount için)
   final profile = await ref.watch(adminProfileProvider.future);
-  final customerCount = (profile["customerCount"] as int?) ?? 0;
+  final profileCustomerCount = (profile["customerCount"] as int?) ?? 0;
 
-  // Tüm verileri paralel olarak çek (customers hariç - artık count'u profile'dan alıyoruz)
+  // Tüm verileri paralel olarak çek
   final results = await Future.wait([
-    repository.fetchCustomers(hasOverduePayment: true), // Sadece ödemesi gelenler
+    repository.fetchCustomers(), // Tüm müşterileri çek (toplam sayı için)
+    repository.fetchCustomers(hasOverduePayment: true), // Ödemesi gelenler
     repository.fetchJobs(),
     repository.fetchPersonnel(),
     repository.fetchInventory(),
     repository.fetchMaintenanceReminders(),
   ]);
 
-  final overdueCustomers = results[0] as List<Customer>;
-  final jobs = results[1] as List<Job>;
-  final personnel = results[2] as List<Personnel>;
-  final inventory = results[3] as List<InventoryItem>;
-  final maintenanceReminders = results[4] as List<MaintenanceReminder>;
+  final allCustomers = results[0] as List<Customer>;
+  final overdueCustomers = results[1] as List<Customer>;
+  final jobs = results[2] as List<Job>;
+  final personnel = results[3] as List<Personnel>;
+  final inventory = results[4] as List<InventoryItem>;
+  final maintenanceReminders = results[5] as List<MaintenanceReminder>;
 
-  // İstatistikleri hesapla
-  final totalCustomers = customerCount;
+  // Gerçek müşteri sayısını hesapla (duplicate'ları kaldırarak)
+  final seenIds = <String>{};
+  final seenNamePhone = <String>{};
+  final uniqueCustomers = allCustomers.where((c) {
+    if (seenIds.contains(c.id)) return false;
+    final namePhoneKey =
+        '${c.name.toLowerCase().trim()}_${c.phone.replaceAll(RegExp(r'\s+'), '')}';
+    if (seenNamePhone.contains(namePhoneKey)) return false;
+    seenIds.add(c.id);
+    seenNamePhone.add(namePhoneKey);
+    return true;
+  }).toList();
+
+  // customerCount: profildeki değer veya hesaplanan değer (hangisi büyükse)
+  // Bu, initialize script çalıştırılana kadar doğru sayı gösterir
+  final totalCustomers = profileCustomerCount > 0 
+      ? profileCustomerCount 
+      : uniqueCustomers.length;
   final activeJobs = jobs
       .where((job) => job.status == "PENDING" || job.status == "IN_PROGRESS")
       .length;
