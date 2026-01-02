@@ -1106,11 +1106,11 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       labelStyle: const TextStyle(color: Colors.black),
                       floatingLabelStyle: const TextStyle(color: Colors.black),
                       hintText: "Tarih seçin",
-                      hintStyle: const TextStyle(color: Colors.black54),
+                      hintStyle: const TextStyle(color: Colors.black),
                       suffixIcon: IconButton(
                         icon: const Icon(
                           Icons.calendar_today,
-                          color: Colors.black54,
+                          color: Colors.black,
                         ),
                         onPressed: () async {
                           final picked = await showDatePicker(
@@ -1240,10 +1240,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       labelStyle: const TextStyle(color: Colors.black),
                       floatingLabelStyle: const TextStyle(color: Colors.black),
                       hintText: "Tarih hesaplanacak",
-                      hintStyle: const TextStyle(color: Colors.black54),
+                      hintStyle: const TextStyle(color: Colors.black),
                       suffixIcon: const Icon(
                         Icons.calendar_today,
-                        color: Colors.black54,
+                        color: Colors.black,
                       ),
                       filled: true,
                       fillColor: Colors.grey.shade100,
@@ -1322,7 +1322,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                         hintStyle: TextStyle(color: Colors.black),
                         prefixIcon: Icon(
                           Icons.attach_money,
-                          color: Colors.black54,
+                          color: Colors.black,
                         ),
                       ),
                       keyboardType: TextInputType.number,
@@ -1357,7 +1357,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                             color: Colors.black,
                           ),
                           hintText: "Tarih seçin",
-                          hintStyle: const TextStyle(color: Colors.black54),
+                          hintStyle: const TextStyle(color: Colors.black),
                           suffixIcon: IconButton(
                             icon: const Icon(Icons.calendar_today),
                             onPressed: () async {
@@ -1446,10 +1446,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                           floatingLabelStyle: const TextStyle(
                             color: Colors.black,
                           ),
-                          hintStyle: const TextStyle(color: Colors.black54),
+                          hintStyle: const TextStyle(color: Colors.black),
                           prefixIcon: Icon(
                             Icons.numbers,
-                            color: Colors.black54,
+                            color: Colors.black,
                           ),
                         ),
                         keyboardType: TextInputType.number,
@@ -1487,7 +1487,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                             color: Colors.black,
                           ),
                           hintText: "Tarih seçin",
-                          hintStyle: const TextStyle(color: Colors.black54),
+                          hintStyle: const TextStyle(color: Colors.black),
                           suffixIcon: IconButton(
                             icon: const Icon(Icons.calendar_today),
                             onPressed: () async {
@@ -1517,8 +1517,8 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                           labelText: "Ödeme kaç günde bir olacak?",
                           labelStyle: TextStyle(color: Colors.black),
                           floatingLabelStyle: TextStyle(color: Colors.black),
-                          hintStyle: TextStyle(color: Colors.black54),
-                          prefixIcon: Icon(Icons.repeat, color: Colors.black54),
+                          hintStyle: TextStyle(color: Colors.black),
+                          prefixIcon: Icon(Icons.repeat, color: Colors.black),
                           helperText:
                               "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
                         ),
@@ -1650,10 +1650,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       labelStyle: const TextStyle(color: Colors.black),
                       floatingLabelStyle: const TextStyle(color: Colors.black),
                       hintText: "ör. 1500",
-                      hintStyle: const TextStyle(color: Colors.black54),
+                      hintStyle: const TextStyle(color: Colors.black),
                       prefixIcon: const Icon(
                         Icons.attach_money,
-                        color: Colors.black54,
+                        color: Colors.black,
                       ),
                       suffixText: "₺",
                       border: OutlineInputBorder(
@@ -1678,15 +1678,15 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       labelStyle: const TextStyle(color: Colors.black),
                       floatingLabelStyle: const TextStyle(color: Colors.black),
                       hintText: "Tarih seçin",
-                      hintStyle: const TextStyle(color: Colors.black54),
+                      hintStyle: const TextStyle(color: Colors.black),
                       prefixIcon: const Icon(
                         Icons.calendar_today,
-                        color: Colors.black54,
+                        color: Colors.black,
                       ),
                       suffixIcon: IconButton(
                         icon: const Icon(
                           Icons.calendar_today,
-                          color: Colors.black54,
+                          color: Colors.black,
                         ),
                         onPressed: () async {
                           final picked = await showDatePicker(
