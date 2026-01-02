@@ -55,7 +55,7 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
   bool _maintenanceDateChanged = false; // Bakım tarihi değiştirildi mi?
   double? _initialDebtAmount; // Başlangıç borç miktarı (karşılaştırma için)
   DateTime? _paymentDate; // Ücret alım tarihi
-  
+
   // Kullanılan ürün bilgisi
   final Map<String, int> _selectedMaterials = {};
   bool _deductFromStock = true;
@@ -269,12 +269,13 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
       if (_maintenanceDateChanged) {
         // Kullanıcı değişiklik yaptıysa, yeni tarihi hesapla
         sendNextMaintenanceDate = true;
-        if (_nextMaintenanceMonths >= 0) {
+        if (_nextMaintenanceMonths > 0) {
+          // Sadece 0'dan büyükse tarih hesapla
           calculatedMaintenanceDate = _lastMaintenanceDate.add(
             Duration(days: (_nextMaintenanceMonths * 30).toInt()),
           );
         } else {
-          // Slider 0'dan küçük olamaz ama yine de güvenlik için
+          // Slider 0'daysa tarih gönderme (mevcut değeri koru veya null olarak ayarla)
           calculatedMaintenanceDate = null;
         }
       }
@@ -353,16 +354,20 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                   : null;
               return {
                 "inventoryItemId": entry.key,
-                "name": inventoryItem?.name ?? 
-                    widget.customer.usedProducts?.firstWhere(
-                      (p) => p.inventoryItemId == entry.key,
-                      orElse: () => UsedProduct(
-                        id: "",
-                        inventoryItemId: entry.key,
-                        name: "Ürün",
-                        quantity: entry.value,
-                      ),
-                    ).name ?? "Ürün",
+                "name":
+                    inventoryItem?.name ??
+                    widget.customer.usedProducts
+                        ?.firstWhere(
+                          (p) => p.inventoryItemId == entry.key,
+                          orElse: () => UsedProduct(
+                            id: "",
+                            inventoryItemId: entry.key,
+                            name: "Ürün",
+                            quantity: entry.value,
+                          ),
+                        )
+                        .name ??
+                    "Ürün",
                 "quantity": entry.value,
                 "unit": inventoryItem?.unit ?? "",
               };
@@ -658,13 +663,14 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
     final inventory = await ref.read(adminRepositoryProvider).fetchInventory();
     if (!mounted) return;
 
-    final result = await showDialog<({Map<String, int> selection, bool deductFromStock})>(
-      context: context,
-      builder: (context) => MaterialSelectionDialog(
-        inventory: inventory,
-        initialSelection: _selectedMaterials,
-      ),
-    );
+    final result =
+        await showDialog<({Map<String, int> selection, bool deductFromStock})>(
+          context: context,
+          builder: (context) => MaterialSelectionDialog(
+            inventory: inventory,
+            initialSelection: _selectedMaterials,
+          ),
+        );
     if (result != null) {
       setState(() {
         _selectedMaterials.clear();
@@ -706,297 +712,335 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 8),
-                // Kayıt Bilgileri
-                Text(
-                  "Kayıt Bilgileri",
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  readOnly: true,
-                  controller: TextEditingController(
-                    text: _createdAt != null
-                        ? DateFormat("dd.MM.yyyy").format(_createdAt!)
-                        : "",
+                  // Kayıt Bilgileri
+                  Text(
+                    "Kayıt Bilgileri",
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  decoration: InputDecoration(
-                    labelText: "Kayıt Tarihi",
-                    hintText: "Tarih seçin",
-                    labelStyle: const TextStyle(color: Colors.black),
-                    floatingLabelStyle: const TextStyle(color: Colors.black),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.calendar_today),
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _createdAt ?? DateTime.now(),
-                          firstDate: DateTime.now().subtract(
-                            const Duration(days: 3650),
-                          ),
-                          lastDate: DateTime.now(),
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            _createdAt = picked;
-                          });
-                        }
-                      },
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    readOnly: true,
+                    controller: TextEditingController(
+                      text: _createdAt != null
+                          ? DateFormat("dd.MM.yyyy").format(_createdAt!)
+                          : "",
                     ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: "İsim",
-                    labelStyle: TextStyle(color: Colors.black),
-                    floatingLabelStyle: TextStyle(color: Colors.black),
-                  ),
-                  textCapitalization: TextCapitalization.words,
-                  validator: (value) => value == null || value.trim().length < 2
-                      ? "İsim girin"
-                      : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(
-                    labelText: "Telefon",
-                    labelStyle: TextStyle(color: Colors.black),
-                    floatingLabelStyle: TextStyle(color: Colors.black),
-                  ),
-                  keyboardType: TextInputType.phone,
-                  validator: (value) => value == null || value.trim().length < 6
-                      ? "Telefon girin"
-                      : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: "E-posta (opsiyonel)",
-                    labelStyle: TextStyle(color: Colors.black),
-                    floatingLabelStyle: TextStyle(color: Colors.black),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _addressController,
-                  decoration: const InputDecoration(
-                    labelText: "Adres",
-                    hintText: "Şehir, ilçe, mahalle, sokak, bina no",
-                    labelStyle: TextStyle(color: Colors.black),
-                    floatingLabelStyle: TextStyle(color: Colors.black),
-                  ),
-                  maxLines: 2,
-                  textCapitalization: TextCapitalization.sentences,
-                  validator: (value) => value == null || value.trim().length < 3
-                      ? "Adres girin"
-                      : null,
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Colors.grey.shade200, width: 1),
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _getCurrentLocation,
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 18,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFF2563EB).withValues(alpha: 0.1),
-                                const Color(0xFF2563EB).withValues(alpha: 0.05),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                    decoration: InputDecoration(
+                      labelText: "Kayıt Tarihi",
+                      hintText: "Tarih seçin",
+                      labelStyle: const TextStyle(color: Colors.black),
+                      floatingLabelStyle: const TextStyle(color: Colors.black),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.calendar_today),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _createdAt ?? DateTime.now(),
+                            firstDate: DateTime.now().subtract(
+                              const Duration(days: 3650),
                             ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF2563EB,
-                                  ).withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.my_location,
-                                  color: Color(0xFF2563EB),
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                _currentLocation != null
-                                    ? "Konumu Düzenle"
-                                    : "Bulunduğum Konumu Seç",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade900,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                            lastDate: DateTime.now(),
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              _createdAt = picked;
+                            });
+                          }
+                        },
                       ),
                     ),
                   ),
-                ),
-                // Harita gösterimi - konum ve adres varsa
-                if (_currentLocation != null &&
-                    _addressController.text.trim().isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Colors.grey.shade200, width: 1),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: "İsim",
+                      labelStyle: TextStyle(color: Colors.black),
+                      floatingLabelStyle: TextStyle(color: Colors.black),
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: SizedBox(
-                        height: 200,
-                        width: double.infinity,
-                        child: FlutterMap(
-                          options: MapOptions(
-                            initialCenter: _currentLocation!,
-                            initialZoom: 15.0,
-                            interactionOptions: const InteractionOptions(
-                              flags: InteractiveFlag.none,
+                    textCapitalization: TextCapitalization.words,
+                    validator: (value) =>
+                        value == null || value.trim().length < 2
+                        ? "İsim girin"
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _phoneController,
+                    decoration: const InputDecoration(
+                      labelText: "Telefon",
+                      labelStyle: TextStyle(color: Colors.black),
+                      floatingLabelStyle: TextStyle(color: Colors.black),
+                    ),
+                    keyboardType: TextInputType.phone,
+                    validator: (value) =>
+                        value == null || value.trim().length < 6
+                        ? "Telefon girin"
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(
+                      labelText: "E-posta (opsiyonel)",
+                      labelStyle: TextStyle(color: Colors.black),
+                      floatingLabelStyle: TextStyle(color: Colors.black),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _addressController,
+                    decoration: const InputDecoration(
+                      labelText: "Adres",
+                      hintText: "Şehir, ilçe, mahalle, sokak, bina no",
+                      labelStyle: TextStyle(color: Colors.black),
+                      floatingLabelStyle: TextStyle(color: Colors.black),
+                    ),
+                    maxLines: 2,
+                    textCapitalization: TextCapitalization.sentences,
+                    validator: (value) =>
+                        value == null || value.trim().length < 3
+                        ? "Adres girin"
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.grey.shade200, width: 1),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _getCurrentLocation,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 18,
                             ),
-                          ),
-                          children: [
-                            TileLayer(
-                              urlTemplate:
-                                  "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                              userAgentPackageName: "com.suaritma.app",
-                              maxZoom: 19,
-                              minZoom: 3,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(
+                                    0xFF2563EB,
+                                  ).withValues(alpha: 0.1),
+                                  const Color(
+                                    0xFF2563EB,
+                                  ).withValues(alpha: 0.05),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
                             ),
-                            MarkerLayer(
-                              markers: [
-                                Marker(
-                                  point: _currentLocation!,
-                                  width: 40,
-                                  height: 40,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF2563EB,
+                                    ).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                   child: const Icon(
-                                    Icons.location_on,
+                                    Icons.my_location,
                                     color: Color(0xFF2563EB),
-                                    size: 40,
+                                    size: 22,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  _currentLocation != null
+                                      ? "Konumu Düzenle"
+                                      : "Bulunduğum Konumu Seç",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade900,
+                                    letterSpacing: -0.2,
                                   ),
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ],
-                // Kullanılan Ürün Bilgisi
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-                Text(
-                  "Kullanılan Ürün Bilgisi",
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Colors.grey.shade200, width: 1),
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _selectMaterials,
+                  // Harita gösterimi - konum ve adres varsa
+                  if (_currentLocation != null &&
+                      _addressController.text.trim().isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 18,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFF10B981).withValues(alpha: 0.1),
-                                const Color(0xFF10B981).withValues(alpha: 0.05),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.inventory_2_outlined,
-                                  color: Color(0xFF10B981),
-                                  size: 22,
-                                ),
+                        side: BorderSide(color: Colors.grey.shade200, width: 1),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: SizedBox(
+                          height: 200,
+                          width: double.infinity,
+                          child: FlutterMap(
+                            options: MapOptions(
+                              initialCenter: _currentLocation!,
+                              initialZoom: 15.0,
+                              interactionOptions: const InteractionOptions(
+                                flags: InteractiveFlag.none,
                               ),
-                              const SizedBox(width: 12),
-                              Text(
-                                _selectedMaterials.isEmpty
-                                    ? "Ürün Ekle"
-                                    : "Ürünleri Düzenle",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade900,
-                                  letterSpacing: -0.2,
-                                ),
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate:
+                                    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                                userAgentPackageName: "com.suaritma.app",
+                                maxZoom: 19,
+                                minZoom: 3,
+                              ),
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    point: _currentLocation!,
+                                    width: 40,
+                                    height: 40,
+                                    child: const Icon(
+                                      Icons.location_on,
+                                      color: Color(0xFF2563EB),
+                                      size: 40,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ),
                       ),
                     ),
+                  ],
+                  // Kullanılan Ürün Bilgisi
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Kullanılan Ürün Bilgisi",
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                ),
-                // Seçili ürünler
-                if (_selectedMaterials.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _selectedMaterials.entries.map((entry) {
-                      final item = _inventoryList.isNotEmpty
-                          ? _inventoryList.firstWhere(
-                              (i) => i.id == entry.key,
-                              orElse: () => InventoryItem(
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.grey.shade200, width: 1),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _selectMaterials,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 18,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(
+                                    0xFF10B981,
+                                  ).withValues(alpha: 0.1),
+                                  const Color(
+                                    0xFF10B981,
+                                  ).withValues(alpha: 0.05),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF10B981,
+                                    ).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.inventory_2_outlined,
+                                    color: Color(0xFF10B981),
+                                    size: 22,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  _selectedMaterials.isEmpty
+                                      ? "Ürün Ekle"
+                                      : "Ürünleri Düzenle",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade900,
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Seçili ürünler
+                  if (_selectedMaterials.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _selectedMaterials.entries.map((entry) {
+                        final item = _inventoryList.isNotEmpty
+                            ? _inventoryList.firstWhere(
+                                (i) => i.id == entry.key,
+                                orElse: () => InventoryItem(
+                                  id: entry.key,
+                                  name:
+                                      widget.customer.usedProducts
+                                          ?.firstWhere(
+                                            (p) =>
+                                                p.inventoryItemId == entry.key,
+                                            orElse: () => UsedProduct(
+                                              id: "",
+                                              inventoryItemId: entry.key,
+                                              name: "Ürün",
+                                              quantity: entry.value,
+                                            ),
+                                          )
+                                          .name ??
+                                      "Ürün",
+                                  category: "",
+                                  stockQty: 0,
+                                  criticalThreshold: 0,
+                                  unitPrice: 0,
+                                  isActive: true,
+                                  unit: "",
+                                ),
+                              )
+                            : InventoryItem(
                                 id: entry.key,
-                                name: widget.customer.usedProducts
+                                name:
+                                    widget.customer.usedProducts
                                         ?.firstWhere(
                                           (p) => p.inventoryItemId == entry.key,
                                           orElse: () => UsedProduct(
@@ -1014,334 +1058,205 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                                 unitPrice: 0,
                                 isActive: true,
                                 unit: "",
+                              );
+                        return Chip(
+                          avatar: CircleAvatar(
+                            backgroundColor: const Color(
+                              0xFF10B981,
+                            ).withValues(alpha: 0.2),
+                            child: Text(
+                              "${entry.value}",
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF10B981),
+                                fontWeight: FontWeight.bold,
                               ),
-                            )
-                          : InventoryItem(
-                              id: entry.key,
-                              name: widget.customer.usedProducts
-                                      ?.firstWhere(
-                                        (p) => p.inventoryItemId == entry.key,
-                                        orElse: () => UsedProduct(
-                                          id: "",
-                                          inventoryItemId: entry.key,
-                                          name: "Ürün",
-                                          quantity: entry.value,
-                                        ),
-                                      )
-                                      .name ??
-                                  "Ürün",
-                              category: "",
-                              stockQty: 0,
-                              criticalThreshold: 0,
-                              unitPrice: 0,
-                              isActive: true,
-                              unit: "",
-                            );
-                      return Chip(
-                        avatar: CircleAvatar(
-                          backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.2),
-                          child: Text(
-                            "${entry.value}",
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF10B981),
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ),
-                        label: Text(item.name),
-                        deleteIcon: const Icon(Icons.close, size: 18),
-                        onDeleted: () {
-                          setState(() {
-                            _selectedMaterials.remove(entry.key);
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                ],
-                // Bakım Bilgileri
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-                Text(
-                  "Bakım Bilgileri",
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 16),
-                // Son bakım tarihi
-                TextFormField(
-                  readOnly: true,
-                  controller: TextEditingController(
-                    text: DateFormat("dd.MM.yyyy").format(_lastMaintenanceDate),
-                  ),
-                  decoration: InputDecoration(
-                    labelText: "Son bakım tarihi",
-                    labelStyle: const TextStyle(color: Colors.black),
-                    floatingLabelStyle: const TextStyle(color: Colors.black),
-                    hintText: "Tarih seçin",
-                    hintStyle: const TextStyle(color: Colors.black54),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.calendar_today, color: Colors.black54),
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _lastMaintenanceDate,
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2100),
+                          label: Text(item.name),
+                          deleteIcon: const Icon(Icons.close, size: 18),
+                          onDeleted: () {
+                            setState(() {
+                              _selectedMaterials.remove(entry.key);
+                            });
+                          },
                         );
-                        if (picked != null) {
-                          setState(() {
-                            _lastMaintenanceDate = picked;
-                            _maintenanceDateChanged =
-                                true; // Kullanıcı tarihi değiştirdi
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // Sonraki Bakım Tarihi Slider
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Sonraki Bakım Tarihi ?",
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Minus button
-                            GestureDetector(
-                              onTap: () {
-                                if (_nextMaintenanceMonths > 0) {
-                                  setState(() {
-                                    _nextMaintenanceMonths--;
-                                    _maintenanceDateChanged = true;
-                                  });
-                                }
-                              },
-                              child: Container(
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF2563EB),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Icon(
-                                  Icons.remove,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              "${_nextMaintenanceMonths.toInt()} ay",
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF2563EB),
-                                  ),
-                            ),
-                            const SizedBox(width: 12),
-                            // Plus button
-                            GestureDetector(
-                              onTap: () {
-                                if (_nextMaintenanceMonths < 12) {
-                                  setState(() {
-                                    _nextMaintenanceMonths++;
-                                    _maintenanceDateChanged = true;
-                                  });
-                                }
-                              },
-                              child: Container(
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF2563EB),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Icon(
-                                  Icons.add,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Slider(
-                      value: _nextMaintenanceMonths,
-                      min: 0,
-                      max: 12,
-                      divisions: 12,
-                      label: "${_nextMaintenanceMonths.toInt()} ay",
-                      onChanged: (value) {
-                        setState(() {
-                          _nextMaintenanceMonths = value;
-                          _maintenanceDateChanged =
-                              true; // Kullanıcı slider'ı değiştirdi
-                        });
-                      },
+                      }).toList(),
                     ),
                   ],
-                ),
-                const SizedBox(height: 16),
-                // Bakım Zamanı (Hesaplanan)
-                TextFormField(
-                  readOnly: true,
-                  controller: TextEditingController(
-                    text: DateFormat("dd.MM.yyyy").format(
-                      _lastMaintenanceDate.add(
-                        Duration(days: (_nextMaintenanceMonths * 30).toInt()),
-                      ),
-                    ),
+                  // Bakım Bilgileri
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Bakım Bilgileri",
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  decoration: InputDecoration(
-                    labelText: "Bakım Zamanı",
-                    labelStyle: const TextStyle(color: Colors.black),
-                    floatingLabelStyle: const TextStyle(color: Colors.black),
-                    hintText: "Tarih hesaplanacak",
-                    hintStyle: const TextStyle(color: Colors.black54),
-                    suffixIcon: const Icon(Icons.calendar_today, color: Colors.black54),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                  ),
-                  style: const TextStyle(color: Colors.black),
-                ),
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-                Text(
-                  "Borç Bilgileri (Opsiyonel)",
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          setState(() {
-                            _hasDebt = true;
-                          });
-                        },
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: _hasDebt == true
-                              ? const Color(0xFF2563EB).withValues(alpha: 0.1)
-                              : null,
-                          side: BorderSide(
-                            color: _hasDebt == true
-                                ? const Color(0xFF2563EB)
-                                : Colors.grey.shade300,
-                            width: _hasDebt == true ? 2 : 1,
-                          ),
-                        ),
-                        child: const Text("Evet"),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          setState(() {
-                            _hasDebt = false;
-                            _debtAmountController.clear();
-                            _debtHasInstallment = false;
-                            _installmentCountController.clear();
-                            _installmentIntervalDaysController.clear();
-                            _nextDebtDate = null;
-                            _installmentStartDate = null;
-                          });
-                        },
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: _hasDebt == false
-                              ? const Color(0xFF2563EB).withValues(alpha: 0.1)
-                              : null,
-                          side: BorderSide(
-                            color: _hasDebt == false
-                                ? const Color(0xFF2563EB)
-                                : Colors.grey.shade300,
-                            width: _hasDebt == false ? 2 : 1,
-                          ),
-                        ),
-                        child: const Text("Hayır"),
-                      ),
-                    ),
-                  ],
-                ),
-                if (_hasDebt == true) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+                  // Son bakım tarihi
                   TextFormField(
-                    controller: _debtAmountController,
-                    decoration: const InputDecoration(
-                      labelText: "Borç Miktarı (TL)",
+                    readOnly: true,
+                    controller: TextEditingController(
+                      text: DateFormat(
+                        "dd.MM.yyyy",
+                      ).format(_lastMaintenanceDate),
+                    ),
+                    decoration: InputDecoration(
+                      labelText: "Son bakım tarihi",
                       labelStyle: const TextStyle(color: Colors.black),
                       floatingLabelStyle: const TextStyle(color: Colors.black),
+                      hintText: "Tarih seçin",
                       hintStyle: const TextStyle(color: Colors.black54),
-                      prefixIcon: Icon(Icons.attach_money, color: Colors.black54),
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (_hasDebt == true &&
-                          (value == null || value.trim().isEmpty)) {
-                        return "Borç miktarı girin";
-                      }
-                      if (value != null && value.trim().isNotEmpty) {
-                        final amount = double.tryParse(value);
-                        if (amount == null || amount <= 0) {
-                          return "Geçerli bir miktar girin";
-                        }
-                      }
-                      return null;
-                    },
-                  ),
-                  // Ödeme Tarihi - Sadece taksit yoksa göster
-                  if (!_debtHasInstallment) ...[
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      readOnly: true,
-                      controller: TextEditingController(
-                        text: _nextDebtDate != null
-                            ? DateFormat("dd.MM.yyyy").format(_nextDebtDate!)
-                            : "",
+                      suffixIcon: IconButton(
+                        icon: const Icon(
+                          Icons.calendar_today,
+                          color: Colors.black54,
+                        ),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _lastMaintenanceDate,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              _lastMaintenanceDate = picked;
+                              _maintenanceDateChanged =
+                                  true; // Kullanıcı tarihi değiştirdi
+                            });
+                          }
+                        },
                       ),
-                      decoration: InputDecoration(
-                        labelText: "Ödeme Tarihi",
-                        labelStyle: const TextStyle(color: Colors.black),
-                        floatingLabelStyle: const TextStyle(color: Colors.black),
-                        hintText: "Tarih seçin",
-                        hintStyle: const TextStyle(color: Colors.black54),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.calendar_today),
-                          onPressed: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: _nextDebtDate ?? DateTime.now(),
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime.now().add(
-                                const Duration(days: 3650),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Sonraki Bakım Tarihi Slider
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Sonraki Bakım Tarihi ?",
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Minus button
+                              GestureDetector(
+                                onTap: () {
+                                  if (_nextMaintenanceMonths > 0) {
+                                    setState(() {
+                                      _nextMaintenanceMonths--;
+                                      _maintenanceDateChanged = true;
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2563EB),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(
+                                    Icons.remove,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
                               ),
-                            );
-                            if (picked != null) {
-                              setState(() {
-                                _nextDebtDate = picked;
-                              });
-                            }
-                          },
+                              const SizedBox(width: 12),
+                              Text(
+                                "${_nextMaintenanceMonths.toInt()} ay",
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF2563EB),
+                                    ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Plus button
+                              GestureDetector(
+                                onTap: () {
+                                  if (_nextMaintenanceMonths < 12) {
+                                    setState(() {
+                                      _nextMaintenanceMonths++;
+                                      _maintenanceDateChanged = true;
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2563EB),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(
+                                    Icons.add,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Slider(
+                        value: _nextMaintenanceMonths,
+                        min: 0,
+                        max: 12,
+                        divisions: 12,
+                        label: "${_nextMaintenanceMonths.toInt()} ay",
+                        onChanged: (value) {
+                          setState(() {
+                            _nextMaintenanceMonths = value;
+                            _maintenanceDateChanged =
+                                true; // Kullanıcı slider'ı değiştirdi
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Bakım Zamanı (Hesaplanan)
+                  TextFormField(
+                    readOnly: true,
+                    controller: TextEditingController(
+                      text: DateFormat("dd.MM.yyyy").format(
+                        _lastMaintenanceDate.add(
+                          Duration(days: (_nextMaintenanceMonths * 30).toInt()),
                         ),
                       ),
                     ),
-                  ],
+                    decoration: InputDecoration(
+                      labelText: "Bakım Zamanı",
+                      labelStyle: const TextStyle(color: Colors.black),
+                      floatingLabelStyle: const TextStyle(color: Colors.black),
+                      hintText: "Tarih hesaplanacak",
+                      hintStyle: const TextStyle(color: Colors.black54),
+                      suffixIcon: const Icon(
+                        Icons.calendar_today,
+                        color: Colors.black54,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                    ),
+                    style: const TextStyle(color: Colors.black),
+                  ),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Borç Bilgileri (Opsiyonel)",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -1349,23 +1264,21 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                         child: OutlinedButton(
                           onPressed: () {
                             setState(() {
-                              _debtHasInstallment = true;
-                              _nextDebtDate =
-                                  null; // Taksit seçildiğinde ödeme tarihini temizle
+                              _hasDebt = true;
                             });
                           },
                           style: OutlinedButton.styleFrom(
-                            backgroundColor: _debtHasInstallment
+                            backgroundColor: _hasDebt == true
                                 ? const Color(0xFF2563EB).withValues(alpha: 0.1)
                                 : null,
                             side: BorderSide(
-                              color: _debtHasInstallment
+                              color: _hasDebt == true
                                   ? const Color(0xFF2563EB)
                                   : Colors.grey.shade300,
-                              width: _debtHasInstallment ? 2 : 1,
+                              width: _hasDebt == true ? 2 : 1,
                             ),
                           ),
-                          child: const Text("Taksitli"),
+                          child: const Text("Evet"),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1373,312 +1286,470 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                         child: OutlinedButton(
                           onPressed: () {
                             setState(() {
+                              _hasDebt = false;
+                              _debtAmountController.clear();
                               _debtHasInstallment = false;
                               _installmentCountController.clear();
                               _installmentIntervalDaysController.clear();
+                              _nextDebtDate = null;
                               _installmentStartDate = null;
                             });
                           },
                           style: OutlinedButton.styleFrom(
-                            backgroundColor: !_debtHasInstallment
+                            backgroundColor: _hasDebt == false
                                 ? const Color(0xFF2563EB).withValues(alpha: 0.1)
                                 : null,
                             side: BorderSide(
-                              color: !_debtHasInstallment
+                              color: _hasDebt == false
                                   ? const Color(0xFF2563EB)
                                   : Colors.grey.shade300,
-                              width: !_debtHasInstallment ? 2 : 1,
+                              width: _hasDebt == false ? 2 : 1,
                             ),
                           ),
-                          child: const Text("Peşin"),
+                          child: const Text("Hayır"),
                         ),
                       ),
                     ],
                   ),
-                  if (_debtHasInstallment) ...[
+                  if (_hasDebt == true) ...[
                     const SizedBox(height: 12),
                     TextFormField(
-                      controller: _installmentCountController,
+                      controller: _debtAmountController,
                       decoration: const InputDecoration(
-                        labelText: "Taksit Sayısı",
-                        labelStyle: const TextStyle(color: Colors.black),
-                        floatingLabelStyle: const TextStyle(color: Colors.black),
-                        hintStyle: const TextStyle(color: Colors.black54),
-                        prefixIcon: Icon(Icons.numbers, color: Colors.black54),
+                        labelText: "Borç Miktarı (TL)",
+                        labelStyle: TextStyle(color: Colors.black),
+                        floatingLabelStyle: TextStyle(color: Colors.black),
+                        hintStyle: TextStyle(color: Colors.black),
+                        prefixIcon: Icon(
+                          Icons.attach_money,
+                          color: Colors.black54,
+                        ),
                       ),
                       keyboardType: TextInputType.number,
-                      onChanged: (_) => setState(() {}), // Kutucukları güncelle
                       validator: (value) {
-                        if (_debtHasInstallment &&
+                        if (_hasDebt == true &&
                             (value == null || value.trim().isEmpty)) {
-                          return "Taksit sayısı girin";
+                          return "Borç miktarı girin";
                         }
                         if (value != null && value.trim().isNotEmpty) {
-                          final count = int.tryParse(value);
-                          if (count == null || count <= 0) {
-                            return "Geçerli bir sayı girin";
+                          final amount = double.tryParse(value);
+                          if (amount == null || amount <= 0) {
+                            return "Geçerli bir miktar girin";
                           }
                         }
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
-                    // Taksit Başlama Tarihi
-                    TextFormField(
-                      readOnly: true,
-                      controller: TextEditingController(
-                        text: _installmentStartDate != null
-                            ? DateFormat(
-                                "dd.MM.yyyy",
-                              ).format(_installmentStartDate!)
-                            : "",
-                      ),
-                      decoration: InputDecoration(
-                        labelText: "Taksit Başlama Tarihi",
-                        labelStyle: const TextStyle(color: Colors.black),
-                        floatingLabelStyle: const TextStyle(color: Colors.black),
-                        hintText: "Tarih seçin",
-                        hintStyle: const TextStyle(color: Colors.black54),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.calendar_today),
-                          onPressed: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate:
-                                  _installmentStartDate ?? DateTime.now(),
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime.now().add(
-                                const Duration(days: 3650),
-                              ),
-                            );
-                            if (picked != null) {
-                              setState(() {
-                                _installmentStartDate = picked;
-                              });
-                            }
-                          },
+                    // Ödeme Tarihi - Sadece taksit yoksa göster
+                    if (!_debtHasInstallment) ...[
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        readOnly: true,
+                        controller: TextEditingController(
+                          text: _nextDebtDate != null
+                              ? DateFormat("dd.MM.yyyy").format(_nextDebtDate!)
+                              : "",
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Ödeme Tekrar Günü
-                    TextFormField(
-                      controller: _installmentIntervalDaysController,
-                      decoration: const InputDecoration(
-                        labelText: "Ödeme kaç günde bir olacak?",
-                        labelStyle: const TextStyle(color: Colors.black),
-                        floatingLabelStyle: const TextStyle(color: Colors.black),
-                        hintStyle: const TextStyle(color: Colors.black54),
-                        prefixIcon: Icon(Icons.repeat, color: Colors.black54),
-                        helperText:
-                            "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
-                      ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (_) => setState(() {}), // Kutucukları güncelle
-                      validator: (value) {
-                        if (_debtHasInstallment &&
-                            (value == null || value.trim().isEmpty)) {
-                          return "Ödeme tekrar günü girin";
-                        }
-                        if (value != null && value.trim().isNotEmpty) {
-                          final days = int.tryParse(value);
-                          if (days == null || days <= 0) {
-                            return "Geçerli bir gün sayısı girin";
-                          }
-                        }
-                        return null;
-                      },
-                    ),
-                    // Taksit Önizleme Kutucukları
-                    if (_installmentCountController.text.isNotEmpty &&
-                        int.tryParse(_installmentCountController.text) != null &&
-                        int.parse(_installmentCountController.text) > 0) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        "Taksit Planı Önizlemesi",
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: List.generate(
-                            int.parse(_installmentCountController.text),
-                            (index) {
-                              final installmentNo = index + 1;
-                              final intervalDays = int.tryParse(
-                                    _installmentIntervalDaysController.text,
-                                  ) ??
-                                  30;
-                              final startDate =
-                                  _installmentStartDate ?? DateTime.now();
-                              final dueDate = startDate.add(
-                                Duration(days: intervalDays * installmentNo),
-                              );
-                              final debtAmount = double.tryParse(
-                                    _debtAmountController.text,
-                                  ) ??
-                                  0;
-                              final installmentAmount =
-                                  debtAmount /
-                                  int.parse(_installmentCountController.text);
-
-                              return Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: const Color(0xFF2563EB).withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      "$installmentNo",
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF2563EB),
-                                      ),
-                                    ),
-                                    Text(
-                                      "${installmentAmount.toStringAsFixed(0)}₺",
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                    Text(
-                                      DateFormat("dd/MM/yyyy").format(dueDate),
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.grey.shade500,
-                                      ),
-                                    ),
-                                  ],
+                        decoration: InputDecoration(
+                          labelText: "Ödeme Tarihi",
+                          labelStyle: const TextStyle(color: Colors.black),
+                          floatingLabelStyle: const TextStyle(
+                            color: Colors.black,
+                          ),
+                          hintText: "Tarih seçin",
+                          hintStyle: const TextStyle(color: Colors.black54),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.calendar_today),
+                            onPressed: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: _nextDebtDate ?? DateTime.now(),
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 3650),
                                 ),
                               );
+                              if (picked != null) {
+                                setState(() {
+                                  _nextDebtDate = picked;
+                                });
+                              }
                             },
                           ),
                         ),
                       ),
                     ],
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setState(() {
+                                _debtHasInstallment = true;
+                                _nextDebtDate =
+                                    null; // Taksit seçildiğinde ödeme tarihini temizle
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: _debtHasInstallment
+                                  ? const Color(
+                                      0xFF2563EB,
+                                    ).withValues(alpha: 0.1)
+                                  : null,
+                              side: BorderSide(
+                                color: _debtHasInstallment
+                                    ? const Color(0xFF2563EB)
+                                    : Colors.grey.shade300,
+                                width: _debtHasInstallment ? 2 : 1,
+                              ),
+                            ),
+                            child: const Text("Taksitli"),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setState(() {
+                                _debtHasInstallment = false;
+                                _installmentCountController.clear();
+                                _installmentIntervalDaysController.clear();
+                                _installmentStartDate = null;
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: !_debtHasInstallment
+                                  ? const Color(
+                                      0xFF2563EB,
+                                    ).withValues(alpha: 0.1)
+                                  : null,
+                              side: BorderSide(
+                                color: !_debtHasInstallment
+                                    ? const Color(0xFF2563EB)
+                                    : Colors.grey.shade300,
+                                width: !_debtHasInstallment ? 2 : 1,
+                              ),
+                            ),
+                            child: const Text("Peşin"),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_debtHasInstallment) ...[
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _installmentCountController,
+                        decoration: const InputDecoration(
+                          labelText: "Taksit Sayısı",
+                          labelStyle: const TextStyle(color: Colors.black),
+                          floatingLabelStyle: const TextStyle(
+                            color: Colors.black,
+                          ),
+                          hintStyle: const TextStyle(color: Colors.black54),
+                          prefixIcon: Icon(
+                            Icons.numbers,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (_) =>
+                            setState(() {}), // Kutucukları güncelle
+                        validator: (value) {
+                          if (_debtHasInstallment &&
+                              (value == null || value.trim().isEmpty)) {
+                            return "Taksit sayısı girin";
+                          }
+                          if (value != null && value.trim().isNotEmpty) {
+                            final count = int.tryParse(value);
+                            if (count == null || count <= 0) {
+                              return "Geçerli bir sayı girin";
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      // Taksit Başlama Tarihi
+                      TextFormField(
+                        readOnly: true,
+                        controller: TextEditingController(
+                          text: _installmentStartDate != null
+                              ? DateFormat(
+                                  "dd.MM.yyyy",
+                                ).format(_installmentStartDate!)
+                              : "",
+                        ),
+                        decoration: InputDecoration(
+                          labelText: "Taksit Başlama Tarihi",
+                          labelStyle: const TextStyle(color: Colors.black),
+                          floatingLabelStyle: const TextStyle(
+                            color: Colors.black,
+                          ),
+                          hintText: "Tarih seçin",
+                          hintStyle: const TextStyle(color: Colors.black54),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.calendar_today),
+                            onPressed: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate:
+                                    _installmentStartDate ?? DateTime.now(),
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 3650),
+                                ),
+                              );
+                              if (picked != null) {
+                                setState(() {
+                                  _installmentStartDate = picked;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Ödeme Tekrar Günü
+                      TextFormField(
+                        controller: _installmentIntervalDaysController,
+                        decoration: const InputDecoration(
+                          labelText: "Ödeme kaç günde bir olacak?",
+                          labelStyle: const TextStyle(color: Colors.black),
+                          floatingLabelStyle: const TextStyle(
+                            color: Colors.black,
+                          ),
+                          hintStyle: const TextStyle(color: Colors.black54),
+                          prefixIcon: Icon(Icons.repeat, color: Colors.black54),
+                          helperText:
+                              "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (_) =>
+                            setState(() {}), // Kutucukları güncelle
+                        validator: (value) {
+                          if (_debtHasInstallment &&
+                              (value == null || value.trim().isEmpty)) {
+                            return "Ödeme tekrar günü girin";
+                          }
+                          if (value != null && value.trim().isNotEmpty) {
+                            final days = int.tryParse(value);
+                            if (days == null || days <= 0) {
+                              return "Geçerli bir gün sayısı girin";
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                      // Taksit Önizleme Kutucukları
+                      if (_installmentCountController.text.isNotEmpty &&
+                          int.tryParse(_installmentCountController.text) !=
+                              null &&
+                          int.parse(_installmentCountController.text) > 0) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          "Taksit Planı Önizlemesi",
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade700,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: List.generate(
+                              int.parse(_installmentCountController.text),
+                              (index) {
+                                final installmentNo = index + 1;
+                                final intervalDays =
+                                    int.tryParse(
+                                      _installmentIntervalDaysController.text,
+                                    ) ??
+                                    30;
+                                final startDate =
+                                    _installmentStartDate ?? DateTime.now();
+                                final dueDate = startDate.add(
+                                  Duration(days: intervalDays * installmentNo),
+                                );
+                                final debtAmount =
+                                    double.tryParse(
+                                      _debtAmountController.text,
+                                    ) ??
+                                    0;
+                                final installmentAmount =
+                                    debtAmount /
+                                    int.parse(_installmentCountController.text);
+
+                                return Container(
+                                  margin: const EdgeInsets.only(right: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF2563EB,
+                                    ).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFF2563EB,
+                                      ).withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        "$installmentNo",
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF2563EB),
+                                        ),
+                                      ),
+                                      Text(
+                                        "${installmentAmount.toStringAsFixed(0)}₺",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      Text(
+                                        DateFormat(
+                                          "dd/MM/yyyy",
+                                        ).format(dueDate),
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ],
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Alınan Ücret",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _receivedAmountController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: "Alınan Ücret (₺)",
+                      labelStyle: const TextStyle(color: Colors.black),
+                      floatingLabelStyle: const TextStyle(color: Colors.black),
+                      hintText: "ör. 1500",
+                      hintStyle: const TextStyle(color: Colors.black54),
+                      prefixIcon: const Icon(
+                        Icons.attach_money,
+                        color: Colors.black54,
+                      ),
+                      suffixText: "₺",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                    ),
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    readOnly: true,
+                    controller: TextEditingController(
+                      text: _paymentDate != null
+                          ? DateFormat("dd.MM.yyyy").format(_paymentDate!)
+                          : "",
+                    ),
+                    decoration: InputDecoration(
+                      labelText: "Ücret Alım Tarihi",
+                      labelStyle: const TextStyle(color: Colors.black),
+                      floatingLabelStyle: const TextStyle(color: Colors.black),
+                      hintText: "Tarih seçin",
+                      hintStyle: const TextStyle(color: Colors.black54),
+                      prefixIcon: const Icon(
+                        Icons.calendar_today,
+                        color: Colors.black54,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: const Icon(
+                          Icons.calendar_today,
+                          color: Colors.black54,
+                        ),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _paymentDate ?? DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              _paymentDate = picked;
+                            });
+                          }
+                        },
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _submitting
+                          ? null
+                          : () {
+                              debugPrint(
+                                "═══════════════════════════════════════════════════════════════════════════════════════════",
+                              );
+                              debugPrint(
+                                "🔵🔵🔵 Frontend - Güncelle BUTONUNA BASILDI 🔵🔵🔵",
+                              );
+                              debugPrint(
+                                "   Customer ID: ${widget.customer.id}",
+                              );
+                              debugPrint(
+                                "═══════════════════════════════════════════════════════════════════════════════════════════",
+                              );
+                              _submit();
+                            },
+                      child: _submitting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text("Güncelle"),
+                    ),
+                  ),
+                  const SizedBox(height: 80),
+                  SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
                 ],
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-                Text(
-                  "Alınan Ücret",
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _receivedAmountController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: "Alınan Ücret (₺)",
-                    labelStyle: const TextStyle(color: Colors.black),
-                    floatingLabelStyle: const TextStyle(color: Colors.black),
-                    hintText: "ör. 1500",
-                    hintStyle: const TextStyle(color: Colors.black54),
-                    prefixIcon: const Icon(Icons.attach_money, color: Colors.black54),
-                    suffixText: "₺",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                  ),
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  readOnly: true,
-                  controller: TextEditingController(
-                    text: _paymentDate != null
-                        ? DateFormat("dd.MM.yyyy").format(_paymentDate!)
-                        : "",
-                  ),
-                  decoration: InputDecoration(
-                    labelText: "Ücret Alım Tarihi",
-                    labelStyle: const TextStyle(color: Colors.black),
-                    floatingLabelStyle: const TextStyle(color: Colors.black),
-                    hintText: "Tarih seçin",
-                    hintStyle: const TextStyle(color: Colors.black54),
-                    prefixIcon: const Icon(Icons.calendar_today, color: Colors.black54),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.calendar_today, color: Colors.black54),
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _paymentDate ?? DateTime.now(),
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2100),
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            _paymentDate = picked;
-                          });
-                        }
-                      },
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: _submitting
-                        ? null
-                        : () {
-                            debugPrint(
-                              "═══════════════════════════════════════════════════════════════════════════════════════════",
-                            );
-                            debugPrint(
-                              "🔵🔵🔵 Frontend - Güncelle BUTONUNA BASILDI 🔵🔵🔵",
-                            );
-                            debugPrint("   Customer ID: ${widget.customer.id}");
-                            debugPrint(
-                              "═══════════════════════════════════════════════════════════════════════════════════════════",
-                            );
-                            _submit();
-                          },
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text("Güncelle"),
-                  ),
-                ),
-                const SizedBox(height: 80),
-                SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-              ],
+              ),
             ),
           ),
         ),
-      ),
       ],
     );
   }
 }
-
-

@@ -362,6 +362,7 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                         controller: _debtAmountController,
                         decoration: const InputDecoration(
                           labelText: "Borç Miktarı (TL)",
+                          labelStyle: TextStyle(color: Colors.black),
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.attach_money),
                         ),
