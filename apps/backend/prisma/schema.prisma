@@ -79,6 +79,7 @@ model Admin {
   taxOffice      String?
   taxNumber      String?
   logoUrl        String?
+  customerCount  Int                @default(0)
   personnel      Personnel[]
   jobs           Job[]
   customers      Customer[]
