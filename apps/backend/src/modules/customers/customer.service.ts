@@ -372,6 +372,12 @@ class CustomerService {
       );
     }
 
+    // Increment admin's customerCount
+    await prisma.admin.update({
+      where: { id: adminId },
+      data: { customerCount: { increment: 1 } },
+    });
+
     return customer;
   }
 
@@ -918,6 +924,12 @@ class CustomerService {
       throw new AppError("Cannot delete customer with active jobs", 400);
     }
     await prisma.customer.delete({ where: { id: customerId } });
+
+    // Decrement admin's customerCount
+    await prisma.admin.update({
+      where: { id: adminId },
+      data: { customerCount: { decrement: 1 } },
+    });
   }
 }
 

@@ -7,6 +7,7 @@ import "../../admin/data/models/inventory_item.dart";
 import "../../admin/data/models/job.dart";
 import "../../admin/data/models/maintenance_reminder.dart";
 import "../../admin/data/models/personnel.dart";
+import "../../admin/presentation/views/admin_profile_page.dart";
 
 class DashboardStats {
   DashboardStats({
@@ -32,36 +33,27 @@ final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
   // Stok listesi değiştiğinde otomatik güncellenmesi için dinle
   ref.watch(inventoryListProvider);
 
-  // Tüm verileri paralel olarak çek
+  // Admin profilini al (customerCount için)
+  final profile = await ref.watch(adminProfileProvider.future);
+  final customerCount = (profile["customerCount"] as int?) ?? 0;
+
+  // Tüm verileri paralel olarak çek (customers hariç - artık count'u profile'dan alıyoruz)
   final results = await Future.wait([
-    repository.fetchCustomers(),
+    repository.fetchCustomers(hasOverduePayment: true), // Sadece ödemesi gelenler
     repository.fetchJobs(),
     repository.fetchPersonnel(),
     repository.fetchInventory(),
     repository.fetchMaintenanceReminders(),
   ]);
 
-  final customers = results[0] as List<Customer>;
+  final overdueCustomers = results[0] as List<Customer>;
   final jobs = results[1] as List<Job>;
   final personnel = results[2] as List<Personnel>;
   final inventory = results[3] as List<InventoryItem>;
   final maintenanceReminders = results[4] as List<MaintenanceReminder>;
 
-  // Remove duplicates by ID and name+phone combination
-  final seenIds = <String>{};
-  final seenNamePhone = <String>{};
-  final uniqueCustomers = customers.where((c) {
-    if (seenIds.contains(c.id)) return false;
-    final namePhoneKey =
-        '${c.name.toLowerCase().trim()}_${c.phone.replaceAll(RegExp(r'\s+'), '')}';
-    if (seenNamePhone.contains(namePhoneKey)) return false;
-    seenIds.add(c.id);
-    seenNamePhone.add(namePhoneKey);
-    return true;
-  }).toList();
-
   // İstatistikleri hesapla
-  final totalCustomers = uniqueCustomers.length;
+  final totalCustomers = customerCount;
   final activeJobs = jobs
       .where((job) => job.status == "PENDING" || job.status == "IN_PROGRESS")
       .length;
@@ -69,10 +61,8 @@ final dashboardStatsProvider = FutureProvider<DashboardStats>((ref) async {
   // 6 adetten az kalan stokları say (stok durumu sayfasındaki mantıkla aynı)
   final lowStockItems = inventory.where((item) => item.stockQty < 6).length;
 
-  // Ödemesi gelen müşteriler
-  final overduePayments = customers
-      .where((customer) => customer.hasOverduePayment == true)
-      .length;
+  // Ödemesi gelen müşteriler (zaten hasOverduePayment=true ile çekildi)
+  final overduePayments = overdueCustomers.length;
 
   // Yaklaşan bakım (7 gün içinde)
   final now = DateTime.now();
