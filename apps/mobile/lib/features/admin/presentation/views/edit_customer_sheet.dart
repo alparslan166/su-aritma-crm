@@ -728,10 +728,14 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                     decoration: InputDecoration(
                       labelText: "Kayıt Tarihi",
                       hintText: "Tarih seçin",
-                      labelStyle: const TextStyle(color: Colors.black),
-                      floatingLabelStyle: const TextStyle(color: Colors.black),
+                       labelStyle: const TextStyle(color: Colors.black),
+                       hintStyle: const TextStyle(color: Colors.black),
+                       floatingLabelStyle: const TextStyle(color: Colors.black),
                       suffixIcon: IconButton(
-                        icon: const Icon(Icons.calendar_today),
+                        icon: const Icon(
+                          Icons.calendar_today,
+                          color: Colors.black,
+                        ),
                         onPressed: () async {
                           final picked = await showDatePicker(
                             context: context,
@@ -1317,9 +1321,9 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                       controller: _debtAmountController,
                       decoration: const InputDecoration(
                         labelText: "Borç Miktarı (TL)",
-                        labelStyle: TextStyle(color: Colors.black),
-                        floatingLabelStyle: TextStyle(color: Colors.black),
-                        hintStyle: TextStyle(color: Colors.black),
+                        labelStyle: const TextStyle(color: Colors.black),
+                        floatingLabelStyle: const TextStyle(color: Colors.black),
+                        hintStyle: const TextStyle(color: Colors.black),
                         prefixIcon: Icon(
                           Icons.attach_money,
                           color: Colors.black,
@@ -1359,7 +1363,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                           hintText: "Tarih seçin",
                           hintStyle: const TextStyle(color: Colors.black),
                           suffixIcon: IconButton(
-                            icon: const Icon(Icons.calendar_today),
+                            icon: const Icon(
+                              Icons.calendar_today,
+                              color: Colors.black,
+                            ),
                             onPressed: () async {
                               final picked = await showDatePicker(
                                 context: context,
@@ -1489,7 +1496,10 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                           hintText: "Tarih seçin",
                           hintStyle: const TextStyle(color: Colors.black),
                           suffixIcon: IconButton(
-                            icon: const Icon(Icons.calendar_today),
+                            icon: const Icon(
+                              Icons.calendar_today,
+                              color: Colors.black,
+                            ),
                             onPressed: () async {
                               final picked = await showDatePicker(
                                 context: context,

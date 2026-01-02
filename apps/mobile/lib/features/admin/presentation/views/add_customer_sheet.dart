@@ -806,7 +806,10 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                       labelStyle: const TextStyle(color: Colors.black),
                       floatingLabelStyle: const TextStyle(color: Colors.black),
                       suffixIcon: IconButton(
-                        icon: const Icon(Icons.calendar_today),
+                        icon: const Icon(
+                          Icons.calendar_today,
+                          color: Colors.black,
+                        ),
                         onPressed: () async {
                           final picked = await showDatePicker(
                             context: context,
@@ -1008,7 +1011,11 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                         labelText: "Borç Miktarı (TL)",
                         labelStyle: TextStyle(color: Colors.black),
                         hintStyle: TextStyle(color: Colors.black),
-                        prefixIcon: Icon(Icons.attach_money),
+                        floatingLabelStyle: TextStyle(color: Colors.black),
+                        prefixIcon: const Icon(
+                          Icons.attach_money,
+                          color: Colors.black,
+                        ),
                       ),
                       keyboardType: TextInputType.number,
                       onChanged: (_) => setState(() {}), // Kutucukları güncelle
@@ -1041,8 +1048,12 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                           hintText: "Tarih seçin",
                           labelStyle: const TextStyle(color: Colors.black),
                           hintStyle: const TextStyle(color: Colors.black),
+                          floatingLabelStyle: const TextStyle(color: Colors.black),
                           suffixIcon: IconButton(
-                            icon: const Icon(Icons.calendar_today),
+                            icon: const Icon(
+                              Icons.calendar_today,
+                              color: Colors.black,
+                            ),
                             onPressed: () async {
                               final picked = await showDatePicker(
                                 context: context,
@@ -1125,7 +1136,13 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                         controller: _installmentCountController,
                         decoration: const InputDecoration(
                           labelText: "Kaç taksit olacak?",
-                          prefixIcon: Icon(Icons.numbers),
+                          labelStyle: TextStyle(color: Colors.black),
+                          hintStyle: TextStyle(color: Colors.black),
+                          floatingLabelStyle: TextStyle(color: Colors.black),
+                          prefixIcon: const Icon(
+                            Icons.numbers,
+                            color: Colors.black,
+                          ),
                         ),
                         keyboardType: TextInputType.number,
                         onChanged: (_) =>
@@ -1158,8 +1175,14 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                         decoration: InputDecoration(
                           labelText: "Taksit Başlama Tarihi",
                           hintText: "Tarih seçin",
+                          labelStyle: const TextStyle(color: Colors.black),
+                          hintStyle: const TextStyle(color: Colors.black),
+                          floatingLabelStyle: const TextStyle(color: Colors.black),
                           suffixIcon: IconButton(
-                            icon: const Icon(Icons.calendar_today),
+                            icon: const Icon(
+                              Icons.calendar_today,
+                              color: Colors.black,
+                            ),
                             onPressed: () async {
                               final picked = await showDatePicker(
                                 context: context,
@@ -1187,7 +1210,11 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                           labelText: "Ödeme kaç günde bir olacak?",
                           labelStyle: TextStyle(color: Colors.black),
                           hintStyle: TextStyle(color: Colors.black),
-                          prefixIcon: Icon(Icons.repeat),
+                          floatingLabelStyle: TextStyle(color: Colors.black),
+                          prefixIcon: const Icon(
+                            Icons.repeat,
+                            color: Colors.black,
+                          ),
                           helperText:
                               "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
                         ),
