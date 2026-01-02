@@ -532,6 +532,9 @@ class _AddJobToCustomerSheetState extends ConsumerState<AddJobToCustomerSheet> {
                           controller: _installmentIntervalDaysController,
                           decoration: const InputDecoration(
                             labelText: "Ödeme kaç günde bir olacak?",
+                            labelStyle: TextStyle(color: Colors.black),
+                            hintStyle: TextStyle(color: Colors.black),
+
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.repeat),
                             helperText:

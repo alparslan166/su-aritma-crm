@@ -1515,11 +1515,9 @@ class _EditCustomerSheetState extends ConsumerState<EditCustomerSheet> {
                         controller: _installmentIntervalDaysController,
                         decoration: const InputDecoration(
                           labelText: "Ödeme kaç günde bir olacak?",
-                          labelStyle: const TextStyle(color: Colors.black),
-                          floatingLabelStyle: const TextStyle(
-                            color: Colors.black,
-                          ),
-                          hintStyle: const TextStyle(color: Colors.black54),
+                          labelStyle: TextStyle(color: Colors.black),
+                          floatingLabelStyle: TextStyle(color: Colors.black),
+                          hintStyle: TextStyle(color: Colors.black54),
                           prefixIcon: Icon(Icons.repeat, color: Colors.black54),
                           helperText:
                               "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",

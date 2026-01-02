@@ -1,8 +1,11 @@
+import "dart:io";
 import "dart:typed_data";
 
 import "package:flutter/foundation.dart" show kIsWeb;
 import "package:flutter/material.dart";
 import "package:hooks_riverpod/hooks_riverpod.dart";
+import "package:path_provider/path_provider.dart";
+import "package:share_plus/share_plus.dart";
 
 import "../../../../core/utils/html_utils.dart" as html;
 import "../../data/admin_repository.dart";
@@ -30,18 +33,17 @@ class _ExportDataPageState extends ConsumerState<ExportDataPage> {
         },
       );
 
-      // Download file (web platform)
+      final fileName = 'SuAritma_Export_${DateTime.now().toIso8601String().split('T')[0]}.xlsx';
+
       if (kIsWeb) {
+        // Web platform - blob download
         final blob = html.Blob(
           [bytes],
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         );
         final url = html.Url.createObjectUrlFromBlob(blob);
         final anchor = html.AnchorElement(href: url)
-          ..setAttribute(
-            'download',
-            'SuAritma_Export_${DateTime.now().toIso8601String().split('T')[0]}.xlsx',
-          )
+          ..setAttribute('download', fileName)
           ..click();
         html.Url.revokeObjectUrl(url);
 
@@ -49,6 +51,28 @@ class _ExportDataPageState extends ConsumerState<ExportDataPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("✅ Excel dosyası indiriliyor..."),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        // Mobile platform - save to documents and share
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/$fileName';
+        final file = File(filePath);
+        await file.writeAsBytes(bytes);
+
+        if (mounted) {
+          // Share the file so user can save or open it
+          await Share.shareXFiles(
+            [XFile(filePath)],
+            text: 'Su Arıtma CRM - Veri Dışarı Aktarma',
+            subject: fileName,
+          );
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("✅ Excel dosyası oluşturuldu!"),
               backgroundColor: Colors.green,
             ),
           );

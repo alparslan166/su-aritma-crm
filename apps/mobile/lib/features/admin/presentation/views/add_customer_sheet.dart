@@ -520,7 +520,7 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                     decoration: const InputDecoration(
                       labelText: "Adres",
                       hintText: "Şehir, ilçe, mahalle, sokak, bina no",
-                      hintStyle: const TextStyle(color: Colors.black54),
+                      hintStyle: TextStyle(color: Colors.black54),
                       labelStyle: TextStyle(color: Colors.black),
                       floatingLabelStyle: TextStyle(color: Colors.black),
                     ),
@@ -608,11 +608,11 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       labelText: "Alınan Ücret (₺)",
+                      labelStyle: TextStyle(color: Colors.black),
                       prefixIcon: const Icon(
                         Icons.attach_money,
                         color: Colors.black54,
                       ),
-                      labelStyle: const TextStyle(color: Colors.black),
                       floatingLabelStyle: const TextStyle(color: Colors.black),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -1185,6 +1185,8 @@ class _AddCustomerSheetState extends ConsumerState<AddCustomerSheet> {
                         controller: _installmentIntervalDaysController,
                         decoration: const InputDecoration(
                           labelText: "Ödeme kaç günde bir olacak?",
+                          labelStyle: TextStyle(color: Colors.black),
+                          hintStyle: TextStyle(color: Colors.black),
                           prefixIcon: Icon(Icons.repeat),
                           helperText:
                               "Her kaç günde bir taksit ödemesi yapılacak? (örn: 30)",
